@@ -107,6 +107,10 @@ function boardShape(){
  return shape;
 }
 /** Projection overlay for the selected illustrative corridor; never exposed as fabricated copper. */
+function selectedRouteHeight(layerIndex){
+ // In exploded mode align the projection with its corresponding artwork plane.
+ return exploded&&layerMeshes[layerIndex]?layerMeshes[layerIndex].position.y+.035:.78;
+}
 function focusIllustrativeRoute(id){
  const route=VISUAL_ROUTES.find(item=>item.id===id);
  focusedVisualRouteId=route?route.id:null;
@@ -117,7 +121,7 @@ function focusIllustrativeRoute(id){
   routeFocusObject=null;
  }
  if(route&&board&&scene){
-  const points=route.points.map(([x,z])=>new THREE.Vector3(x,.78,z));
+  const points=route.points.map(([x,z])=>new THREE.Vector3(x,0,z));
   const path=new THREE.CatmullRomCurve3(points,false,'centripetal');
   const mesh=new THREE.Mesh(
    new THREE.TubeGeometry(path,42,.028,6,false),
@@ -126,6 +130,7 @@ function focusIllustrativeRoute(id){
   mesh.name='VISUAL_ROUTE_PROJECTION_NOT_COPPER';
   mesh.renderOrder=1200;
   mesh.userData.routeId=route.id;
+  mesh.position.y=selectedRouteHeight(route.layer);
   board.add(mesh);
   routeFocusObject=mesh;
  }
@@ -480,6 +485,13 @@ function init(){
  getFPS(){return actualFPS},
  getRenderCount(){return totalRenders},
  getFocusedVisualRoute(){return focusedVisualRouteId},
+ getFocusedRouteDiagnostics(){
+  const route=VISUAL_ROUTES.find(item=>item.id===focusedVisualRouteId);
+  const layer=route?.layer??null;
+  return {id:route?.id??null,layer,exploded,overlayPresent:!!routeFocusObject,
+   projectionY:routeFocusObject?Number(routeFocusObject.position.y.toFixed(4)):null,
+   planeY:layer!==null&&layerMeshes[layer]?Number(layerMeshes[layer].position.y.toFixed(4)):null};
+ },
  getVisualRoutingAudit(){return auditIllustrativeGeometry()},
  getVisualRoutingRevision(){return ROUTING_REVISION},
  getBoardDiagnostics(){
@@ -550,6 +562,16 @@ function init(){
    group.position.y=THREE.MathUtils.lerp(group.position.y,target,.16);
   }
   if(!exploded&&!layersMoving)layerStack.visible=false;
+ }
+ if(routeFocusObject&&focusedVisualRouteId){
+  const focusedRoute=VISUAL_ROUTES.find(item=>item.id===focusedVisualRouteId);
+  if(focusedRoute){
+   const nextY=selectedRouteHeight(focusedRoute.layer);
+   if(Math.abs(routeFocusObject.position.y-nextY)>.0001){
+    routeFocusObject.position.y=nextY;
+    needsRender=true;
+   }
+  }
  }
  if(selectionHelper&&layersMoving)selectionHelper.update();
  if(cameraMoving||needsRender)updateCamera();

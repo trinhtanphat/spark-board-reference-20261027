@@ -126,3 +126,6 @@ This feature is NOT schematic capture, a PCB layout editor or a KiCad netlist br
 ### Synchronized routing highlight
 Selecting a visual route in Route Explorer highlights the corresponding corridor as a temporary projection above the 3D reference board. Changing a layer or signal corridor removes the highlight. This projection is NOT a copper trace, electrical net or manufacturing geometry. The feature remains navigable in 2D when GPU support is unavailable.
 The Chrome E2E suite asserts that 2D selection and 3D focus agree, and that filtering clears any stale focus.
+
+### Layer-accurate visual focus (2026-10-27)
+The 2D-selected route projection now follows its corresponding conceptual layer plane during 3D explode/collapse (all eight layer indices). In collapsed studio view it remains a visible projection floating above the board; in exploded view its height tracks the animated selected artwork plane. This is visualization geometry, **not true plated copper or a physically defined stackup**. Browser tests verify L6 selection, dynamic plane alignment, collapse return, no-WebGL fallback and context-loss recovery.
