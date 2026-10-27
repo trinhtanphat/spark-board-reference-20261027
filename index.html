@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#15111f">
+<meta name="description" content="SPARK / The Bare Board — interactive PCB-inspired design demo.">
+<title>SPARK — THE BOARD / Reference Recreation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="app" aria-label="SPARK design dashboard">
+<aside class="editor">
+<div class="editor-top"><div class="traffic" aria-hidden="true"><i></i><i></i><i></i></div><span>~/spark · board.build</span><button class="top-live" id="liveToggle" title="Pause or resume demo animation" aria-pressed="true"><span class="live-dot"></span><span id="liveText">LIVE</span></button></div>
+<div class="brand-heading"><div class="brand-avatar" aria-hidden="true"><div class="avatar-core">✦</div></div><div class="brand-word"><span class="hello"><span class="sparkle">✳</span> WELCOME TO SPARK</span><h1>SPARK</h1></div></div>
+<div class="built-lines"><div>✳ built with Claude Code · firmware by Claude Fable 5.1</div><div>✳ build source · spark/board.build · 80 parts</div></div>
+<div class="editor-rule"></div><div class="code-scroller" id="codeScroller"><div class="code-lines" id="codeLines" role="presentation"></div></div>
+<div class="editor-foot"><span><b>PORT</b> · stage 12/20 passed</span><span>Ln <span id="currentLine">470</span> · 14:1/s</span></div>
+</aside>
+<section class="board">
+<div class="board-header"><span class="corner tl"></span><span class="corner tr"></span><div class="board-head-row"><span class="header-fig">Fig 5</span><span class="board-title">ANTHROPIC · SPARK · THE BOARD</span></div><div id="progressPixels" class="pixel-progress" aria-label="Digital progress visualization"></div></div>
+<div class="pcb" id="pcb"><canvas id="pcbCanvas" aria-label="Decorative circuit board drawing"></canvas><div class="pcb-shade"></div>
+<div class="scope-card"><div class="scope-display"><svg id="scopeSvg" viewBox="0 0 110 116" preserveAspectRatio="none" aria-label="Simulated signal waveform"><defs><pattern id="scopeGrid" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" stroke="#5966cc" stroke-width=".5" fill="none" opacity=".4"/></pattern></defs><circle cx="55" cy="58" r="54" fill="#0b0a19"/><circle cx="55" cy="58" r="53" stroke="#5d5c9b" stroke-width="1.2" fill="url(#scopeGrid)"/><path id="wavePathA" d="" stroke="#3db0e3" stroke-width="1.6" fill="none"/><path id="wavePathB" d="" stroke="#7860e6" stroke-width="1.3" fill="none"/></svg></div><small>SCOPE · VIN PH1 · 50%</small><small>1.250 V · dark 3200</small></div>
+<div class="chip-card" aria-label="Microcontroller visual"><span class="chip-trace"></span><div class="chip-center"><span class="chip-label">SPARK / SOC</span><span class="chip-model">FABLE 5.1</span></div></div>
+<div class="diagnostics"><div class="diagnostics-head"><span>✳ CLAUDE FABLE 5.1</span><span class="heft">HEFT</span></div><div><span>task</span><b id="taskValue">post v2</b></div><div><span>stream</span><b><span id="streamValue">160</span> tok/s · 5,734</b></div><div><span>latency · conf</span><b>27 ms · 0.96</b></div><div><span>parts</span><b>2148/2148 · drc 0</b></div><div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="bar-captions"><span>LYR</span><span>TXT</span><span>DRC</span><span>CORE</span></div></div>
+<div class="pcb-mark"><div class="mark-caption">BUILT WITH CODE</div><div class="spark-lockup"><span class="round-emblem"><svg viewBox="0 0 100 66"><ellipse cx="50" cy="33" rx="47" ry="30" fill="none" stroke="currentColor" stroke-width="2.3"/><ellipse cx="50" cy="33" rx="40" ry="25" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M50 5L59 27 77 33 59 39 50 61 41 39 23 33 41 27Z" fill="currentColor"/></svg></span><span class="spark-oval">SPARK</span></div><div class="under-mark">01 · FIRMWARE BY FABLE 5.1</div></div>
+<div class="pcb-bottom-text"><span>FABLE&nbsp;&nbsp; NET&nbsp;&nbsp; GND</span><span>SPARK S3 · ATX · 8 LAYER</span><span>BOOT&nbsp;&nbsp; RUN&nbsp;&nbsp; CODE&nbsp;&nbsp; FIRMWARE&nbsp;&nbsp; VIA&nbsp;&nbsp; POWER</span></div>
+</div>
+<div class="board-footer"><div class="footer-caption"><span class="corner bl"></span><span class="corner br"></span><span>THE BARE BOARD</span><span>8 layers · black mask · white print</span></div><div class="stats">
+<button class="stat-card selected" data-stat="mesh"><span class="stat-top"><span>BAY 01 · MESH</span><span class="stat-chip green">LIVE</span></span><strong id="meshValue">12.1k</strong><small>tris · 80 parts</small><span class="stat-gradient"></span></button>
+<button class="stat-card" data-stat="fable"><span class="stat-top"><span>BAY 02 · FABLE 5.1</span><span class="stat-chip green">DONE</span></span><strong>0.97</strong><small>score · self confidence</small><span class="stat-gradient"></span></button>
+<button class="stat-card" data-stat="flash"><span class="stat-top"><span>BAY 03 · FLASH</span><span class="stat-chip green" id="flashStatus">DONE</span></span><strong id="flashValue">32 MB</strong><small>flash page 256/256 · verified</small><span class="stat-gradient"></span></button>
+<button class="stat-card" data-stat="post"><span class="stat-top"><span>BAY 04 · POST</span><span class="stat-chip grey">OK</span></span><strong id="postValue">92</strong><small>post code · 33/39 stages</small><span class="stat-gradient"></span></button>
+</div></div>
+</section>
+</main>
+<div class="outside-foot"><span>SPARK / BOARD.BUILD</span><span id="interactionStatus">REFERENCE-INSPIRED INTERACTIVE DEMO · SIMULATED DATA</span><span>© 2026</span></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="app.js" defer></script>
+</body>
+</html>
