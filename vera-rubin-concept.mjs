@@ -4,7 +4,7 @@
  * Architecture follows NVIDIA public docs: two Rubin GPU + one Vera CPU.
  */
 export function createRubinConcept(THREE){
- const group=new THREE.Group(),assemblies=[],parts=[];
+ const group=new THREE.Group(),assemblies=[],parts=[],coolingGroups=[];
  group.name="UNOFFICIAL_VERA_RUBIN_SUPERCHIP_CONCEPT";
  const mat=(color,metalness=.2,roughness=.55)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
  const dark=mat("#101b19",.18,.47),green=mat("#213e27",.22,.5),edge=mat("#a5b88d",.67,.37);
@@ -60,6 +60,38 @@ export function createRubinConcept(THREE){
  makePackage("NVIDIA / RUBIN GPU A","RUBIN","GPU / NVFP4", -3.00,-.16,2.10,2.20,"gpu");
  makePackage("NVIDIA / RUBIN GPU B","RUBIN","GPU / NVFP4", 3.00,-.16,2.10,2.20,"gpu");
  makePackage("NVIDIA / VERA CPU","VERA","88 OLYMPUS CORES",0,1.98,2.28,1.72,"cpu");
+
+ // Optional cold-plate and fluid-channel study: the Vera Rubin compute tray uses
+ // liquid cooling, but this mechanical layout is NOT sourced from NVIDIA CAD.
+ const coolantMetal=mat("#91a7a0",.78,.23),coolantTop=mat("#313e40",.66,.28);
+ const coolantBlue=mat("#568b94",.67,.22);
+ const coolingSpecs=[
+  {name:"RUBIN A",holder:parts[0],width:2.36,depth:2.43},
+  {name:"RUBIN B",holder:parts[1],width:2.36,depth:2.43},
+  {name:"VERA",holder:parts[2],width:2.48,depth:1.94}
+ ];
+ for(const spec of coolingSpecs){
+  const module=new THREE.Group();module.name="UNOFFICIAL_LIQUID_COLDPLATE_"+spec.name.replaceAll(" ","_");
+  module.visible=false;spec.holder.add(module);coolingGroups.push(module);
+  box(module,spec.width,.11,spec.depth,coolantMetal,0,.73,0);
+  box(module,spec.width-.15,.08,spec.depth-.15,coolantTop,0,.84,0);
+  const finsCount=11,geom=new THREE.BoxGeometry(.085,.15,spec.depth-.30);
+  const fins=new THREE.InstancedMesh(geom,coolantMetal,finsCount),dummy=new THREE.Object3D();
+  for(let i=0;i<finsCount;i++){
+   dummy.position.set((i-(finsCount-1)/2)*(spec.width-.28)/finsCount,.99,0);
+   dummy.updateMatrix();fins.setMatrixAt(i,dummy.matrix);
+  }
+  fins.instanceMatrix.needsUpdate=true;fins.computeBoundingSphere();module.add(fins);
+  // Parallel connection pipes and two nonfunctional quick-disconnect bosses.
+  for(const dx of [-spec.width*.32,spec.width*.32]){
+   box(module,.13,.08,spec.depth-.17,coolantBlue,dx,1.12,0);
+   const fitting=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.14,12),coolantMetal);
+   fitting.position.set(dx,1.16,-spec.depth*.39);module.add(fitting);
+   const bore=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.15,12),coolantBlue);
+   bore.position.set(dx,1.25,-spec.depth*.39);module.add(bore);
+  }
+  label(module,0,1.17,spec.depth*.31,Math.min(1.30,spec.width-.32),.33,spec.name,"COOLING / CONCEPT","#c9e6ca");
+ }
  // The HBM4 packages are intentionally illustrative; positions and chip counts
  // are NOT sourced from a physical NVIDIA compute board drawing.
  for(const gx of [-3,3]){
@@ -90,5 +122,5 @@ export function createRubinConcept(THREE){
  }
  // Banner etched into the assembly: visibly marked non-official reference.
  label(base,0,.095,-2.63,3.4,.58,"VERA RUBIN","UNOFFICIAL CONCEPT","#d7e9c9");
- return {group,assemblies,parts};
+ return {group,assemblies,parts,coolingGroups};
 }

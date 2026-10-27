@@ -1,0 +1,15 @@
+import {strict as assert} from "node:assert";
+import {NVIDIA_PRODUCT as p} from "../nvidia-product.mjs";
+assert.equal(p.superchip.rubinGPUs,2);
+assert.equal(p.superchip.veraCPUs,1);
+assert.equal(p.superchip.hbm4GB,576);
+assert.equal(p.superchip.nvfp4Pflops,100);
+assert.equal(p.superchip.nvlinkC2cTbps,1.8);
+assert.equal(p.rack.rubinGPUs,72);
+assert.equal(p.rack.veraCPUs,36);
+assert.equal(p.rack.nvlinkTbps,216);
+assert.equal(p.rack.hbm4TB,20.7);
+assert.ok(p.disclaimer.includes("NOT NVIDIA CAD"));
+assert.ok(p.references.every(s=>s.startsWith("https://")));
+assert.ok(p.references.some(s=>s.startsWith("https://www.nvidia.com/")));
+console.log(JSON.stringify({product:p.name,superchip:p.superchip,rack:p.rack,status:"PASS",provenance:"NVIDIA published specifications, not measured data",fabricationApproved:false}));

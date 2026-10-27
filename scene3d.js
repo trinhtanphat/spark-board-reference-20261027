@@ -23,7 +23,7 @@ let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=fa
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 let focusedVisualRouteId=null,routeFocusObject=null;
-let nvidiaModel=null,modelMode='nvidia';
+let nvidiaModel=null,modelMode='nvidia',nvidiaCoolingVisible=false;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -356,7 +356,10 @@ function applyModelMode(mode){
  if(!['nvidia','reference'].includes(mode))return;
  modelMode=mode;
  if(board)board.visible=mode==='reference';
- if(nvidiaModel)nvidiaModel.group.visible=mode==='nvidia';
+ if(nvidiaModel){
+  nvidiaModel.group.visible=mode==='nvidia';
+  for(const coldplate of nvidiaModel.coolingGroups)coldplate.visible=mode==='nvidia'&&nvidiaCoolingVisible;
+ }
  // Product mode uses a processor assembly exploded view; the reference retains the
  // existing conceptual PCB layer animation. Never confuse either with physical PCB CAD.
  if(mode==='nvidia'&&layerStack)layerStack.visible=false;
@@ -513,9 +516,11 @@ function init(){
  }
  window.SPARK3D={ready:true,
  getModelMode(){return modelMode},
+ setNvidiaCooling(on){nvidiaCoolingVisible=Boolean(on);if(nvidiaModel){for(const coldplate of nvidiaModel.coolingGroups)coldplate.visible=modelMode==='nvidia'&&nvidiaCoolingVisible}needsRender=true},
+ getNvidiaCooling(){return nvidiaCoolingVisible},
  setModelMode(mode){applyModelMode(mode)},
  getNvidiaProductInfo(){return {name:NVIDIA_PRODUCT.name,...NVIDIA_PRODUCT.superchip}},
- getNvidiaModelDiagnostics(){return {mode:modelMode,visible:nvidiaModel.group.visible,gpuPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('RUBIN GPU')).length,cpuPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('VERA CPU')).length,hbmArtPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('HBM4')).length,assemblyHeights:nvidiaModel.assemblies.map(p=>({name:p.group.userData.part,y:Number(p.group.position.y.toFixed(3))}))}},
+ getNvidiaModelDiagnostics(){return {mode:modelMode,visible:nvidiaModel.group.visible,gpuPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('RUBIN GPU')).length,cpuPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('VERA CPU')).length,hbmArtPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('HBM4')).length,coldPlateModules:nvidiaModel.coolingGroups.length,coolingOn:nvidiaCoolingVisible,coolingVisible:nvidiaModel.coolingGroups.filter(g=>g.visible).length,assemblyHeights:nvidiaModel.assemblies.map(p=>({name:p.group.userData.part,y:Number(p.group.position.y.toFixed(3))}))}},
  async exportSnapshotInfo(){const blob=await captureFrameBlob();return {size:blob?.size||0,type:blob?.type||''}},
  getQuality(){return qualityMode},
  setQuality(mode){applyQuality(mode)},

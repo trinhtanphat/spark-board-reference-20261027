@@ -126,6 +126,8 @@ function updateModelView(mode){
  document.querySelector(".label-a").textContent=mode==="nvidia"?"MODEL / VERA RUBIN":"MODEL / SPARK S3";
  $("explodeToggle").textContent=exploded?"⫶ ASSEMBLE":mode==="nvidia"?"⫶ EXPLODE MODULE":"⫶ EXPLODE 8L";
  $("layersToggle").disabled=mode==="nvidia";
+ $("coolingToggle").disabled=mode!=="nvidia";
+ $("coolingToggle").setAttribute("aria-pressed",String(Boolean(window.SPARK3D?.getNvidiaCooling?.())));
  $("inspectCore").setAttribute("aria-label",mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
 }
 for(const [mode,button] of Object.entries(viewButtons))button.addEventListener("click",()=>{
@@ -134,6 +136,14 @@ for(const [mode,button] of Object.entries(viewButtons))button.addEventListener("
  notify(mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
 });
 document.addEventListener("spark:model-mode-change",ev=>updateModelView(ev.detail.mode));
+$("coolingToggle").addEventListener("click",()=>{
+ if(window.SPARK3D?.getModelMode?.()!=="nvidia")return;
+ const on=!window.SPARK3D.getNvidiaCooling();
+ window.SPARK3D.setNvidiaCooling(on);
+ $("coolingToggle").textContent=on?"COOLING / ON":"COOLING / OFF";
+ $("coolingToggle").setAttribute("aria-pressed",String(on));
+ notify(on?"Conceptual liquid cold plates visible (not official CAD)":"Showing exposed Rubin/Vera chip packages");
+});
 
 const qualityLevels=["auto","eco","ultra"];
 $("qualityToggle").addEventListener("click",()=>{

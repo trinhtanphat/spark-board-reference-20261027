@@ -175,3 +175,8 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .nvidia-sources{display:flex;gap:16px;flex-wrap:wrap}
 @media(max-width:900px){.nvidia-facts-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.product-view-selector>span{width:100%;margin-left:0}.product-view-selector button{flex:1}.nvidia-product-facts{padding:13px}.nvidia-facts-head{flex-direction:column}.nvidia-facts-head h3{font-size:19px}.nvidia-facts-grid strong{font-size:14px}}
+
+/* Optional fluid-cold-plate study; visually distinguished from official silicon data */
+.product-view-selector .cooling-toggle{border-color:#527e86;color:#c3e0d9;background:#1d3136}
+.product-view-selector .cooling-toggle[aria-pressed="true"]{background:#2d5b62;border-color:#8fcad0;color:#e5f9f7}
+.product-view-selector .cooling-toggle:disabled{opacity:.35;cursor:not-allowed}

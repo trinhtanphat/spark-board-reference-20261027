@@ -139,3 +139,9 @@ The 2D-selected route projection now follows its corresponding conceptual layer 
 ## NVIDIA Vera Rubin architectural concept (October 2026)
 
 The default 3D model now presents an **unofficial** NVIDIA Vera Rubin Superchip study (two Rubin GPUs + one Vera CPU), with illustrative HBM4 and interconnect geometry. The previous SPARK PCB/Route Explorer remains available with the model switch. NVIDIA official public specifications and source URLs are documented in [NVIDIA_VERA_RUBIN_REFERENCE.md](docs/NVIDIA_VERA_RUBIN_REFERENCE.md). The physical arrangement and board layout are artistic; **not NVIDIA CAD or a manufacturing-approved circuit**.
+
+## Optional liquid-cooling assembly visualization (2026-10-28)
+
+Vera Rubin concept mode now includes a **COOLING / OFF–ON** toggle. Three cold-plate assemblies (two over the GPUs, one over Vera CPU) use metallic housings, shared instanced fins and decorative couplings. The cooling mode is entirely **artist-rendered**; NVIDIA confirms a liquid-cooled compute tray with manifold/quick-disconnect architecture, but the dimensions, flow paths, thermal ratings and physical attachment points here have **not** been established from manufacturer CAD. It must not be used as cooling-system engineering data. The original SPARK reference and 2D routing audit are preserved unchanged. E2E verifies the toggle and all three cooling groups.
+
+`node scripts/test-nvidia-product.mjs` checks the embedded official spec summary against the public values recorded in [NVIDIA source notes](docs/NVIDIA_VERA_RUBIN_REFERENCE.md). It is a static regression test, not a live NVIDIA data API.
