@@ -56,3 +56,9 @@ This independent design project is not affiliated with Anthropic or any other re
 - WebGL context loss displays a reconnecting state and retained 2D fallback; renderer state is reconfigured after the browser restores the graphics context.
 - Missing or slow WebGL module loading also produces an explicit "module loading" status after 10 seconds instead of an indefinitely opaque initialization message.
 - The browser-test script runs in an **isolated temporary Chrome profile** and never uses an active user browser session. Optional context-loss QA is available by setting `TEST_WEBGL_RECOVERY=1` while running `node e2e-check.js`.
+
+## Render-on-demand in Pause mode
+
+The scene no longer redraws continuously after Pause. Pending camera and exploded-layer transitions are resolved to their target poses, then WebGL submissions stop until the user changes the view, toggles a layer, selects a component, changes render quality, or requests PNG export. Resume restores normal animation. The HUD reports **GPU IDLE · PAUSED**.
+
+The Chrome E2E suite checks that total render submissions stay unchanged during a settled Pause interval and increase again when zooming while paused. This verifies fewer redundant WebGL submissions, not a measured electricity or battery saving. The render loop still uses `requestAnimationFrame` for state checks; hardware performance still requires direct testing.

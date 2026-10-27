@@ -16,7 +16,7 @@ let az=.34,el=.82,dist=13.8,azTarget=az,elTarget=el,distTarget=dist,lastTime=0,f
 let dragged=false,pointer=null,touchStart=null;
 let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=false,selectionHelper=null,lastDraw=0;
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
-let keyLight,cyanLight,violetLight;
+let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -223,7 +223,8 @@ function resize(){
  const w=Math.max(2,mount.clientWidth),h=Math.max(2,mount.clientHeight);
  if(w<3||h<3)return;
  renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<640?42:35;if(root)root.scale.setScalar(w<640?.53:w<860?.82:1);camera.updateProjectionMatrix();
- if(!animating&&!contextLost)renderer.render(scene,camera);
+ needsRender=true;
+ if(!meshReady&&!contextLost&&scene)renderer.render(scene,camera);
 }
 function notifyPart(name){selectPart(name)}
 function interactions(){
@@ -291,6 +292,7 @@ function applyQuality(name){
  if(name!==qualityMode){autoEco=false;slowWindows=0;}
  qualityMode=name;
  if(!renderer||!meshReady||contextLost)return;
+ needsRender=true;
  renderer.setPixelRatio(qualityDpr());
  const reduced=name==="eco"||(name==="auto"&&autoEco);
  renderer.shadowMap.enabled=!reduced&&(name==="ultra"||window.innerWidth>=900);
@@ -333,49 +335,90 @@ function init(){
  getQuality(){return qualityMode},
  setQuality(mode){applyQuality(mode)},
  getFPS(){return actualFPS},
+ getRenderCount(){return totalRenders},
  getRenderStats(){return {drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,dpr:renderer.getPixelRatio(),textureCount:renderer.info.memory.textures,geometryCount:renderer.info.memory.geometries}},
  getCameraState(){return {azimuth:azTarget,elevation:elTarget,distance:distTarget}},
- zoom(dir){distTarget=clamp(distTarget+dir*.8,8.5,21);if(!animating)requestAnimationFrame(()=>{updateCamera(true);renderer.render(scene,camera)})},
- setView(mode){azTarget=mode==='top'?0:.34;elTarget=mode==='top'?1.57:.82;distTarget=mode==='top'?14:13.8;if(!animating)requestAnimationFrame(()=>{updateCamera(true);renderer.render(scene,camera)})},
- reset(){azTarget=.34;elTarget=.82;distTarget=13.8;if(!animating)requestAnimationFrame(()=>{updateCamera(true);renderer.render(scene,camera)})},
- nudge(x,y){azTarget+=x*.14;elTarget=clamp(elTarget+y*.12,.18,1.57)},
- showTraces(show){traceVisible=show;glowGroup.visible=show;coreIndicator.intensity=show?2:0;renderer.render(scene,camera)},
- setMotion(val){motion=val},
- setRunning(val){running=val},
- setExploded(on){exploded=Boolean(on);layerStack.visible=true;elTarget=exploded?.40:.82;distTarget=exploded?14.6:13.8;azTarget=exploded?.44:.34},
- selectPart(name){selectPart(name)},
- clearSelection(){clearSelection()},
- capture(){renderer.render(scene,camera);renderer.domElement.toBlob(blob=>{if(!blob){window.sparkNotify?.("PNG export unavailable");return}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="spark-3d-board.png";a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);window.sparkNotify?.("3D board PNG captured")},"image/png")},
- highlight(kind){coreIndicator.color.set(kind==='fable'?0x9873ff:kind==='flash'?0x60caff:kind==='post'?0xffd288:0x52ffe1);if(!animating)renderer.render(scene,camera)}
+ zoom(dir){distTarget=clamp(distTarget+dir*.8,8.5,21);needsRender=true},
+ setView(mode){azTarget=mode==='top'?0:.34;elTarget=mode==='top'?1.57:.82;distTarget=mode==='top'?14:13.8;needsRender=true},
+ reset(){azTarget=.34;elTarget=.82;distTarget=13.8;needsRender=true},
+ nudge(x,y){azTarget+=x*.14;elTarget=clamp(elTarget+y*.12,.18,1.57);needsRender=true},
+ showTraces(show){traceVisible=show;glowGroup.visible=show;coreIndicator.intensity=show?2:0;needsRender=true},
+ setMotion(val){motion=val;needsRender=true},
+ setRunning(val){
+  running=Boolean(val);
+  if(!running)fpsLabel.textContent='GPU IDLE · PAUSED';
+  if(!running){
+   // Pause resolves pending transitions in one draw, then leaves the GPU idle.
+   az=azTarget;el=elTarget;dist=distTarget;center.y=exploded?.75:0;updateCamera(true);
+   if(layerStack){
+    for(let i=0;i<layerMeshes.length;i++)layerMeshes[i].position.y=exploded?.35+i*.23:.24+i*.003;
+    for(const group of componentGroups)group.position.y=exploded?2.50:0;
+    layerStack.visible=exploded;
+   }
+   if(selectionHelper)selectionHelper.update();
+  }
+  needsRender=true;
+ },
+ setExploded(on){exploded=Boolean(on);layerStack.visible=true;elTarget=exploded?.40:.82;distTarget=exploded?14.6:13.8;azTarget=exploded?.44:.34;needsRender=true},
+ selectPart(name){selectPart(name);needsRender=true},
+ clearSelection(){clearSelection();needsRender=true},
+ capture(){renderer.render(scene,camera);totalRenders++;renderer.domElement.toBlob(blob=>{if(!blob){window.sparkNotify?.("PNG export unavailable");return}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="spark-3d-board.png";a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);window.sparkNotify?.("3D board PNG captured")},"image/png")},
+ highlight(kind){coreIndicator.color.set(kind==='fable'?0x9873ff:kind==='flash'?0x60caff:kind==='post'?0xffd288:0x52ffe1);needsRender=true}
  };
  function animate(t){
- requestAnimationFrame(animate);if(!meshReady)return;
- const dt=Math.min(.05,Math.max(0,(t-lastTime)/1000));lastTime=t;
- const visible=!document.hidden,animateNow=visible&&running;
- if(animateNow&&motion){root.rotation.y=Math.sin(t*.00014)*.085;coreIndicator.intensity=1.8+.6*Math.sin(t*.0015)}
- if(layerStack){
-  for(let i=0;i<layerMeshes.length;i++){const layer=layerMeshes[i];layer.position.y=THREE.MathUtils.lerp(layer.position.y,exploded?.35+i*.23:.24+i*.003,.12)}
-  for(const group of componentGroups)group.position.y=THREE.MathUtils.lerp(group.position.y,exploded?2.50:0,.10);
-  if(!exploded&&Math.abs(layerMeshes[7].position.y-(.24+7*.003))<.006)layerStack.visible=false;
+ requestAnimationFrame(animate);
+ if(!meshReady||contextLost)return;
+ const visible=!document.hidden,ambientNow=visible&&running&&motion&&!prefersReducedMotion;
+ // Camera and exploded layers keep easing after the user releases a pointer,
+ // but settled scenes no longer submit redundant WebGL frames.
+ const cameraMoving=Math.abs(az-azTarget)+Math.abs(el-elTarget)+Math.abs(dist-distTarget)+Math.abs(center.y-(exploded?.75:0))>.002;
+ let layersMoving=false;
+ if(ambientNow){
+  root.rotation.y=Math.sin(t*.00014)*.085;
+  coreIndicator.intensity=traceVisible?1.8+.6*Math.sin(t*.0015):0;
  }
- if(selectionHelper)selectionHelper.update();
- updateCamera();if(visible&&!contextLost&&t-lastDraw>=qualityInterval()){renderer.render(scene,camera);lastDraw=t;renderSamples++}
+ if(layerStack){
+  for(let i=0;i<layerMeshes.length;i++){
+   const layer=layerMeshes[i],target=exploded?.35+i*.23:.24+i*.003;
+   if(Math.abs(layer.position.y-target)>.002)layersMoving=true;
+   layer.position.y=THREE.MathUtils.lerp(layer.position.y,target,.16);
+  }
+  for(const group of componentGroups){
+   const target=exploded?2.50:0;
+   if(Math.abs(group.position.y-target)>.002)layersMoving=true;
+   group.position.y=THREE.MathUtils.lerp(group.position.y,target,.16);
+  }
+  if(!exploded&&!layersMoving)layerStack.visible=false;
+ }
+ if(selectionHelper&&layersMoving)selectionHelper.update();
+ if(cameraMoving||needsRender)updateCamera();
+ const draw=visible&&(ambientNow||cameraMoving||layersMoving||needsRender);
+ if(draw&&t-lastDraw>=qualityInterval()){
+  if(selectionHelper)selectionHelper.update();
+  renderer.render(scene,camera);
+  lastDraw=t;renderSamples++;totalRenders++;needsRender=false;
+ }
  if(!lastSampleTime)lastSampleTime=t;
  if(t-lastSampleTime>=1750){
- actualFPS=Math.round(renderSamples*1000/(t-lastSampleTime));renderSamples=0;lastSampleTime=t;
- if(qualityMode==='auto'&&!autoEco&&running&&!document.hidden){
-  slowWindows=actualFPS<16?slowWindows+1:0;
-  if(slowWindows>=2){
-   autoEco=true;applyQuality('auto');
-   const badge=document.getElementById('qualityToggle');
-   if(badge){badge.textContent='AUTO ECO';badge.dataset.mode='eco'}
-   window.sparkNotify?.('Auto quality reduced GPU load after slow frame rate');
+  actualFPS=Math.round(renderSamples*1000/(t-lastSampleTime));
+  renderSamples=0;lastSampleTime=t;
+  if(qualityMode==='auto'&&!autoEco&&running&&ambientNow){
+   slowWindows=actualFPS<16?slowWindows+1:0;
+   if(slowWindows>=2){
+    autoEco=true;applyQuality('auto');
+    const badge=document.getElementById('qualityToggle');
+    if(badge){badge.textContent='AUTO ECO';badge.dataset.mode='eco'}
+    window.sparkNotify?.('Auto quality reduced GPU load after slow frame rate');
+   }
   }
+  const tris=renderer.info.render.triangles;
+  fpsLabel.textContent=!running?'GPU IDLE · PAUSED':actualFPS+' FPS · '+(tris/1000).toFixed(1)+'K TRI'+(autoEco?' · ECO':'');
  }
- const tris=renderer.info.render.triangles;
- fpsLabel.textContent=actualFPS+' FPS · '+(tris/1000).toFixed(1)+'K TRI'+(autoEco?' · ECO':'');
-}
- frames++;if(frames%90===0){const tris=renderer.info.render.triangles;document.getElementById('meshValue').innerHTML=(tris/1000).toFixed(1)+'<span>k</span>'}
+ frames++;
+ if(frames%90===0){
+  const tris=renderer.info.render.triangles;
+  document.getElementById('meshValue').innerHTML=(tris/1000).toFixed(1)+'<span>k</span>';
+ }
  }
  requestAnimationFrame(animate);
  const obs=new ResizeObserver(()=>resize());obs.observe(mount);

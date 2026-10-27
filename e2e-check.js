@@ -35,7 +35,22 @@ async function main(){try{
   console.log("GPU_TOUCH",JSON.stringify({screen:screen.name,...gestures}));
   const exportPng=await js("new Promise(resolve=>document.querySelector('#sceneMount canvas').toBlob(blob=>resolve({size:blob?.size||0,type:blob?.type||''}),'image/png'))");
   console.log("EXPORT",JSON.stringify({screen:screen.name,...exportPng}));
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110;
+  let idle={ok:true,skipped:true};
+  if(screen.name==="desktop"){
+   await js("document.getElementById('toggleRun').click()");
+   await delay(2100);
+   const before=await js("window.SPARK3D.getRenderCount()");
+   await delay(1300);
+   const after=await js("window.SPARK3D.getRenderCount()");
+   await js("window.SPARK3D.zoom(-1)");
+   await delay(650);
+   const wake=await js("window.SPARK3D.getRenderCount()");
+   await js("document.getElementById('toggleRun').click()");
+   const resumed=await js("document.getElementById('runLabel').textContent==='PAUSE'");
+   idle={before,after,wake,resumed,ok:after-before<=2&&wake>after&&resumed};
+   console.log("GPU_IDLE",JSON.stringify(idle));
+  }
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok;
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }
