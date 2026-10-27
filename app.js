@@ -5,7 +5,7 @@ let running=true,motion=true,traces=true,lastTick=Date.now(),elapsed=0,seq=0,toa
 function notify(s){const el=$("toast");el.textContent=s;el.classList.add("show");clearTimeout(toastHandle);toastHandle=setTimeout(()=>el.classList.remove("show"),2800)}
 window.sparkNotify=notify;
 function esc(s){return s.replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]))}
-const lines=[
+const referenceLines=[
  "// SPARK / CONCEPTUAL PCB",
  "import { auditIllustrativeGeometry } from './routing/visual-routing.mjs';",
  "",
@@ -30,8 +30,28 @@ const lines=[
  "telemetry.simulate('preview');",
  "console.log('VISUAL PREVIEW READY');"
 ];
+const nvidiaLines=[
+ "// NVIDIA VERA RUBIN / PUBLIC ARCHITECTURE",
+ "// Unofficial architecture study, not source CAD",
+ "",
+ "const superchip = {",
+ "  gpu: '2 x NVIDIA Rubin',",
+ "  cpu: '1 x NVIDIA Vera',",
+ "  hbm4: '576 GB total',",
+ "  nvfp4: '100 PFLOPS (sparse)',",
+ "  interconnect: 'NVLink-C2C',",
+ "  layout: 'conceptual only',",
+ "};",
+ "",
+ "// NVL72 = 72 GPU + 36 Vera CPU",
+ "// Physical PCB netlist: not disclosed",
+ "renderReference(superchip);",
+ "console.log('VISUAL PREVIEW READY');"
+];
+let lines=nvidiaLines;
 function colorize(s){return esc(s).replace(/(\/\/.*)$/g,'<span class="token-grey">$1</span>').replace(/\b(import|from|const|new|await|true)\b/g,'<span class="token-purple">$1</span>').replace(/\b(Board|Core|MB|webgl2|realtime)\b/g,'<span class="token-green">$1</span>').replace(/(&#39;.*?&#39;|'[^']*')/g,'<span class="token-orange">$1</span>').replace(/\b([0-9]+)\b/g,'<span class="token-blue">$1</span>')}
-$("codeLines").innerHTML=lines.map((s,i)=>'<div class="code-row"><span class="ln">'+String(i+1).padStart(2,"0")+'</span><span class="code-text">'+colorize(s)+'</span></div>').join("");
+function renderTerminal(){ $("codeLines").innerHTML=lines.map((s,i)=>'<div class="code-row"><span class="ln">'+String(i+1).padStart(2,"0")+'</span><span class="code-text">'+colorize(s)+'</span></div>').join(""); }
+renderTerminal();
 let points=Array.from({length:64},(_,i)=>.34+.14*Math.sin(i*.5)+.08*Math.cos(i*.91));
 function graph(){points.push(.32+.22*Math.sin(seq*.13)+.07*Math.sin(seq*.59));points.shift();let xStep=316/(points.length-1);const p=points.map((a,i)=>(i===0?"M":"L")+(i*xStep).toFixed(1)+" "+(52-40*a).toFixed(1)).join(" ");$("chartStroke").setAttribute("d",p);$("chartArea").setAttribute("d",p+" L316 58 L0 58 Z")}
 function clock(d){return [d.getUTCHours(),d.getUTCMinutes(),d.getUTCSeconds()].map(x=>String(x).padStart(2,"0")).join(":")+" UTC"}
@@ -52,6 +72,12 @@ document.querySelectorAll(".metric-card").forEach(btn=>btn.addEventListener("cli
 $("sceneMount").addEventListener("keydown",ev=>{if(ev.key==="ArrowLeft")window.SPARK3D?.nudge(-1,0);if(ev.key==="ArrowRight")window.SPARK3D?.nudge(1,0);if(ev.key==="ArrowUp")window.SPARK3D?.nudge(0,1);if(ev.key==="ArrowDown")window.SPARK3D?.nudge(0,-1)});
 $("sceneMount").tabIndex=0;
 
+const modelDescriptions={
+ "NVIDIA / RUBIN GPU A":["NVIDIA RUBIN GPU · 1 / 2","Reference for the first Rubin GPU. NVIDIA publishes 288 GB HBM4 per Rubin GPU; this package geometry is artistic."],
+ "NVIDIA / RUBIN GPU B":["NVIDIA RUBIN GPU · 2 / 2","Reference for the second Rubin GPU in the Vera Rubin Superchip. Not an official NVIDIA CAD file."],
+ "NVIDIA / VERA CPU":["NVIDIA VERA CPU","NVIDIA Vera CPU: 88 custom Olympus cores, with NVLink-C2C to GPUs. Position and dimensions are illustrative."],
+ "NVIDIA / HBM4 MEMORY":["HBM4 MEMORY (CONCEPT)","HBM4 placement and individual package counts are illustrative; not copied from NVIDIA's production board."]
+};
 const parts={
 "SPARK / FABLE CORE":["U1 / SYSTEM CORE","Central FABLE 5.1 processing package with simulated memory bus and high-density solder contacts."],
 "RF / 24":["U2 / RADIO FRONT END","Illustrative 2.4 GHz radio-frequency package and signal routing network."],
@@ -66,22 +92,48 @@ const parts={
 "U6 / POWER MANAGEMENT":["U6 / REGULATOR","Power-management shield can, modeled for the studio assembly."]
 };
 window.sparkInspectPart=name=>{
- const [type,desc]=parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];
+ const [type,desc]=modelDescriptions[name]||parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];
  $("partInspector").hidden=false;$("partType").textContent=type;$("partName").textContent=name;$("partDescription").textContent=desc;
 };
 $("inspectCore").addEventListener("click",()=>{
  if(!window.SPARK3D?.ready){notify("3D model is still loading");return}
- window.SPARK3D.selectPart("SPARK / FABLE CORE");
+ window.SPARK3D.selectPart(window.SPARK3D.getModelMode?.()==="nvidia"?"NVIDIA / RUBIN GPU A":"SPARK / FABLE CORE");
 });
 $("closeInspector").addEventListener("click",()=>{ $("partInspector").hidden=true;window.SPARK3D?.clearSelection() });
 let exploded=false;
 $("explodeToggle").addEventListener("click",()=>{
  exploded=!exploded;$("explodeToggle").classList.toggle("active",exploded);
  $("explodeToggle").setAttribute("aria-pressed",String(exploded));
- $("explodeToggle").textContent=exploded?"⫶ ASSEMBLE":"⫶ EXPLODE 8L";
+ $("explodeToggle").textContent=exploded?"⫶ ASSEMBLE":window.SPARK3D?.getModelMode?.()==="nvidia"?"⫶ EXPLODE MODULE":"⫶ EXPLODE 8L";
  window.SPARK3D?.setExploded(exploded);
- notify(exploded?"Exploded view · 8 conceptual signal layers":"Board assembly restored");
+ notify(exploded?(window.SPARK3D?.getModelMode?.()==="nvidia"?"Superchip concept exploded":"Exploded view · 8 conceptual signal layers"):"Assembly restored");
 });
+
+
+const viewButtons={nvidia:$("modelNvidia"),reference:$("modelReference")};
+function updateModelView(mode){
+ lines=mode==="nvidia"?nvidiaLines:referenceLines;
+ renderTerminal();
+ for(const [key,button] of Object.entries(viewButtons)){
+  button.classList.toggle("active",key===mode);
+  button.setAttribute("aria-pressed",String(key===mode));
+ }
+ document.querySelector(".stage-title h2").innerHTML=mode==="nvidia"?
+  'VERA <span>RUBIN</span><span class="h2-suffix"> / 2026</span>':
+  'THE BARE <span>BOARD</span><span class="h2-suffix"> / 05</span>';
+ document.querySelector(".stage-title p").textContent=mode==="nvidia"?
+  "2 Rubin GPUs · 1 Vera CPU · HBM4 memory":"Matte FR-4 · plated copper · assembly concept";
+ document.querySelector(".label-a").textContent=mode==="nvidia"?"MODEL / VERA RUBIN":"MODEL / SPARK S3";
+ $("explodeToggle").textContent=exploded?"⫶ ASSEMBLE":mode==="nvidia"?"⫶ EXPLODE MODULE":"⫶ EXPLODE 8L";
+ $("layersToggle").disabled=mode==="nvidia";
+ $("inspectCore").setAttribute("aria-label",mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
+}
+for(const [mode,button] of Object.entries(viewButtons))button.addEventListener("click",()=>{
+ window.SPARK3D?.setModelMode?.(mode);
+ updateModelView(mode);
+ notify(mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
+});
+document.addEventListener("spark:model-mode-change",ev=>updateModelView(ev.detail.mode));
 
 const qualityLevels=["auto","eco","ultra"];
 $("qualityToggle").addEventListener("click",()=>{

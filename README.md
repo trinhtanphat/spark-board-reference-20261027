@@ -135,3 +135,7 @@ The 2D-selected route projection now follows its corresponding conceptual layer 
 - Route Explorer exports a selected conceptual layer/corridor as SVG preview or JSON visual-route metadata. Exports carry a visible NOT FOR FABRICATION watermark and explicitly deny electrical verification/approval.
 - Export file names contain VISUAL-NOT-FOR-FAB, units are normalized 3D scene units rather than mm, and JSON flags manufacturingApproved, electricalVerification, kiCadERC and kiCadDRC are false. Neither SVG nor JSON is a manufacturing PCB/netlist file.
 - Unit test: node scripts/test-visual-export.mjs covers all eight layers and five filter choices, plus invalid inputs. Browser E2E checks export buttons and projection fidelity.
+
+## NVIDIA Vera Rubin architectural concept (October 2026)
+
+The default 3D model now presents an **unofficial** NVIDIA Vera Rubin Superchip study (two Rubin GPUs + one Vera CPU), with illustrative HBM4 and interconnect geometry. The previous SPARK PCB/Route Explorer remains available with the model switch. NVIDIA official public specifications and source URLs are documented in [NVIDIA_VERA_RUBIN_REFERENCE.md](docs/NVIDIA_VERA_RUBIN_REFERENCE.md). The physical arrangement and board layout are artistic; **not NVIDIA CAD or a manufacturing-approved circuit**.

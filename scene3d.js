@@ -1,4 +1,6 @@
 import * as THREE from './vendor/three.module.js';
+import {createRubinConcept} from './vera-rubin-concept.mjs';
+import {NVIDIA_PRODUCT} from './nvidia-product.mjs';
 import { VISUAL_ROUTES, ILLUSTRATIVE_STITCHING, LAYER_LABELS, ROUTING_REVISION, auditIllustrativeGeometry, isIllustrativeRoutingCorridor } from './routing/visual-routing.mjs';
 
 /* SPARK 3D hardware board · procedural meshes and textures · Three.js 0.186.1
@@ -21,6 +23,7 @@ let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=fa
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 let focusedVisualRouteId=null,routeFocusObject=null;
+let nvidiaModel=null,modelMode='nvidia';
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -112,6 +115,7 @@ function selectedRouteHeight(layerIndex){
  return exploded&&layerMeshes[layerIndex]?layerMeshes[layerIndex].position.y+.035:.78;
 }
 function focusIllustrativeRoute(id){
+ if(id&&modelMode!=='reference')applyModelMode('reference');
  const route=VISUAL_ROUTES.find(item=>item.id===id);
  focusedVisualRouteId=route?route.id:null;
  if(routeFocusObject&&board){
@@ -327,7 +331,10 @@ function buildLayerStack(){
 }
 
 function selectPart(name){
- const target=componentGroups.find(g=>g.userData.part===name);
+ const nvidiaTarget=nvidiaModel?.parts.find(g=>g.userData.part===name);
+ if(nvidiaTarget&&modelMode!=='nvidia')applyModelMode('nvidia');
+ if(!nvidiaTarget&&modelMode!=='reference')applyModelMode('reference');
+ const target=nvidiaTarget||componentGroups.find(g=>g.userData.part===name);
  if(!target)return;
  if(selectionHelper){scene.remove(selectionHelper);selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
  selectionHelper=new THREE.BoxHelper(target,0xd4b37d);
@@ -336,6 +343,30 @@ function selectPart(name){
 }
 function clearSelection(){
  if(selectionHelper){scene.remove(selectionHelper);selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
+}
+
+function nvidiaExplodedHeight(assembly){
+ if(!exploded||modelMode!=='nvidia')return 0;
+ const name=assembly.group.userData.part||'';
+ if(name.includes('RUBIN GPU'))return 1.55;
+ if(name.includes('VERA CPU'))return 1.10;
+ return .66;
+}
+function applyModelMode(mode){
+ if(!['nvidia','reference'].includes(mode))return;
+ modelMode=mode;
+ if(board)board.visible=mode==='reference';
+ if(nvidiaModel)nvidiaModel.group.visible=mode==='nvidia';
+ // Product mode uses a processor assembly exploded view; the reference retains the
+ // existing conceptual PCB layer animation. Never confuse either with physical PCB CAD.
+ if(mode==='nvidia'&&layerStack)layerStack.visible=false;
+ clearSelection();
+ if(nvidiaModel){
+  for(const assembly of nvidiaModel.assemblies)assembly.group.position.y=
+   nvidiaExplodedHeight(assembly);
+ }
+ needsRender=true;
+ document.dispatchEvent(new CustomEvent('spark:model-mode-change',{detail:{mode}}));
 }
 
 function createSky(){
@@ -400,7 +431,7 @@ function interactions(){
    const rect=renderer.domElement.getBoundingClientRect();
    const pt=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
    const ray=new THREE.Raycaster();ray.setFromCamera(pt,camera);
-   const intersections=ray.intersectObjects(board.children,true);
+   const intersections=ray.intersectObjects(modelMode==='nvidia'?nvidiaModel.group.children:board.children,true);
    const item=intersections.map(v=>{let o=v.object;while(o&&!o.userData.part)o=o.parent;return o}).find(o=>o&&o.userData.part);
    if(item)notifyPart(item.userData.part);
   }
@@ -468,7 +499,7 @@ function init(){
  keyLight=new THREE.DirectionalLight(0xfff7ec,2.4);keyLight.position.set(-3,10,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);keyLight.shadow.camera.left=-9;keyLight.shadow.camera.right=9;keyLight.shadow.camera.top=9;keyLight.shadow.camera.bottom=-9;keyLight.shadow.bias=-.0003;scene.add(keyLight);
  cyanLight=new THREE.PointLight(0xe4edf0,14,19,2);cyanLight.position.set(-6,7,-1);scene.add(cyanLight);
  violetLight=new THREE.PointLight(0xffecd8,10,20,2);violetLight.position.set(7,6,4);scene.add(violetLight);
- root=new THREE.Group();scene.add(root);createBoard();createSky();if(focusedVisualRouteId)focusIllustrativeRoute(focusedVisualRouteId);
+ root=new THREE.Group();scene.add(root);createBoard();nvidiaModel=createRubinConcept(THREE);root.add(nvidiaModel.group);applyModelMode('nvidia');createSky();if(focusedVisualRouteId)focusIllustrativeRoute(focusedVisualRouteId);
  updateCamera(true);resize();interactions();
  renderer.render(scene,camera);totalRenders++;lastDraw=performance.now();
  meshReady=true;setEngineReady();fpsLabel.textContent='THREE.JS / STUDIO MATERIALS';
@@ -481,6 +512,10 @@ function init(){
   return new Promise(resolve=>renderer.domElement.toBlob(resolve,'image/png'));
  }
  window.SPARK3D={ready:true,
+ getModelMode(){return modelMode},
+ setModelMode(mode){applyModelMode(mode)},
+ getNvidiaProductInfo(){return {name:NVIDIA_PRODUCT.name,...NVIDIA_PRODUCT.superchip}},
+ getNvidiaModelDiagnostics(){return {mode:modelMode,visible:nvidiaModel.group.visible,gpuPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('RUBIN GPU')).length,cpuPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('VERA CPU')).length,hbmArtPackages:nvidiaModel.parts.filter(p=>p.userData.part.includes('HBM4')).length,assemblyHeights:nvidiaModel.assemblies.map(p=>({name:p.group.userData.part,y:Number(p.group.position.y.toFixed(3))}))}},
  async exportSnapshotInfo(){const blob=await captureFrameBlob();return {size:blob?.size||0,type:blob?.type||''}},
  getQuality(){return qualityMode},
  setQuality(mode){applyQuality(mode)},
@@ -521,6 +556,7 @@ function init(){
   running=Boolean(val);
   if(!running)fpsLabel.textContent='GPU IDLE · PAUSED';
   if(!running){
+   if(nvidiaModel)for(const assembly of nvidiaModel.assemblies)assembly.group.position.y=nvidiaExplodedHeight(assembly);
    // Pause resolves pending transitions in one draw, then leaves the GPU idle.
    az=azTarget;el=elTarget;dist=distTarget;center.y=exploded?.75:0;updateCamera(true);
    if(layerStack){
@@ -535,6 +571,7 @@ function init(){
  setExploded(on){
   exploded=Boolean(on);layerStack.visible=true;
   elTarget=exploded?.40:.82;distTarget=exploded?16.5:15.55;azTarget=exploded?.48:.43;
+  if(nvidiaModel)for(const assembly of nvidiaModel.assemblies)assembly.group.position.y=nvidiaExplodedHeight(assembly);
   // Immediately align selected route when entering/leaving exploded mode.
   // Animation still follows subsequent per-layer easing frames.
   const route=VISUAL_ROUTES.find(item=>item.id===focusedVisualRouteId);
@@ -566,7 +603,7 @@ function init(){
   root.rotation.y=Math.sin(t*.00014)*.085;
   coreIndicator.intensity=traceVisible?.12:0;
  }
- if(layerStack){
+ if(layerStack&&modelMode==='reference'){
   for(let i=0;i<layerMeshes.length;i++){
    const layer=layerMeshes[i],target=exploded?.35+i*.23:.24+i*.003;
    if(Math.abs(layer.position.y-target)>.002)layersMoving=true;

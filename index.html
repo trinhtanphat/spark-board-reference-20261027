@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#080d16">
-<meta name="description" content="SPARK BOARD / An interactive 3D circuit-board engineering concept.">
-<title>SPARK — Interactive 3D Engineering Board</title>
+<meta name="description" content="Unofficial interactive 3D study of the NVIDIA Vera Rubin Superchip architecture with 2 Rubin GPUs and 1 Vera CPU. Not an NVIDIA official CAD design.">
+<title>Vera Rubin Superchip 3D Concept | SPARK Hardware Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
@@ -14,7 +14,7 @@
 <div class="shell">
 <header class="topbar">
   <a class="logo-group" href="./" aria-label="SPARK 3D homepage"><span class="logo-icon" aria-hidden="true">✦</span><span class="logo-name">SPARK<span class="logo-period">.</span></span><span class="brand-divider"></span><span class="logo-descriptor">DESIGN SYSTEM<br>HARDWARE LAB</span></a>
-  <div class="header-center"><span class="breadcrumb-root">WORKSPACE</span><span class="crumb">/</span><span>THE BARE BOARD</span><span class="version">REV 05</span></div>
+  <div class="header-center"><span class="breadcrumb-root">WORKSPACE</span><span class="crumb">/</span><span>VERA RUBIN STUDY</span><span class="version">2026</span></div>
   <div class="header-right"><div class="system-status"><span class="status-pulse"></span><span>3D PREVIEW ONLINE</span></div><span class="header-clock" id="headerClock">00:00:00 UTC</span><button id="toggleRun" class="header-action" type="button" aria-pressed="true" title="Pause or resume motion"><span class="icon-play">Ⅱ</span><span id="runLabel">PAUSE</span></button></div>
 </header>
 <div class="workspace">
@@ -30,20 +30,32 @@
   <div class="sidebar-signature"><span>✳ ENGINEERED WITH PRECISION</span><span>2026 / SPARK LABS</span></div>
 </aside>
 <main class="main-column">
-  <section class="hero-stage" aria-label="Interactive 3D circuit board">
+  <div class="product-view-selector" role="group" aria-label="Choose 3D hardware model"><button type="button" id="modelNvidia" class="active" aria-pressed="true">VERA RUBIN SUPERCHIP</button><button type="button" id="modelReference" aria-pressed="false">SPARK PCB REFERENCE</button><span>INDEPENDENT STUDY / NOT NVIDIA OFFICIAL</span></div>
+  <section class="hero-stage" aria-label="Interactive 3D NVIDIA Vera Rubin architecture concept">
     <div class="stage-gradient"></div><div class="stage-grid"></div>
-    <div class="stage-top"><div class="stage-title"><span class="stage-overline"><span class="live-square"></span> STUDIO PRODUCT RENDER / WEBGL</span><h2>THE BARE <span>BOARD</span><span class="h2-suffix"> / 05</span></h2><p>Matte FR-4 &nbsp;·&nbsp; plated copper &nbsp;·&nbsp; assembly concept</p></div>
+    <div class="stage-top"><div class="stage-title"><span class="stage-overline"><span class="live-square"></span> STUDIO PRODUCT RENDER / WEBGL</span><h2>VERA <span>RUBIN</span><span class="h2-suffix"> / 2026</span></h2><p>2 Rubin GPUs &nbsp;·&nbsp; 1 Vera CPU &nbsp;·&nbsp; HBM4 memory</p></div>
     <div class="engine-status"><span id="engineDot" class="status-pulse"></span><div><b id="engineLabel">INITIALIZING 3D</b><span id="fpsLabel">WEBGL / PBR SHADING</span></div></div></div>
-    <div id="sceneMount" class="scene-mount" aria-label="Three-dimensional SPARK circuit board. Drag to orbit, scroll to zoom."><div id="sceneFallback" class="scene-fallback"><div class="fallback-motherboard"><div class="fallback-traces"></div><div class="fallback-chip"><span>✳</span><b>SPARK</b><small>FABLE 5.1</small></div></div><span class="fallback-note">PREPARING RENDER ENGINE...</span></div></div>
-    <div class="stage-label label-a"><span class="dot-cross">+</span> MODEL / SPARK S3<span class="label-hair"></span></div>
-    <div class="stage-label label-b">001 <span class="label-hair"></span> REFERENCE ASSEMBLY / REV 05</div>
+    <div id="sceneMount" class="scene-mount" aria-label="Unofficial NVIDIA Vera Rubin Superchip 3D architecture study. Drag to orbit and scroll to zoom."><div id="sceneFallback" class="scene-fallback"><div class="fallback-motherboard"><div class="fallback-traces"></div><div class="fallback-chip"><span>✳</span><b>SPARK</b><small>FABLE 5.1</small></div></div><span class="fallback-note">PREPARING RENDER ENGINE...</span></div></div>
+    <div class="stage-label label-a"><span class="dot-cross">+</span> MODEL / VERA RUBIN<span class="label-hair"></span></div>
+    <div class="stage-label label-b">001 <span class="label-hair"></span> UNOFFICIAL SUPERCHIP CONCEPT / 2026</div>
     <div class="stage-controls"><div class="view-mode" role="group" aria-label="Camera view"><button type="button" id="viewIso" class="active" aria-pressed="true">3D VIEW</button><button type="button" id="viewTop" aria-pressed="false">TOP VIEW</button></div><span class="control-divider"></span><button type="button" id="zoomOut" class="icon-control" aria-label="Zoom out" title="Zoom out">−</button><button type="button" id="zoomIn" class="icon-control" aria-label="Zoom in" title="Zoom in">+</button><button type="button" id="resetView" class="icon-control" aria-label="Reset camera" title="Reset view">↺</button><button type="button" id="qualityToggle" class="quality-toggle" aria-label="Change 3D rendering quality" title="Change render quality: Auto, Eco, Ultra">AUTO</button><button type="button" id="captureScene" class="icon-control" aria-label="Save PNG of 3D board" title="Save 3D board as PNG">↓</button></div>
-    <aside class="part-inspector" id="partInspector" aria-live="polite" hidden><div class="part-inspector-top"><span>COMPONENT INSPECTOR <span class="inspector-led"></span></span><button type="button" id="closeInspector" aria-label="Close component inspector">×</button></div><div class="part-inspector-content"><span id="partType">U1 / INTEGRATED CIRCUIT</span><strong id="partName">SPARK / FABLE CORE</strong><p id="partDescription"></p><div class="part-inspector-meta"><span>SIMULATED ASSEMBLY</span><span>REV 05</span></div></div></aside><div class="stage-bottom"><div class="view-instructions"><span class="mouse-icon" aria-hidden="true">◉</span><span>DRAG TO ROTATE <span class="instruction-sep">/</span> SCROLL TO ZOOM</span></div><div class="board-badges"><button type="button" id="explodeToggle" class="pill-button" aria-pressed="false">⫶ EXPLODE 8L</button><button type="button" id="inspectCore" class="pill-button" aria-label="Inspect SPARK core">◎ INSPECT</button><button type="button" id="layersToggle" class="pill-button active" aria-pressed="true"><span class="pill-indicator"></span> TRACES ON</button><button type="button" id="motionToggle" class="pill-button active" aria-pressed="true">✦ MOTION ON</button></div></div>
+    <aside class="part-inspector" id="partInspector" aria-live="polite" hidden><div class="part-inspector-top"><span>COMPONENT INSPECTOR <span class="inspector-led"></span></span><button type="button" id="closeInspector" aria-label="Close component inspector">×</button></div><div class="part-inspector-content"><span id="partType">U1 / INTEGRATED CIRCUIT</span><strong id="partName">SPARK / FABLE CORE</strong><p id="partDescription"></p><div class="part-inspector-meta"><span>SIMULATED ASSEMBLY</span><span>REV 05</span></div></div></aside><div class="stage-bottom"><div class="view-instructions"><span class="mouse-icon" aria-hidden="true">◉</span><span>DRAG TO ROTATE <span class="instruction-sep">/</span> SCROLL TO ZOOM</span></div><div class="board-badges"><button type="button" id="explodeToggle" class="pill-button" aria-pressed="false">⫶ EXPLODE 8L</button><button type="button" id="inspectCore" class="pill-button" aria-label="Inspect model processor">◎ INSPECT</button><button type="button" id="layersToggle" class="pill-button active" aria-pressed="true"><span class="pill-indicator"></span> TRACES ON</button><button type="button" id="motionToggle" class="pill-button active" aria-pressed="true">✦ MOTION ON</button></div></div>
     <div class="axis-frame axis-frame-left"></div><div class="axis-frame axis-frame-right"></div>
+  </section>
+  <section class="nvidia-product-facts" aria-label="Official NVIDIA Vera Rubin product specifications">
+    <div class="nvidia-facts-head"><div><span class="nvidia-kicker">NVIDIA VERA RUBIN / OFFICIAL PRODUCT FACTS</span><h3>Two GPUs. One Vera CPU. One Superchip.</h3><p>Independent architectural visualization — not an official NVIDIA product render or manufacturing model.</p></div><a href="https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/" target="_blank" rel="noopener noreferrer">NVIDIA specifications ↗</a></div>
+    <div class="nvidia-facts-grid">
+      <div><span>SUPERCHIP CONFIGURATION</span><strong>2 Rubin GPU + 1 Vera CPU</strong></div>
+      <div><span>SUPERCHIP GPU MEMORY</span><strong>576 GB HBM4</strong></div>
+      <div><span>SUPERCHIP NVFP4 INFERENCE</span><strong>100 PFLOPS*</strong></div>
+      <div><span>NVL72 RACK CONFIGURATION</span><strong>72 GPU + 36 CPU</strong></div>
+    </div>
+    <p class="nvidia-fact-note">* NVIDIA sparse NVFP4 specification. Figures belong to NVIDIA's published hardware, not live measurements from this browser. Chip placement, interconnect lines, memory arrangement and cooling geometry in the 3D view are illustrative.</p>
+    <div class="nvidia-sources"><a href="https://developer.nvidia.com/blog/inside-the-nvidia-rubin-platform-six-new-chips-one-ai-supercomputer/" target="_blank" rel="noopener noreferrer">Architecture reference ↗</a><a href="https://nvidianews.nvidia.com/news/nvidia-and-oracle-expand-nvidia-vera-rubin-to-multi-gigawatt-scale-and-bring-nvidia-vera-cpu-to-oracle-cloud-infrastructure" target="_blank" rel="noopener noreferrer">27 Oct 2026 availability ↗</a></div>
   </section>
   <div class="routing-audit-banner" role="note" aria-label="PCB electrical verification warning" data-routing-status="not-verified">
    <span class="routing-audit-marker" aria-hidden="true">!</span>
-   <div><strong>PCB ROUTING — NOT ELECTRICALLY VERIFIED</strong><span>Decorative traces only · no schematic, netlist or fabrication DRC</span></div>
+   <div><strong>REFERENCE PCB ROUTING — NOT ELECTRICALLY VERIFIED</strong><span>Legacy SPARK visual board only · no schematic, netlist or fabrication DRC</span></div>
    <a href="https://github.com/trinhtanphat/spark-board-reference-20261027/blob/main/docs/PCB_DESIGN_AUDIT.md" target="_blank" rel="noopener noreferrer">Engineering audit ↗</a>
   </div>
 
@@ -82,7 +94,7 @@
   </div>
 </main>
 </div>
-<footer class="app-footer"><span><b class="footer-star">✳</b> SPARK DESIGN LABORATORY <span class="footer-sub">© 2026</span></span><span class="footer-mid">CONCEPT MODEL · NOT VALIDATED FOR FABRICATION · TELEMETRY SIMULATED</span><span>DESIGNED IN CODE <span class="footer-symbol">↗</span></span></footer>
+<footer class="app-footer"><span><b class="footer-star">✳</b> SPARK DESIGN LABORATORY <span class="footer-sub">© 2026</span></span><span class="footer-mid">UNOFFICIAL NVIDIA STUDY · NOT NVIDIA CAD · TELEMETRY SIMULATED</span><span>DESIGNED IN CODE <span class="footer-symbol">↗</span></span></footer>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script defer src="app.js"></script>
