@@ -10,6 +10,8 @@ const fpsLabel=document.getElementById('fpsLabel');
 const engineStatus=document.querySelector('.engine-status');
 const prefersReducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const W=11.7,D=7.2;
+const DRILL_LOCATIONS=[[-5.27,-3.0],[-5.27,3.0],[5.27,-3.0],[5.27,3.0]];
+let pcbTopMesh=null,pcbSubstrateMesh=null;
 let renderer,scene,camera,root,board,glowGroup,coreGroup,coreIndicator,meshReady=false;
 let animating=!prefersReducedMotion,running=true,motion=!prefersReducedMotion,traceVisible=true;
 let az=.43,el=.69,dist=15.55,azTarget=az,elTarget=el,distTarget=dist,lastTime=0,frames=0;
@@ -97,6 +99,8 @@ function circuitTexture(){
 function boardShape(){
  const shape=new THREE.Shape(),a=-W/2,b=-D/2,rr=.23;
  shape.moveTo(a+rr,b);shape.lineTo(-a-rr,b);shape.quadraticCurveTo(-a,b,-a,b+rr);shape.lineTo(-a,-b-rr);shape.quadraticCurveTo(-a,-b,-a-rr,-b);shape.lineTo(a+rr,-b);shape.quadraticCurveTo(a,-b,a,-b-rr);shape.lineTo(a,b+rr);shape.quadraticCurveTo(a,b,a+rr,b);
+ // Four actual mechanically drilled mounting holes in both solder mask and FR-4.
+ for(const [x,z] of DRILL_LOCATIONS){const bore=new THREE.Path();bore.absarc(x,-z,.126,0,Math.PI*2,true);shape.holes.push(bore)}
  return shape;
 }
 function createBoard(){
@@ -105,19 +109,26 @@ function createBoard(){
  const geo=new THREE.ExtrudeGeometry(boardShape(),{depth:.17,bevelEnabled:true,bevelThickness:.018,bevelSize:.025,bevelSegments:2,curveSegments:8,steps:1});
  geo.rotateX(Math.PI/2);
  const substrate=new THREE.Mesh(geo,[chassisMat,makeMat('#d7b880',.3,.52)]);
- substrate.position.y=.12;substrate.receiveShadow=true;board.add(substrate);
+ substrate.position.y=.12;substrate.receiveShadow=true;board.add(substrate);pcbSubstrateMesh=substrate;
  const texture=circuitTexture(),maskMat=new THREE.MeshStandardMaterial({map:texture,metalness:.07,roughness:.73,side:THREE.DoubleSide});
- const top=new THREE.Mesh(new THREE.PlaneGeometry(W-.06,D-.06).rotateX(-Math.PI/2),maskMat);
- top.position.y=.197;top.receiveShadow=true;board.add(top);
+ // ShapeGeometry shares the same drilled holes as the FR-4 extrusion.
+ // Normalize generated UV coordinates so the existing silk-screen texture retains its alignment.
+ const topGeo=new THREE.ShapeGeometry(boardShape(),10);
+ const position=topGeo.getAttribute('position'),uv=topGeo.getAttribute('uv');
+ for(let i=0;i<position.count;i++){
+  const x=position.getX(i),y=position.getY(i);
+  uv.setXY(i,(x+W/2)/W,(y+D/2)/D);
+ }
+ uv.needsUpdate=true;topGeo.rotateX(-Math.PI/2);
+ const top=new THREE.Mesh(topGeo,maskMat);
+ top.position.y=.197;top.receiveShadow=true;top.userData.role='pcb-solder-mask';board.add(top);pcbTopMesh=top;
  const ringGold=new THREE.MeshStandardMaterial({color:'#b8a374',metalness:.78,roughness:.31});
- const barrel=new THREE.MeshStandardMaterial({color:'#07100d',roughness:.85});
- const washerGeo=new THREE.RingGeometry(.128,.23,32),holeGeo=new THREE.CircleGeometry(.125,32);
- washerGeo.rotateX(-Math.PI/2);holeGeo.rotateX(-Math.PI/2);
- for(const x of [-5.27,5.27])for(const z of [-3.0,3.0]){
-  const ring=new THREE.Mesh(washerGeo,ringGold);ring.position.set(x,.218,z);board.add(ring);
-  const inside=new THREE.Mesh(holeGeo,barrel);inside.position.set(x,.219,z);board.add(inside);
-  const holeWall=new THREE.Mesh(new THREE.CylinderGeometry(.126,.126,.1,24,1,true),solderMat);
-  holeWall.position.set(x,.136,z);board.add(holeWall);
+ const washerGeo=new THREE.RingGeometry(.131,.23,32);washerGeo.rotateX(-Math.PI/2);
+ for(const [x,z] of DRILL_LOCATIONS){
+  const ring=new THREE.Mesh(washerGeo,ringGold);ring.position.set(x,.209,z);board.add(ring);
+  // Metallic wall of the bore (open cylinder, NOT a black disc painted onto the board).
+  const barrelWall=new THREE.Mesh(new THREE.CylinderGeometry(.126,.126,.21,32,1,true),solderMat);
+  barrelWall.position.set(x,.08,z);barrelWall.material.side=THREE.DoubleSide;board.add(barrelWall);
  }
  const tmp=new THREE.Object3D(),rnd=seeded(7199),count=280;
  const via=new THREE.InstancedMesh(new THREE.CylinderGeometry(.022,.022,.006,10),copperMat,count);
@@ -419,11 +430,27 @@ function init(){
  updateCamera(true);resize();interactions();
  renderer.render(scene,camera);totalRenders++;lastDraw=performance.now();
  meshReady=true;setEngineReady();fpsLabel.textContent='THREE.JS / STUDIO MATERIALS';
+ async function captureFrameBlob(){
+  if(contextLost||!renderer)return null;
+  // Finish GPU work before PNG readback, especially after changing quality/pixel ratio.
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+  renderer.render(scene,camera);totalRenders++;
+  renderer.getContext().finish();
+  return new Promise(resolve=>renderer.domElement.toBlob(resolve,'image/png'));
+ }
  window.SPARK3D={ready:true,
+ async exportSnapshotInfo(){const blob=await captureFrameBlob();return {size:blob?.size||0,type:blob?.type||''}},
  getQuality(){return qualityMode},
  setQuality(mode){applyQuality(mode)},
  getFPS(){return actualFPS},
  getRenderCount(){return totalRenders},
+ getBoardDiagnostics(){
+  const ray=new THREE.Raycaster(),direction=new THREE.Vector3(0,-1,0);
+  const intersects=(mesh,x,z)=>{mesh.updateWorldMatrix(true,false);const origin=pcbTopMesh.localToWorld(new THREE.Vector3(x,0,z));ray.set(origin.clone().add(new THREE.Vector3(0,2,0)),direction);return ray.intersectObject(mesh,false).length>0};
+  const check=(mesh)=>({clear:DRILL_LOCATIONS.every(([x,z])=>!intersects(mesh,x,z)),adjacentSolid:DRILL_LOCATIONS.every(([x,z])=>intersects(mesh,x+(x<0?.37:-.37),z))});
+  const mask=check(pcbTopMesh),fiberglass=check(pcbSubstrateMesh);
+  return {mountingHoleCount:DRILL_LOCATIONS.length,holesPassThroughMask:mask.clear,adjacentMaskSolid:mask.adjacentSolid,holesPassThroughFR4:fiberglass.clear,adjacentFR4Solid:fiberglass.adjacentSolid,componentGroups:componentGroups.length};
+ },
  getRenderStats(){return {drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,dpr:renderer.getPixelRatio(),textureCount:renderer.info.memory.textures,geometryCount:renderer.info.memory.geometries}},
  getCameraState(){return {azimuth:azTarget,elevation:elTarget,distance:distTarget}},
  zoom(dir){distTarget=clamp(distTarget+dir*.8,8.5,21);needsRender=true},
@@ -450,7 +477,14 @@ function init(){
  setExploded(on){exploded=Boolean(on);layerStack.visible=true;elTarget=exploded?.40:.82;distTarget=exploded?16.5:15.55;azTarget=exploded?.48:.43;needsRender=true},
  selectPart(name){selectPart(name);needsRender=true},
  clearSelection(){clearSelection();needsRender=true},
- capture(){renderer.render(scene,camera);totalRenders++;renderer.domElement.toBlob(blob=>{if(!blob){window.sparkNotify?.("PNG export unavailable");return}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="spark-3d-board.png";a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);window.sparkNotify?.("3D board PNG captured")},"image/png")},
+ async capture(){
+  const blob=await captureFrameBlob();
+  if(!blob||blob.size<25000){window.sparkNotify?.('PNG render incomplete · please retry');return}
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='spark-3d-board.png';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  window.sparkNotify?.('3D board PNG captured');
+ },
  highlight(kind){coreIndicator.color.set(kind==='fable'?0x9873ff:kind==='flash'?0x60caff:kind==='post'?0xffd288:0x52ffe1);needsRender=true}
  };
  function animate(t){

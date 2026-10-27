@@ -74,3 +74,9 @@ The hero uses neutral key/fill studio lighting, a contact-shadow plane and quiet
 **Engineering scope:** The board, PCB routing and component footprints are artistically modeled. They are **not real KiCad/Altium board files, Gerbers, validated electrical circuits or manufacturing-ready data**. The product-render styling should not be taken as a claim of electrical functionality.
 
 Local verification: `node e2e-check.js`, with `TEST_WEBGL_RECOVERY=1` for optional simulated context-loss recovery.
+## Machined mounting holes and deterministic screenshot capture
+
+- The four corner holes now cut through **both** the FR-4 solid geometry and textured solder-mask surface, rather than being dark circles painted onto a solid board. Each has a plated ring and open barrel wall. Custom UV remapping keeps top-side PCB legends aligned after triangulating the perforated mask.
+- The browser test raycasts the hole centers and adjacent copper-mask/FR-4 areas in transformed world coordinates, including the smaller mobile scale, so regression tests detect fake or blocked holes.
+- Browser PNG export now forces a fresh WebGL render, waits for GPU completion before readback, and checks for an actual nonempty PNG. This improves reliability when the user switches rendering quality immediately before exporting.
+- The model remains a **visual, non-manufacturing reference**. Hole sizes, mounting clearances and footprints are illustrative, not validated mechanical or electronic design data.
