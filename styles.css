@@ -103,3 +103,12 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .quality-toggle[data-mode=eco]{color:#cfd8bd;border-color:#7e927d}
 .metric-sub span{color:#c5d6bf}
 @media(max-width:640px){.hero-stage{background:radial-gradient(ellipse at 45% 45%,#374145,#202729 77%)}}
+/* Verified engineering transparency: decorative PCB art is not an electrical layout. */
+.routing-audit-banner{display:flex;align-items:center;gap:11px;padding:11px 14px;margin-top:12px;border:1px solid #80745b;background:#272925;color:#e9dfce;border-radius:9px;min-width:0}
+.routing-audit-marker{display:grid;place-items:center;flex:none;width:22px;height:22px;border:1px solid #bca879;border-radius:50%;color:#e0c995;font:700 14px var(--mono)}
+.routing-audit-banner>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.routing-audit-banner strong{font:700 9px var(--mono);letter-spacing:.6px}
+.routing-audit-banner>div>span{color:#c8c5b6;font:500 9px/1.5 var(--mono)}
+.routing-audit-banner a{margin-left:auto;color:#e0d0a8;font:700 9px var(--mono);white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
+.routing-audit-banner a:hover{color:#fff2c8}
+@media(max-width:640px){.routing-audit-banner{align-items:start;flex-wrap:wrap;gap:8px;padding:10px}.routing-audit-banner a{margin-left:30px}}

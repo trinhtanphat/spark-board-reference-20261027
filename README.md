@@ -80,3 +80,6 @@ Local verification: `node e2e-check.js`, with `TEST_WEBGL_RECOVERY=1` for option
 - The browser test raycasts the hole centers and adjacent copper-mask/FR-4 areas in transformed world coordinates, including the smaller mobile scale, so regression tests detect fake or blocked holes.
 - Browser PNG export now forces a fresh WebGL render, waits for GPU completion before readback, and checks for an actual nonempty PNG. This improves reliability when the user switches rendering quality immediately before exporting.
 - The model remains a **visual, non-manufacturing reference**. Hole sizes, mounting clearances and footprints are illustrative, not validated mechanical or electronic design data.
+## Electrical layout cross-check (2026-10-27)
+
+The 3D PCB is NOT a verified circuit. Run `node scripts/pcb-routing-audit.js` for a reproducible static analysis of the decorative copper routing and `node scripts/pcb-routing-audit.js --require-manufacturing-ready` for a **fail-closed** production gate. See [PCB design audit](docs/PCB_DESIGN_AUDIT.md) and its machine-readable [JSON](docs/PCB_DESIGN_AUDIT.json). The website itself now displays this status beside the 3D model. Native EDA schematic/board/netlist files are still required for KiCad ERC/DRC; no 3D visual QA should be interpreted as manufacturing approval.

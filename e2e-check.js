@@ -21,11 +21,13 @@ async function main(){try{
   await send("Emulation.setDeviceMetricsOverride",{width:screen.width,height:screen.height,deviceScaleFactor:1,mobile:screen.mobile});
   await send("Page.navigate",{url:target});await delay(350);for(let waited=0;waited<42;waited++){const state=await js("({ready:!!window.SPARK3D?.ready,failed:document.getElementById('engineLabel')?.textContent==='2D COMPATIBILITY MODE'})");if(state.ready||state.failed)break;await delay(400)}
   const r=await js(inspect);
+  const qaBanner=await js("(()=>{const e=document.querySelector('[data-routing-status]');return {present:!!e,status:e?.dataset.routingStatus,clearlyUnverified:e?.textContent.includes('NOT ELECTRICALLY VERIFIED')}})()");
+  console.log('ELECTRICAL_DISCLOSURE',JSON.stringify({screen:screen.name,...qaBanner}));
   const drilled=await js("window.SPARK3D?.getBoardDiagnostics?.()||null");
   console.log("PCB_DRILLED_HOLES",JSON.stringify({screen:screen.name,...drilled}));
   await delay(400);
-  const firstFrame=await js("new Promise(resolve=>document.querySelector('#sceneMount canvas')?.toBlob(blob=>resolve({size:blob?.size||0,type:blob?.type||''}),'image/png'))");
-  console.log("FIRST_FRAME",JSON.stringify({screen:screen.name,...firstFrame}));
+  const firstFrame=await js("window.SPARK3D.exportSnapshotInfo()");
+  console.log("EARLY_GPU_SYNC_FRAME",JSON.stringify({screen:screen.name,...firstFrame}));
   const shot=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});
   fs.writeFileSync(path.join(__dirname,"test-"+screen.name+".png"),Buffer.from(shot.data,"base64"));
   const controls=await js("(()=>{const first=document.querySelector('.metric-card[data-stat=fable]');first.click();document.getElementById('viewTop').click();document.getElementById('layersToggle').click();document.getElementById('zoomIn').click();return{selected:first.classList.contains('selected'),top:document.getElementById('viewTop').classList.contains('active'),layers:document.getElementById('layersToggle').getAttribute('aria-pressed'),model:!!window.SPARK3D?.ready}})()");
@@ -57,7 +59,7 @@ async function main(){try{
    idle={before,after,wake,resumed,ok:after-before<=2&&wake>after&&resumed};
    console.log("GPU_IDLE",JSON.stringify(idle));
   }
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true;
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true&&qaBanner.present&&qaBanner.status==='not-verified'&&qaBanner.clearlyUnverified;
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }
