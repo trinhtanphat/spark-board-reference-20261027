@@ -85,8 +85,28 @@ function segmentDistance(a,b,c,d){
 /** Returns the same geometric facts in the browser and in Node. NOT KiCad DRC. */
 export function auditIllustrativeGeometry(routes=VISUAL_ROUTES){
  let crossings=0,minGap=Infinity,clearanceViolations=0,outside=0,nonFinite=0,packageKeepoutWarnings=0;
- let firstIssues=[];
+ let invalidRecords=0,invalidLayers=0,invalidWidths=0,duplicateIds=0,degenerateSegments=0;
+ const ids=new Set(),accepted=[],firstIssues=[];
  for(const route of routes){
+  if(!route||typeof route.id!=='string'||!route.id.trim()||!Array.isArray(route.points)||route.points.length<2){
+   invalidRecords++;if(firstIssues.length<10)firstIssues.push({issue:"invalid route record"});continue;
+  }
+  if(ids.has(route.id)){duplicateIds++;if(firstIssues.length<10)firstIssues.push({issue:"duplicate route id",id:route.id})}
+  ids.add(route.id);
+  const layerOk=Number.isInteger(route.layer)&&route.layer>=0&&route.layer<LAYER_LABELS.length;
+  const widthOk=Number.isFinite(route.width)&&route.width>0&&route.width<=.25;
+  const pointsOk=route.points.every(p=>Array.isArray(p)&&p.length===2&&Number.isFinite(p[0])&&Number.isFinite(p[1]));
+  if(!layerOk)invalidLayers++;
+  if(!widthOk)invalidWidths++;
+  if(!pointsOk){nonFinite++;invalidRecords++}
+  if(!layerOk||!widthOk||!pointsOk){if(firstIssues.length<10)firstIssues.push({issue:"invalid layer/width/coordinates",id:route.id});continue}
+  for(let k=1;k<route.points.length;k++){
+   const a=route.points[k-1],b=route.points[k];
+   if(Math.hypot(b[0]-a[0],b[1]-a[1])<.000001){degenerateSegments++;if(firstIssues.length<10)firstIssues.push({issue:"zero-length segment",id:route.id})}
+  }
+  accepted.push(route);
+ }
+ for(const route of accepted){
   for(let k=1;k<route.points.length;k++){
    const a=route.points[k-1],b=route.points[k];
    for(const box of ILLUSTRATIVE_BODY_KEEPOUTS){
@@ -104,9 +124,9 @@ export function auditIllustrativeGeometry(routes=VISUAL_ROUTES){
       Math.abs(z)+route.width/2>BOARD_BOUNDS.halfDepth-BOARD_BOUNDS.margin)outside++;
   }
  }
- const layers=[...new Set(routes.map(route=>route.layer))];
+ const layers=[...new Set(accepted.map(route=>route.layer))];
  for(const layer of layers){
-  const list=routes.filter(route=>route.layer===layer);
+  const list=accepted.filter(route=>route.layer===layer);
   for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
    const a=list[i],b=list[j];let pairGap=Infinity;
    for(let k=0;k<a.points.length-1;k++)for(let l=0;l<b.points.length-1;l++){
@@ -128,7 +148,8 @@ export function auditIllustrativeGeometry(routes=VISUAL_ROUTES){
   sameLayerClearanceWarnings:clearanceViolations,
   minimumVisibleEdgeGap:Number(minGap.toFixed(5)),
   outOfBounds:outside,nonFiniteCoordinates:nonFinite,packageKeepoutWarnings,
-  visualGeometryPass:crossings===0&&clearanceViolations===0&&outside===0&&nonFinite===0&&packageKeepoutWarnings===0,
+  invalidRouteRecords:invalidRecords,invalidLayerAssignments:invalidLayers,invalidTrackWidths:invalidWidths,duplicateRouteIds:duplicateIds,zeroLengthSegments:degenerateSegments,
+  visualGeometryPass:crossings===0&&clearanceViolations===0&&outside===0&&nonFinite===0&&packageKeepoutWarnings===0&&invalidRecords===0&&invalidLayers===0&&invalidWidths===0&&duplicateIds===0&&degenerateSegments===0,
   fabricationApproved:false,ercVerified:false,kicadDrcVerified:false,
   firstIssues
  });

@@ -112,3 +112,19 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .routing-audit-banner a{margin-left:auto;color:#e0d0a8;font:700 9px var(--mono);white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
 .routing-audit-banner a:hover{color:#fff2c8}
 @media(max-width:640px){.routing-audit-banner{align-items:start;flex-wrap:wrap;gap:8px;padding:10px}.routing-audit-banner a{margin-left:30px}}
+
+/* Verifiable, accessible visual-only routing inspection (not fabrication DRC) */
+.routing-detail{margin:8px 0 12px;border:1px solid #647069;border-radius:9px;background:linear-gradient(135deg,#252e2d,#171f20);color:#dce5de;overflow:hidden}
+.routing-detail summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;padding:13px 16px;font:700 10px/1.4 var(--mono);letter-spacing:.8px}
+.routing-detail summary::-webkit-details-marker{display:none}
+.routing-detail summary:focus-visible{outline:2px solid #e2cfa2;outline-offset:-3px}
+.routing-detail-chevron{font-size:20px;font-weight:400;line-height:12px;transition:transform .2s ease}
+.routing-detail[open] .routing-detail-chevron{transform:rotate(180deg)}
+.routing-detail-body{border-top:1px solid #4b5c53;padding:13px 16px}
+.routing-detail-body p{margin:0;color:#b7c2b7;font-size:11px;line-height:1.7}
+.routing-detail-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 15px;margin:14px 0;font-size:11px;align-items:center}
+.routing-detail-grid strong{font:700 11px var(--mono);color:#d5dcc8;text-align:right}
+.routing-detail-grid strong.audit-not-verified{color:#f1c997}
+.routing-detail-body .routing-detail-note{font-size:10px;color:#a9b0ab}
+@media(max-width:640px){.routing-detail summary{font-size:9px;padding:13px}.routing-detail-body{padding:13px}.routing-detail-grid{font-size:10px;gap:10px 8px}.routing-detail-grid strong{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.routing-detail-chevron{transition:none}}

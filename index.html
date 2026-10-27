@@ -15,7 +15,7 @@
 <header class="topbar">
   <a class="logo-group" href="./" aria-label="SPARK 3D homepage"><span class="logo-icon" aria-hidden="true">✦</span><span class="logo-name">SPARK<span class="logo-period">.</span></span><span class="brand-divider"></span><span class="logo-descriptor">DESIGN SYSTEM<br>HARDWARE LAB</span></a>
   <div class="header-center"><span class="breadcrumb-root">WORKSPACE</span><span class="crumb">/</span><span>THE BARE BOARD</span><span class="version">REV 05</span></div>
-  <div class="header-right"><div class="system-status"><span class="status-pulse"></span><span>SYSTEM ONLINE</span></div><span class="header-clock" id="headerClock">00:00:00 UTC</span><button id="toggleRun" class="header-action" type="button" aria-pressed="true" title="Pause or resume motion"><span class="icon-play">Ⅱ</span><span id="runLabel">PAUSE</span></button></div>
+  <div class="header-right"><div class="system-status"><span class="status-pulse"></span><span>3D PREVIEW ONLINE</span></div><span class="header-clock" id="headerClock">00:00:00 UTC</span><button id="toggleRun" class="header-action" type="button" aria-pressed="true" title="Pause or resume motion"><span class="icon-play">Ⅱ</span><span id="runLabel">PAUSE</span></button></div>
 </header>
 <div class="workspace">
 <aside class="sidebar">
@@ -23,7 +23,7 @@
   <div class="side-intro"><div class="kicker"><span class="kicker-line"></span> HARDWARE, REIMAGINED</div><h1>FROM CODE<br>TO <span>MATTER.</span></h1><p>A visual playground where software meets silicon. Explore the architecture beneath the surface.</p></div>
   <div class="terminal"><div class="terminal-header"><span><i class="terminal-dot red"></i><i class="terminal-dot yellow"></i><i class="terminal-dot green"></i></span><span>board.config.ts</span><span class="terminal-lang">TYPESCRIPT</span></div>
   <div class="terminal-code" id="codeLines" role="presentation"></div>
-  <div class="terminal-footer"><span><span class="tiny-bolt">↯</span> <span id="terminalStatus">BUILD SUCCESSFUL</span></span><span id="currentLine">Ln 024 · Col 08</span></div></div>
+  <div class="terminal-footer"><span><span class="tiny-bolt">↯</span> <span id="terminalStatus">VISUAL PREVIEW READY</span></span><span id="currentLine">Ln 024 · Col 08</span></div></div>
   <div class="sidebar-bottom"><div class="activity-header"><span>LIVE TELEMETRY <i class="green-dot"></i></span><span class="activity-label">SIMULATED</span></div>
   <div class="activity-chart"><svg id="activityGraph" viewBox="0 0 316 58" preserveAspectRatio="none" role="img" aria-label="Animated sample processor activity"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#49f1c0" stop-opacity=".24"/><stop offset="1" stop-color="#49f1c0" stop-opacity="0"/></linearGradient></defs><path d="" fill="url(#chartFill)" id="chartArea"/><path d="" fill="none" stroke="#65f7cb" stroke-width="2" id="chartStroke"/></svg></div>
   <div class="activity-stats"><span><b id="uptime">00:00:00</b><small>SESSION</small></span><span><b id="cycle">1.48 GHz</b><small>CLOCK SPEED</small></span><span><b id="cpu">24%</b><small>CORE LOAD</small></span></div></div>
@@ -46,12 +46,26 @@
    <div><strong>PCB ROUTING — NOT ELECTRICALLY VERIFIED</strong><span>Decorative traces only · no schematic, netlist or fabrication DRC</span></div>
    <a href="https://github.com/trinhtanphat/spark-board-reference-20261027/blob/main/docs/PCB_DESIGN_AUDIT.md" target="_blank" rel="noopener noreferrer">Engineering audit ↗</a>
   </div>
+
+  <details id="routingDetails" class="routing-detail">
+    <summary><span>ROUTING VALIDATION DETAILS</span><span class="routing-detail-chevron" aria-hidden="true">⌄</span></summary>
+    <div class="routing-detail-body" id="routingAuditContent" aria-live="polite">
+      <p>Checking local illustrative route geometry. This does not perform electrical ERC/DRC.</p>
+      <div class="routing-detail-grid">
+        <span>Routes / conceptual layers</span><strong id="routingCount">LOADING</strong>
+        <span>Same-layer artwork intersections</span><strong id="routingCrossings">LOADING</strong>
+        <span>Visual spacing / body keepout warnings</span><strong id="routingSpacing">LOADING</strong>
+        <span>Electrical verification</span><strong class="audit-not-verified">NOT VERIFIED</strong>
+      </div>
+      <p class="routing-detail-note">These checks use scene units, not millimeters. No real netlist, chip pinout, or manufacturer-defined DRC rules are present.</p>
+    </div>
+  </details>
   <div class="section-header"><div><span class="section-index">/ 02</span><h3>SYSTEM DIAGNOSTICS</h3></div><span class="metrics-caption">LIVE PREVIEW <span>·</span> SYNTHETIC TELEMETRY</span></div>
   <div class="metric-grid">
   <button type="button" class="metric-card selected" data-stat="mesh" aria-pressed="true"><span class="metric-head"><span><i class="metric-index">01</i> GEOMETRY</span><span class="metric-state"><i class="state-dot"></i> ACTIVE</span></span><span class="metric-value" id="meshValue">12.1<span>k</span></span><span class="metric-sub">Rendered triangles <span>↗ 8.2%</span></span><span class="metric-line mint"></span><span class="card-corner"></span></button>
   <button type="button" class="metric-card" data-stat="fable" aria-pressed="false"><span class="metric-head"><span><i class="metric-index">02</i> NEURAL CORE</span><span class="metric-state neutral">NOMINAL</span></span><span class="metric-value" id="neuralValue">0.97<span>/ 1</span></span><span class="metric-sub">Confidence index <span>↑ OPTIMAL</span></span><span class="metric-line violet"></span><span class="card-corner"></span></button>
-  <button type="button" class="metric-card" data-stat="flash" aria-pressed="false"><span class="metric-head"><span><i class="metric-index">03</i> MEMORY</span><span class="metric-state neutral">VERIFIED</span></span><span class="metric-value">32<span>MB</span></span><span class="metric-sub">Flash allocation <span>256 PAGES</span></span><span class="metric-line sky"></span><span class="card-corner"></span></button>
-  <button type="button" class="metric-card" data-stat="post" aria-pressed="false"><span class="metric-head"><span><i class="metric-index">04</i> POST</span><span class="metric-state"><i class="state-dot"></i> PASSED</span></span><span class="metric-value" id="postValue">92<span>/ 100</span></span><span class="metric-sub">Integrity checks <span>ZERO ERRORS</span></span><span class="metric-line amber"></span><span class="card-corner"></span></button>
+  <button type="button" class="metric-card" data-stat="flash" aria-pressed="false"><span class="metric-head"><span><i class="metric-index">03</i> MEMORY</span><span class="metric-state neutral">SIMULATED</span></span><span class="metric-value">32<span>MB</span></span><span class="metric-sub">Fictional capacity <span>SIMULATED</span></span><span class="metric-line sky"></span><span class="card-corner"></span></button>
+  <button type="button" class="metric-card" data-stat="post" aria-pressed="false"><span class="metric-head"><span><i class="metric-index">04</i> POST</span><span class="metric-state"><i class="state-dot"></i> DEMO</span></span><span class="metric-value" id="postValue">92<span>/ 100</span></span><span class="metric-sub">Synthetic preview score <span>SIMULATED</span></span><span class="metric-line amber"></span><span class="card-corner"></span></button>
   </div>
 </main>
 </div>

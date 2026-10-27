@@ -29,4 +29,15 @@ const badBody=auditIllustrativeGeometry([...VISUAL_ROUTES,keepout]);
 assert.equal(badBody.visualGeometryPass,false);
 assert.ok(badBody.packageKeepoutWarnings>0);
 assert.equal(badNan.visualGeometryPass,false);assert.ok(badNan.nonFiniteCoordinates>0);
-console.log(JSON.stringify({revision:ROUTING_REVISION,validRoutes:ok.illustrativeRoutes,layers:LAYER_LABELS.length,minimumGap:ok.minimumVisibleEdgeGap,checks:['valid','duplicate rejected','outside rejected','intersection rejected','NaN rejected','body keepout rejected'],result:'PASS',electricalValidation:false},null,2));
+
+const invalidLayer=auditIllustrativeGeometry([...VISUAL_ROUTES,{...baseline,id:'INJECTED_LAYER',layer:99}]);
+assert.equal(invalidLayer.visualGeometryPass,false);assert.ok(invalidLayer.invalidLayerAssignments>0);
+const invalidWidth=auditIllustrativeGeometry([...VISUAL_ROUTES,{...baseline,id:'INJECTED_WIDTH',width:-.03}]);
+assert.equal(invalidWidth.visualGeometryPass,false);assert.ok(invalidWidth.invalidTrackWidths>0);
+const duplicateId=auditIllustrativeGeometry([...VISUAL_ROUTES,{...baseline,layer:1}]);
+assert.equal(duplicateId.visualGeometryPass,false);assert.ok(duplicateId.duplicateRouteIds>0);
+const degenerate=auditIllustrativeGeometry([...VISUAL_ROUTES,{...baseline,id:'INJECTED_ZERO_LENGTH',points:[[2.0,-2.0],[2.0,-2.0]]}]);
+assert.equal(degenerate.visualGeometryPass,false);assert.ok(degenerate.zeroLengthSegments>0);
+const invalidRecord=auditIllustrativeGeometry([...VISUAL_ROUTES,{id:'INJECTED_EMPTY',layer:0,points:[],width:.02}]);
+assert.equal(invalidRecord.visualGeometryPass,false);assert.ok(invalidRecord.invalidRouteRecords>0);
+console.log(JSON.stringify({revision:ROUTING_REVISION,validRoutes:ok.illustrativeRoutes,layers:LAYER_LABELS.length,minimumGap:ok.minimumVisibleEdgeGap,checks:['valid','duplicate rejected','outside rejected','intersection rejected','NaN rejected','body keepout rejected','invalid layer rejected','invalid width rejected','duplicate ID rejected','degenerate segment rejected','invalid record rejected'],result:'PASS',electricalValidation:false},null,2));

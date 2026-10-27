@@ -16,6 +16,20 @@ async function main(){try{
  ws=new WebSocket(tab.webSocketDebuggerUrl);await Promise.race([new Promise((ok,no)=>{ws.onopen=ok;ws.onerror=no}),timeout()]);
  ws.onmessage=e=>{const o=JSON.parse(e.data);if(o.id&&pending.has(o.id)){const p=pending.get(o.id);pending.delete(o.id);o.error?p.reject(new Error(o.error.message)):p.resolve(o.result)}if(o.method==="Runtime.exceptionThrown")exceptions.push(o.params.exceptionDetails?.text||"exception");if(o.method==="Runtime.consoleAPICalled"&&o.params.type==="error")consoleErrors.push(o.params.args?.map(x=>x.value||x.description).join(" "))};
  await send("Page.enable");await send("Runtime.enable");
+ if(process.env.TEST_NO_WEBGL==="1"){
+  await send("Page.addScriptToEvaluateOnNewDocument",{source:"(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){if(kind==='webgl2')return null;return original.call(this,kind,...args)}})();"});
+  await send("Page.navigate",{url:target});
+  let state={};
+  for(let i=0;i<28;i++){
+   await delay(300);
+   state=await js("(()=>{const e=document.getElementById('engineLabel'),detail=document.getElementById('routingDetails');return{engine:e?.textContent,routeCount:document.getElementById('routingCount')?.textContent,detailStatus:detail?.dataset.visualPass,warning:document.querySelector('[data-routing-status]')?.dataset.routingStatus}})()");
+   if(state.engine==='2D COMPATIBILITY MODE'&&state.routeCount==='224 / 8')break;
+  }
+  const pass=state.engine==='2D COMPATIBILITY MODE'&&state.routeCount==='224 / 8'&&state.detailStatus==='true'&&state.warning==='not-verified';
+  console.log("WEBGL_FALLBACK_WITH_ROUTING_AUDIT",JSON.stringify({...state,pass}));
+  if(!pass)process.exitCode=2;
+  return;
+ }
  let good=true;
  for(const screen of [{name:"desktop",width:1440,height:900,mobile:false},{name:"mobile",width:390,height:844,mobile:true},{name:"tablet",width:768,height:1000,mobile:true}]){
   await send("Emulation.setDeviceMetricsOverride",{width:screen.width,height:screen.height,deviceScaleFactor:1,mobile:screen.mobile});
@@ -25,6 +39,9 @@ async function main(){try{
   console.log('ELECTRICAL_DISCLOSURE',JSON.stringify({screen:screen.name,...qaBanner}));
   const routing=await js("window.SPARK3D?.getVisualRoutingAudit?.()||null");
   console.log("VISUAL_ROUTE_CHECK",JSON.stringify({screen:screen.name,...routing}));
+  const readiness=await js("(()=>{const details=document.getElementById('routingDetails');details.open=true;const text=document.getElementById('codeLines').textContent;const fields=['routingCount','routingCrossings','routingSpacing'].map(k=>document.getElementById(k).textContent);return{hasDetails:!!details,opens:details.open,counts:fields[0]==='224 / 8',crossings:fields[1]==='0',spacing:fields[2]==='0 / 0',noFakeDRC:!text.includes('verifyDRC()'),showsEngineeringLimit:document.getElementById('routingAuditContent').textContent.includes('No real netlist')}})()");
+  console.log("TRUTHFUL_ENGINEERING_UI",JSON.stringify({screen:screen.name,...readiness}));
+
   const drilled=await js("window.SPARK3D?.getBoardDiagnostics?.()||null");
   console.log("PCB_DRILLED_HOLES",JSON.stringify({screen:screen.name,...drilled}));
   await delay(400);
@@ -61,7 +78,7 @@ async function main(){try{
    idle={before,after,wake,resumed,ok:after-before<=2&&wake>after&&resumed};
    console.log("GPU_IDLE",JSON.stringify(idle));
   }
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true&&qaBanner.present&&qaBanner.status==='not-verified'&&qaBanner.clearlyUnverified&&routing?.visualGeometryPass===true&&routing?.illustrativeRoutes===224&&routing?.sameLayerIntersections===0&&routing?.sameLayerClearanceWarnings===0&&routing?.fabricationApproved===false;
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true&&qaBanner.present&&qaBanner.status==='not-verified'&&qaBanner.clearlyUnverified&&routing?.visualGeometryPass===true&&routing?.illustrativeRoutes===224&&routing?.sameLayerIntersections===0&&routing?.sameLayerClearanceWarnings===0&&routing?.fabricationApproved===false&&Object.values(readiness).every(Boolean);
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }

@@ -6,7 +6,29 @@ function notify(s){const el=$("toast");el.textContent=s;el.classList.add("show")
 window.sparkNotify=notify;
 function esc(s){return s.replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]))}
 const lines=[
-"// SPARK / FABLE 5.1", "import { Board, Core } from 'spark';","","const board = new Board({","  revision: '05',","  layers: 8,","  substrate: 'graphite',","  copper: 'gold',","});","","const core = new Core({","  architecture: 'FABLE-5.1',","  flash: 32 * MB,","  mesh: true,","  renderer: 'webgl2',","});","","await board.routeTraces();","await board.verifyDRC();","await core.mount(board);","","// all systems nominal","telemetry.stream('realtime');","console.log('SPARK READY');"
+ "// SPARK / CONCEPTUAL PCB",
+ "import { auditIllustrativeGeometry } from './routing/visual-routing.mjs';",
+ "",
+ "const model = {",
+ "  revision: '05',",
+ "  type: 'visual demonstration',",
+ "  layers: 8,",
+ "  schematic: null,",
+ "  manufacturerRules: null,",
+ "};",
+ "",
+ "const report = auditIllustrativeGeometry();",
+ "if (!report.visualGeometryPass) {",
+ "  throw new Error('Visual geometry requires review');",
+ "}",
+ "",
+ "// This is NOT KiCad ERC or DRC",
+ "const electricalVerified = false;",
+ "const manufacturingApproved = false;",
+ "",
+ "renderStudioBoard(model);",
+ "telemetry.simulate('preview');",
+ "console.log('VISUAL PREVIEW READY');"
 ];
 function colorize(s){return esc(s).replace(/(\/\/.*)$/g,'<span class="token-grey">$1</span>').replace(/\b(import|from|const|new|await|true)\b/g,'<span class="token-purple">$1</span>').replace(/\b(Board|Core|MB|webgl2|realtime)\b/g,'<span class="token-green">$1</span>').replace(/(&#39;.*?&#39;|'[^']*')/g,'<span class="token-orange">$1</span>').replace(/\b([0-9]+)\b/g,'<span class="token-blue">$1</span>')}
 $("codeLines").innerHTML=lines.map((s,i)=>'<div class="code-row"><span class="ln">'+String(i+1).padStart(2,"0")+'</span><span class="code-text">'+colorize(s)+'</span></div>').join("");
@@ -16,7 +38,7 @@ function clock(d){return [d.getUTCHours(),d.getUTCMinutes(),d.getUTCSeconds()].m
 function uptime(t){return [Math.floor(t/3600),Math.floor(t/60)%60,t%60].map(x=>String(x).padStart(2,"0")).join(":")}
 function tick(){const now=Date.now();if(running&&!document.hidden){elapsed+=Math.max(0,Math.min((now-lastTick)/1000,2));seq++;graph();$("cpu").textContent=(22+Math.round(8*Math.sin(seq*.34)+4*Math.sin(seq*.9)))+"%";$("cycle").textContent=(1.45+.06*Math.sin(seq*.18)).toFixed(2)+" GHz";$("currentLine").textContent="Ln "+String(13+seq%11).padStart(3,"0")+" · Col 08";$("uptime").textContent=uptime(Math.floor(elapsed));}lastTick=now;$("headerClock").textContent=clock(new Date())}
 tick();setInterval(tick,450);
-$("toggleRun").addEventListener("click",()=>{running=!running;$("runLabel").textContent=running?"PAUSE":"RESUME";$("toggleRun").setAttribute("aria-pressed",String(running));$("terminalStatus").textContent=running?"BUILD SUCCESSFUL":"SIMULATION PAUSED";window.SPARK3D?.setRunning(running);notify(running?"Live simulation resumed":"Live simulation paused")});
+$("toggleRun").addEventListener("click",()=>{running=!running;$("runLabel").textContent=running?"PAUSE":"RESUME";$("toggleRun").setAttribute("aria-pressed",String(running));$("terminalStatus").textContent=running?"VISUAL PREVIEW READY":"SIMULATION PAUSED";window.SPARK3D?.setRunning(running);notify(running?"Live simulation resumed":"Live simulation paused")});
 function setView(name){$("viewIso").classList.toggle("active",name==="iso");$("viewTop").classList.toggle("active",name==="top");$("viewIso").setAttribute("aria-pressed",String(name==="iso"));$("viewTop").setAttribute("aria-pressed",String(name==="top"));window.SPARK3D?.setView(name);if(!window.SPARK3D?.ready)notify("Model view available when WebGL initializes")}
 $("viewIso").addEventListener("click",()=>setView("iso"));
 $("viewTop").addEventListener("click",()=>setView("top"));
@@ -25,7 +47,7 @@ $("zoomOut").addEventListener("click",()=>window.SPARK3D?.zoom(1)||undefined);
 $("resetView").addEventListener("click",()=>{setView("iso");window.SPARK3D?.reset();notify("Camera reset")});
 $("layersToggle").addEventListener("click",()=>{traces=!traces;$("layersToggle").classList.toggle("active",traces);$("layersToggle").setAttribute("aria-pressed",String(traces));$("layersToggle").innerHTML='<span class="pill-indicator"></span> TRACES '+(traces?"ON":"OFF");window.SPARK3D?.showTraces(traces);notify(traces?"Copper traces visible":"Copper traces hidden")});
 $("motionToggle").addEventListener("click",()=>{motion=!motion;$("motionToggle").classList.toggle("active",motion);$("motionToggle").setAttribute("aria-pressed",String(motion));$("motionToggle").textContent="✦ MOTION "+(motion?"ON":"OFF");window.SPARK3D?.setMotion(motion);notify("Ambient motion "+(motion?"enabled":"disabled"))});
-const stats={mesh:["GEOMETRY","12.1k triangles in the reference assembly. This is a simulated metric."],fable:["NEURAL CORE","FABLE core confidence 0.97. Simulated dashboard data."],flash:["MEMORY","32 MB flash. No live hardware connection."],post:["POWER-ON SELF TEST","All checks nominal in simulated telemetry."]};
+const stats={mesh:["GEOMETRY","12.1k triangles in the reference assembly. This is a simulated metric."],fable:["NEURAL CORE","FABLE core confidence 0.97. Simulated dashboard data."],flash:["MEMORY","32 MB flash. No live hardware connection."],post:["SIMULATED PREVIEW SCORE","No physical POST performed. This is demo-only telemetry."]};
 document.querySelectorAll(".metric-card").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll(".metric-card").forEach(el=>{const on=el===btn;el.classList.toggle("selected",on);el.setAttribute("aria-pressed",String(on))});const [name,desc]=stats[btn.dataset.stat]||["SYSTEM",""];notify(name+" · "+desc);window.SPARK3D?.highlight(btn.dataset.stat)}));
 $("sceneMount").addEventListener("keydown",ev=>{if(ev.key==="ArrowLeft")window.SPARK3D?.nudge(-1,0);if(ev.key==="ArrowRight")window.SPARK3D?.nudge(1,0);if(ev.key==="ArrowUp")window.SPARK3D?.nudge(0,1);if(ev.key==="ArrowDown")window.SPARK3D?.nudge(0,-1)});
 $("sceneMount").tabIndex=0;
@@ -89,6 +111,29 @@ document.addEventListener("keydown",ev=>{
  if((ev.key==="r"||ev.key==="R")&&!ev.repeat)$("resetView").click();
  if((ev.key==="q"||ev.key==="Q")&&!ev.repeat)$("qualityToggle").click();
 });
+
+
+function renderRoutingDetails(result){
+ $("routingCount").textContent=result.illustrativeRoutes+" / "+result.conceptualLayerCount;
+ $("routingCrossings").textContent=String(result.sameLayerIntersections);
+ $("routingSpacing").textContent=result.sameLayerClearanceWarnings+" / "+result.packageKeepoutWarnings;
+ $("routingDetails").dataset.visualPass=String(result.visualGeometryPass);
+}
+function syncRoutingDetails(){
+ const result=window.SPARK3D?.getVisualRoutingAudit?.();
+ if(result)renderRoutingDetails(result);
+}
+document.addEventListener("spark3d:ready",syncRoutingDetails);
+// This audit is independent of GPU readiness: it remains accessible in 2D fallback mode.
+import("./routing/visual-routing.mjs").then(module=>{
+ renderRoutingDetails(module.auditIllustrativeGeometry());
+}).catch(()=>{
+ $("routingCount").textContent="UNAVAILABLE";
+ $("routingCrossings").textContent="UNAVAILABLE";
+ $("routingSpacing").textContent="UNAVAILABLE";
+ $("routingDetails").dataset.visualPass="false";
+});
+syncRoutingDetails();
 
 document.addEventListener("visibilitychange",()=>{lastTick=Date.now()});
 })();

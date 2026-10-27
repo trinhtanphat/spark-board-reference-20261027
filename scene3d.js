@@ -496,6 +496,7 @@ function init(){
  },
  highlight(kind){coreIndicator.color.set(kind==='fable'?0x9873ff:kind==='flash'?0x60caff:kind==='post'?0xffd288:0x52ffe1);needsRender=true}
  };
+ document.dispatchEvent(new CustomEvent("spark3d:ready"));
  function animate(t){
  requestAnimationFrame(animate);
  if(!meshReady||contextLost)return;

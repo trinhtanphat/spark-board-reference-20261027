@@ -96,3 +96,23 @@ The original 310 pseudo-random Canvas traces with 3,063 2D crossing candidates a
 - Run node scripts/test-visual-routing.mjs; run node scripts/pcb-routing-audit.js to regenerate the report and JSON. The release gate node scripts/pcb-routing-audit.js --require-manufacturing-ready intentionally returns 3 because **electrical correctness remains unverified**.
 
 No route is tied to a vendor component pin. Units are normalized 3D world dimensions, **not millimeters**. This is neither KiCad ERC nor PCB DRC; real routing needs a schematic, real netlist, package footprints, physical stackup and manufacturer rules.
+
+## Engineering completeness / release scope (2026-10-27)
+
+**Completed for the public visual demo:** one shared routing-manifest used by 3D rendering and audit; 224 deterministic illustrative tracks on eight conceptual layers; negative tests for overlapping/duplicate/invalid/degenerate segments and keepouts; reproducible geometry evidence; three viewport E2E tests for rendering and controls; no-WebGL 2D-fallback test; truthful simulated-telemetry labelling; and an in-page Routing Validation Details panel that works without WebGL.
+
+**Not completed for electrical hardware:** there is still no real chip part-number/pinout, schematic, netlist, KiCad PCB, BOM with validated footprints, stackup in mm, signal/power calculations, ERC, DRC or DFM signoff. The fabrication gate remains deliberately closed. See [Electrical Handoff](docs/ELECTRICAL_HANDOFF.md) and [PCB Design Audit](docs/PCB_DESIGN_AUDIT.md).
+
+### Local reproducible checks (no GitHub Actions)
+
+    node scripts/test-visual-routing.mjs
+    node scripts/pcb-routing-audit.js
+    node e2e-check.js
+    $env:TEST_NO_WEBGL='1'; node e2e-check.js
+    $env:TEST_WEBGL_RECOVERY='1'; node e2e-check.js
+
+Production gate is intentionally non-zero:
+
+    node scripts/pcb-routing-audit.js --require-manufacturing-ready
+
+Never treat a visualization geometry PASS as KiCad ERC/DRC or electrical sign-off.
