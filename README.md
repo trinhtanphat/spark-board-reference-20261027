@@ -15,7 +15,7 @@ The GitHub Pages website is published directly from `main` in branch mode (no cu
 - Adjustable orbit camera, drag to rotate, mouse wheel to zoom, 3D and top views, reset, zoom buttons, trace visibility control, motion control and selectable 3D components.
 - **Exploded 8-layer teaching view** with independently rendered conceptual routing planes and selectable 3D component inspection panels.
 - **Export PNG** of the WebGL board using the download control; the render is generated locally in the browser.
-- Keyboard shortcuts: **E** explode/assemble, **R** reset camera, **Esc** close inspector, arrow keys rotate while board has keyboard focus.
+- Keyboard shortcuts: **E** explode/assemble, **R** reset camera, **Q** cycle quality, **Esc** close inspector, arrow keys rotate while board has keyboard focus.
 - Adaptive rendering resolution for handheld devices and support for reduced-motion preferences.
 - Hardware-style diagnostics, 4 metric cards, animated simulated telemetry and code editor panel.
 - WebGL2 fallback artwork with a meaningful status when GPU/WebGL is unavailable.
@@ -39,3 +39,11 @@ The local server allows only the website's exact public asset filenames. All oth
 The JavaScript module files in `vendor/` are **Three.js**, installed from npm at version **0.186.1**, licensed under the MIT license. See `vendor/THREE-LICENSE.txt`. All other custom web files are original code for this demonstration.
 
 This independent design project is not affiliated with Anthropic or any other referenced company.
+
+## Quality and resilience
+
+- The renderer provides **AUTO / ECO / ULTRA** settings via the top-of-canvas quality button (shortcut **Q**). AUTO chooses a device-aware pixel ratio and frame cap; if two consecutive FPS sampling intervals drop below 16 FPS, AUTO switches to a lower resolution and disables shadow rendering for the rest of that AUTO session. ECO prioritizes battery usage and ULTRA sharpness.
+- A live FPS counter replaces the static "renderer active" diagnostic after initialization. Actual results depend on the GPU, available memory, screen size, and browser. Software-only WebGL used in CI-like headless Chrome can render far more slowly than a real graphics adapter.
+- WebGL context loss displays a reconnecting state and retained 2D fallback; renderer state is reconfigured after the browser restores the graphics context.
+- Missing or slow WebGL module loading also produces an explicit "module loading" status after 10 seconds instead of an indefinitely opaque initialization message.
+- The browser-test script runs in an **isolated temporary Chrome profile** and never uses an active user browser session. Optional context-loss QA is available by setting `TEST_WEBGL_RECOVERY=1` while running `node e2e-check.js`.

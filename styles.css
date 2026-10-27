@@ -54,3 +54,10 @@ html{min-width:320px}body{margin:0;min-height:100vh;overflow-x:hidden;background
  .part-inspector-content>p{font-size:10px;margin:6px 0 10px}
 }
 @media(max-width:375px){.board-badges{grid-template-columns:repeat(2,minmax(0,1fr))}.stage-bottom{bottom:76px}.view-instructions{display:none}.pill-button{font-size:8px;padding:7px 3px}}
+
+/* Interactive renderer presets. AUTO balances quality, ECO saves power, ULTRA favors sharpness. */
+.quality-toggle{height:36px;min-width:51px;padding:0 7px;border-radius:6px;background:#1a3140;border:1px solid #456b70;color:#91fbd9;font:700 9px var(--mono);letter-spacing:.1px;cursor:pointer}
+.quality-toggle:hover,.quality-toggle:focus-visible{background:#285164;color:#e6fff9}
+.quality-toggle[data-mode="eco"]{color:#ffe1a6;border-color:#826d4a}
+.quality-toggle[data-mode="ultra"]{color:#c3b0ff;border-color:#6c59a3}
+@media(max-width:640px){.quality-toggle{min-width:42px;height:32px;font-size:8px;padding:0 4px}.stage-controls{gap:4px}.icon-control{width:25px}.view-mode button{padding:0 9px}}

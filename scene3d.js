@@ -15,6 +15,7 @@ let animating=!prefersReducedMotion,running=true,motion=!prefersReducedMotion,tr
 let az=.34,el=.82,dist=13.8,azTarget=az,elTarget=el,distTarget=dist,lastTime=0,frames=0;
 let dragged=false,pointer=null,touchStart=null;
 let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=false,selectionHelper=null,lastDraw=0;
+let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -205,7 +206,7 @@ function resize(){
  const w=Math.max(2,mount.clientWidth),h=Math.max(2,mount.clientHeight);
  if(w<3||h<3)return;
  renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<640?42:35;if(root)root.scale.setScalar(w<640?.53:w<860?.82:1);camera.updateProjectionMatrix();
- if(!animating)renderer.render(scene,camera);
+ if(!animating&&!contextLost)renderer.render(scene,camera);
 }
 function notifyPart(name){selectPart(name)}
 function interactions(){
@@ -216,19 +217,50 @@ function interactions(){
  mount.addEventListener('pointerup',release);mount.addEventListener('pointercancel',()=>{pointer=null});
  mount.addEventListener('wheel',e=>{if(!e.ctrlKey)e.preventDefault();distTarget=clamp(distTarget+Math.sign(e.deltaY)*.5,8.5,21)}, {passive:false});
 }
+
+function qualityDpr(){
+ const native=window.devicePixelRatio||1;
+ if(qualityMode==="eco")return Math.min(native,1);
+ if(qualityMode==="auto"&&autoEco)return Math.min(native,.85);
+ if(qualityMode==="ultra")return Math.min(native,2);
+ return Math.min(native,window.innerWidth<640?1.25:1.6);
+}
+function qualityInterval(){
+ if(!running)return 1000/8;
+ if(qualityMode==="eco"||(qualityMode==="auto"&&autoEco))return 1000/24;
+ if(qualityMode==="ultra")return 1000/60;
+ return window.innerWidth<640?1000/30:1000/50;
+}
+function applyQuality(name){
+ if(!["auto","eco","ultra"].includes(name))return;
+ if(name!==qualityMode){autoEco=false;slowWindows=0;}
+ qualityMode=name;
+ if(!renderer||!meshReady||contextLost)return;
+ renderer.setPixelRatio(qualityDpr());
+ renderer.shadowMap.enabled=name!=="eco"&&!(name==="auto"&&autoEco);
+ renderer.shadowMap.needsUpdate=true;
+ resize();
+}
+function setEngineReady(){
+ engineLabel.textContent="3D ENGINE ACTIVE";engineStatus.classList.remove("offline");
+ fallback.style.display="none";
+}
+
 function fallbackMode(err){
  console.warn('[SPARK 3D] WebGL fallback:',err?.message||err);
- meshReady=false;engineLabel.textContent='2D COMPATIBILITY MODE';fpsLabel.textContent='WEBGL NOT AVAILABLE';engineStatus.classList.add('offline');fallback.style.display='grid';fallback.querySelector('.fallback-note').textContent='WEBGL UNAVAILABLE · 2D REFERENCE MODE';window.SPARK3D={ready:false,zoom(){},reset(){},setView(){},nudge(){},highlight(){},setMotion(){},setRunning(){},showTraces(){},setExploded(){},selectPart(){},clearSelection(){},capture(){}};
+ meshReady=false;engineLabel.textContent='2D COMPATIBILITY MODE';fpsLabel.textContent='WEBGL NOT AVAILABLE';engineStatus.classList.add('offline');fallback.style.display='grid';fallback.querySelector('.fallback-note').textContent='WEBGL UNAVAILABLE · 2D REFERENCE MODE';window.SPARK3D={ready:false,zoom(){},reset(){},setView(){},nudge(){},highlight(){},setMotion(){},setRunning(){},showTraces(){},setExploded(){},selectPart(){},clearSelection(){},capture(){},setQuality(){},getQuality(){return 'auto'},getFPS(){return 0}};
 }
 function init(){
  if(!document.createElement('canvas').getContext('webgl2'))throw new Error('WebGL2 unavailable');
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:'high-performance',stencil:false,depth:true});
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<640?1.5:2));
+ renderer.setPixelRatio(qualityDpr());
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
  renderer.toneMappingExposure=1.55;
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.setAttribute('aria-label','Interactive 3D printed circuit board');
+ renderer.domElement.addEventListener('webglcontextlost',ev=>{ev.preventDefault();contextLost=true;meshReady=false;if(window.SPARK3D)window.SPARK3D.ready=false;engineLabel.textContent='GPU RECONNECTING';fpsLabel.textContent='WEBGL CONTEXT LOST';engineStatus.classList.add('offline');fallback.style.display='grid';fallback.querySelector('.fallback-note').textContent='GPU CONTEXT LOST · AWAITING RESTORE';});
+ renderer.domElement.addEventListener('webglcontextrestored',()=>{contextLost=false;meshReady=true;if(window.SPARK3D)window.SPARK3D.ready=true;applyQuality(qualityMode);setEngineReady();lastSampleTime=performance.now();renderSamples=0;});
  mount.appendChild(renderer.domElement);
  scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x0b1524,.032);
  camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(4.5,8.8,9);
@@ -239,8 +271,11 @@ function init(){
  const violet=new THREE.PointLight(0x7b54ff,48,17,2);violet.position.set(5,4,4);scene.add(violet);
  root=new THREE.Group();scene.add(root);createBoard();createSky();
  updateCamera(true);resize();interactions();
- meshReady=true;engineLabel.textContent='3D ENGINE ACTIVE';fpsLabel.textContent='THREE.JS / PBR MATERIALS';engineStatus.classList.remove('offline');fallback.style.display='none';
+ meshReady=true;setEngineReady();fpsLabel.textContent='THREE.JS / PBR MATERIALS';
  window.SPARK3D={ready:true,
+ getQuality(){return qualityMode},
+ setQuality(mode){applyQuality(mode)},
+ getFPS(){return actualFPS},
  zoom(dir){distTarget=clamp(distTarget+dir*.8,8.5,21);if(!animating)requestAnimationFrame(()=>{updateCamera(true);renderer.render(scene,camera)})},
  setView(mode){azTarget=mode==='top'?0:.34;elTarget=mode==='top'?1.57:.82;distTarget=mode==='top'?14:13.8;if(!animating)requestAnimationFrame(()=>{updateCamera(true);renderer.render(scene,camera)})},
  reset(){azTarget=.34;elTarget=.82;distTarget=13.8;if(!animating)requestAnimationFrame(()=>{updateCamera(true);renderer.render(scene,camera)})},
@@ -265,9 +300,23 @@ function init(){
   if(!exploded&&Math.abs(layerMeshes[7].position.y-(.24+7*.003))<.006)layerStack.visible=false;
  }
  if(selectionHelper)selectionHelper.update();
- updateCamera();const interval=window.innerWidth<640?1000/30:1000/50;
- if(visible&&t-lastDraw>=interval){renderer.render(scene,camera);lastDraw=t;}
- frames++;if(frames%90===0){const tris=renderer.info.render.triangles;document.getElementById('meshValue').innerHTML=(tris/1000).toFixed(1)+'<span>k</span>';fpsLabel.textContent='THREE.JS · '+tris.toLocaleString()+' TRIS'}
+ updateCamera();if(visible&&!contextLost&&t-lastDraw>=qualityInterval()){renderer.render(scene,camera);lastDraw=t;renderSamples++}
+ if(!lastSampleTime)lastSampleTime=t;
+ if(t-lastSampleTime>=1750){
+ actualFPS=Math.round(renderSamples*1000/(t-lastSampleTime));renderSamples=0;lastSampleTime=t;
+ if(qualityMode==='auto'&&!autoEco&&running&&!document.hidden){
+  slowWindows=actualFPS<16?slowWindows+1:0;
+  if(slowWindows>=2){
+   autoEco=true;applyQuality('auto');
+   const badge=document.getElementById('qualityToggle');
+   if(badge){badge.textContent='AUTO ECO';badge.dataset.mode='eco'}
+   window.sparkNotify?.('Auto quality reduced GPU load after slow frame rate');
+  }
+ }
+ const tris=renderer.info.render.triangles;
+ fpsLabel.textContent=actualFPS+' FPS · '+(tris/1000).toFixed(1)+'K TRI'+(autoEco?' · ECO':'');
+}
+ frames++;if(frames%90===0){const tris=renderer.info.render.triangles;document.getElementById('meshValue').innerHTML=(tris/1000).toFixed(1)+'<span>k</span>'}
  }
  requestAnimationFrame(animate);
  const obs=new ResizeObserver(()=>resize());obs.observe(mount);

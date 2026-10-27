@@ -54,6 +54,24 @@ $("explodeToggle").addEventListener("click",()=>{
  window.SPARK3D?.setExploded(exploded);
  notify(exploded?"Exploded view · 8 conceptual signal layers":"Board assembly restored");
 });
+
+const qualityLevels=["auto","eco","ultra"];
+$("qualityToggle").addEventListener("click",()=>{
+ const current=window.SPARK3D?.getQuality?.()||"auto";
+ const next=qualityLevels[(qualityLevels.indexOf(current)+1)%qualityLevels.length];
+ $("qualityToggle").textContent=next.toUpperCase();
+ $("qualityToggle").dataset.mode=next;
+ window.SPARK3D?.setQuality(next);
+ notify("3D render quality: "+next.toUpperCase()+(next==="eco"?" · power-saving mode":""));
+});
+setTimeout(()=>{
+ if(!window.SPARK3D&&$("engineLabel").textContent==="INITIALIZING 3D"){
+  $("engineLabel").textContent="3D MODULE LOADING";
+  $("fpsLabel").textContent="CHECKING GPU / CONNECTION";
+  document.querySelector(".fallback-note").textContent="WAITING FOR WEBGL MODULE · 2D PREVIEW ACTIVE";
+ }
+},10000);
+
 $("captureScene").addEventListener("click",()=>{
  if(!window.SPARK3D?.ready){notify("3D capture requires WebGL");return}
  window.SPARK3D.capture();
@@ -63,6 +81,7 @@ document.addEventListener("keydown",ev=>{
  if(ev.key==="Escape"){$("partInspector").hidden=true;window.SPARK3D?.clearSelection();}
  if((ev.key==="e"||ev.key==="E")&&!ev.repeat)$("explodeToggle").click();
  if((ev.key==="r"||ev.key==="R")&&!ev.repeat)$("resetView").click();
+ if((ev.key==="q"||ev.key==="Q")&&!ev.repeat)$("qualityToggle").click();
 });
 
 document.addEventListener("visibilitychange",()=>{lastTick=Date.now()});

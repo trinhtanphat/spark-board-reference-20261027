@@ -27,11 +27,27 @@ async function main(){try{
   const advanced=await js("(()=>{document.getElementById('inspectCore').click();const shown=!document.getElementById('partInspector').hidden&&document.getElementById('partName').textContent==='SPARK / FABLE CORE';document.getElementById('viewIso').click();const iso=document.getElementById('viewIso').getAttribute('aria-pressed')==='true';document.getElementById('layersToggle').click();document.getElementById('explodeToggle').click();const exploded=document.getElementById('explodeToggle').getAttribute('aria-pressed')==='true';document.getElementById('closeInspector').click();const closed=document.getElementById('partInspector').hidden;return{shown,exploded,iso,closed,captureAvailable:typeof window.SPARK3D?.capture==='function'}})()");
   if(screen.name==="mobile"){await delay(1100);const image=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});fs.writeFileSync(path.join(__dirname,"test-mobile-exploded.png"),Buffer.from(image.data,"base64"));}
   console.log("ADVANCED",JSON.stringify({...screen,advanced}));
+  const quality=await js("(()=>{const q=document.getElementById('qualityToggle');q.click();const eco=q.textContent==='ECO'&&window.SPARK3D.getQuality()==='eco';q.click();const ultra=q.textContent==='ULTRA'&&window.SPARK3D.getQuality()==='ultra';q.click();const auto=q.textContent==='AUTO'&&window.SPARK3D.getQuality()==='auto';return{eco,ultra,auto}})()");
+  await delay(2000);
+  const perf=await js("({fps:window.SPARK3D?.getFPS?.()||0,status:document.getElementById('engineLabel')?.textContent})");
+  console.log("QUALITY",JSON.stringify({screen:screen.name,quality,perf}));
   const exportPng=await js("new Promise(resolve=>document.querySelector('#sceneMount canvas').toBlob(blob=>resolve({size:blob?.size||0,type:blob?.type||''}),'image/png'))");
   console.log("EXPORT",JSON.stringify({screen:screen.name,...exportPng}));
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000;
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0;
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
+ }
+ if(process.env.TEST_WEBGL_RECOVERY==="1"){
+  const supported=await js("(()=>{const gl=document.querySelector('#sceneMount canvas')?.getContext('webgl2');const ext=gl?.getExtension('WEBGL_lose_context');if(!ext)return false;window.__sparkRecoveryExt=ext;ext.loseContext();return true})()");
+  if(supported){
+   await delay(1100);
+   const lost=await js("({ready:window.SPARK3D?.ready,status:document.getElementById('engineLabel')?.textContent})");
+   await js("window.__sparkRecoveryExt.restoreContext()");
+   let restored=false;
+   for(let k=0;k<38;k++){await delay(350);const v=await js("({ready:!!window.SPARK3D?.ready,status:document.getElementById('engineLabel')?.textContent})");if(v.ready&&v.status==='3D ENGINE ACTIVE'){restored=true;break}}
+   console.log("WEBGL_RECOVERY",JSON.stringify({supported,lost,restored}));
+   if(lost.ready!==false||!restored)good=false;
+  }else{console.log("WEBGL_RECOVERY","SKIPPED (extension unavailable)")}
  }
  console.log("JS_EXCEPTIONS",JSON.stringify(exceptions));console.log("CONSOLE_ERRORS",JSON.stringify(consoleErrors));console.log("RESULT",good&&exceptions.length===0&&consoleErrors.length===0?"PASS":"FAIL");
  if(!good||exceptions.length||consoleErrors.length)process.exitCode=2;
