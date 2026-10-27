@@ -3,3 +3,11 @@
 @media(max-width:680px){.board,.board-header,.board-footer,.stats,.stat-card,.stat-top{min-width:0;max-width:100%}.board{width:100%;grid-template-columns:minmax(0,1fr)}.board-header,.board-footer{overflow:hidden}.board-head-row{min-width:0}.board-title{max-width:65%;font-size:5.7px;white-space:normal;line-height:1.2;letter-spacing:.25px;text-align:right}.header-fig{flex:none}.stats{width:100%;grid-template-columns:repeat(4,minmax(0,1fr))}.stat-card{overflow:hidden}.stat-top{font-size:5px;overflow:hidden;white-space:normal;overflow-wrap:anywhere}.stat-card strong{font-size:clamp(17px,4.1vw,23px);white-space:nowrap}.stat-card small{overflow-wrap:anywhere}.stat-chip{max-width:100%}.footer-caption>span:nth-child(4){max-width:55%;white-space:normal;text-align:right}}
 
 @media(max-width:680px){html,body{width:100%;max-width:100%;overflow-x:hidden}body{padding:6px}.app,.editor,.board{width:calc(100vw - 12px)!important;max-width:calc(100vw - 12px)!important;min-width:0!important;flex-shrink:0}.board-header,.board-footer,.stats{width:100%!important;min-width:0!important;max-width:100%!important}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.stat-card{width:100%;min-width:0!important;padding-left:3px;padding-right:3px}.stat-card strong{font-size:clamp(14px,4.1vw,21px)}.board-title{max-width:70%;font-size:5px;white-space:normal}.diagnostics{transform:scale(.57);transform-origin:top right}.scope-card{transform:scale(.60)}}
+
+/* Reference-parity typography and compact source monitor */
+.brand-word h1{font-family:"Tektur",Impact,"Arial Black",sans-serif;font-weight:900;font-size:clamp(49px,5.6vw,87px);letter-spacing:-.065em;line-height:.88;transform:scaleX(1.01);text-shadow:2px 2px #604dcf,4px 4px 0 #171248,6px 6px 0 #7770cb,8px 8px 0 #1b1762}
+.code-lines{line-height:1.3}
+.brand-avatar{box-shadow:0 1px 10px #10042baa,inset 0 0 0 2px #6cd0f77c}
+.stat-card:focus-visible,.top-live:focus-visible{outline:3px solid #926eff;outline-offset:3px}
+@media(max-width:1000px){.brand-word h1{font-size:clamp(37px,5vw,64px)}}
+@media(max-width:680px){.brand-word h1{font-size:clamp(45px,13vw,54px)}.code-lines{line-height:1.22}}
