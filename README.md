@@ -129,3 +129,9 @@ The Chrome E2E suite asserts that 2D selection and 3D focus agree, and that filt
 
 ### Layer-accurate visual focus (2026-10-27)
 The 2D-selected route projection now follows its corresponding conceptual layer plane during 3D explode/collapse (all eight layer indices). In collapsed studio view it remains a visible projection floating above the board; in exploded view its height tracks the animated selected artwork plane. This is visualization geometry, **not true plated copper or a physically defined stackup**. Browser tests verify L6 selection, dynamic plane alignment, collapse return, no-WebGL fallback and context-loss recovery.
+## Exact visual-route projection and safe illustration exports (October 2026)
+
+- 3D focus now follows piecewise straight route segments, not smooth spline curves that could depart from the canonical route points. E2E verifies each segment endpoint against the manifest.
+- Route Explorer exports a selected conceptual layer/corridor as SVG preview or JSON visual-route metadata. Exports carry a visible NOT FOR FABRICATION watermark and explicitly deny electrical verification/approval.
+- Export file names contain VISUAL-NOT-FOR-FAB, units are normalized 3D scene units rather than mm, and JSON flags manufacturingApproved, electricalVerification, kiCadERC and kiCadDRC are false. Neither SVG nor JSON is a manufacturing PCB/netlist file.
+- Unit test: node scripts/test-visual-export.mjs covers all eight layers and five filter choices, plus invalid inputs. Browser E2E checks export buttons and projection fidelity.

@@ -4,9 +4,11 @@
  * No electrical connectivity / KiCad nets are implied.
  */
 import {VISUAL_ROUTES,LAYER_LABELS,ILLUSTRATIVE_BODY_KEEPOUTS,auditIllustrativeGeometry} from "./routing/visual-routing.mjs";
+import {exportVisualSvg,exportVisualManifest,EXPORT_DISCLAIMER} from "./routing/visual-export.mjs";
 const $=id=>document.getElementById(id);
 const svgNS="http://www.w3.org/2000/svg",panel=$("routeExplorer"),layer=$("routeExplorerLayer"),group=$("routeExplorerGroup");
 const canvas=$("routeExplorerMap"),count=$("routeExplorerCount"),detail=$("routeExplorerSelection");
+const exportSvgButton=$("routeExplorerExportSvg"),exportJsonButton=$("routeExplorerExportJson");
 const audit=auditIllustrativeGeometry();
 const categories=["ALL","RF","FLASH","IO","NPU"];
 const create=(name,attrs={},text=null)=>{
@@ -68,11 +70,27 @@ for(let i=0;i<LAYER_LABELS.length;i++){
 for(const name of categories){
  const option=document.createElement("option");option.value=name;option.textContent=name==="ALL"?"All corridors":name+" corridor";group.append(option);
 }
+
+function downloadVisualFile(contents,mime,extension){
+ const blob=new Blob([contents],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="spark-VISUAL-NOT-FOR-FAB-L"+(Number(layer.value)+1)+"-"+group.value+"."+extension;
+ document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+exportSvgButton.addEventListener("click",()=>{
+ downloadVisualFile(exportVisualSvg(Number(layer.value),group.value),"image/svg+xml;charset=utf-8","svg");
+ window.sparkNotify?.("Illustrative SVG exported - NOT for fabrication");
+});
+exportJsonButton.addEventListener("click",()=>{
+ downloadVisualFile(exportVisualManifest(Number(layer.value),group.value),"application/json;charset=utf-8","json");
+ window.sparkNotify?.("Illustrative route JSON exported - NOT a netlist");
+});
+
 layer.addEventListener("change",render);
 group.addEventListener("change",render);
 render();
-window.SPARK_ROUTE_EXPLORER={getState:()=>({
+window.SPARK_ROUTE_EXPLORER={getExports:()=>({svg:exportVisualSvg(Number(layer.value),group.value),json:exportVisualManifest(Number(layer.value),group.value)}),getState:()=>({
  ready:panel.dataset.ready==="true",layer:Number(layer.value),corridor:group.value,
  visibleRoutes:canvas.querySelectorAll("[data-route-id]").length,focusedId,
- auditPassed:audit.visualGeometryPass,manufacturingApproved:false
+ auditPassed:audit.visualGeometryPass,manufacturingApproved:false,disclaimer:EXPORT_DISCLAIMER
 })};

@@ -146,3 +146,11 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .route-explorer-meta strong{color:#e2d5b0;font-size:11px}
 @media(max-width:640px){.route-explorer{padding:10px}.route-explorer h4{font-size:10px}.route-explorer-filters{grid-template-columns:1fr;gap:7px}.route-explorer-map svg{max-height:240px}.route-explorer-filters label{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.route-explorer-map svg [data-route-id]{transition:none}}
+
+/* Export explicitly illustrative route diagrams and metadata; never manufacturing data */
+.route-explorer-export{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.route-explorer-export button{border:1px solid #849c86;background:#293b33;color:#f1eddf;border-radius:6px;padding:9px 11px;font:700 10px/1.4 var(--mono);cursor:pointer}
+.route-explorer-export button:hover{background:#405d49;border-color:#d4e6c1}
+.route-explorer-export button:focus-visible{outline:2px solid #f9d69f;outline-offset:2px}
+.route-explorer .route-export-warning{font:700 9px/1.6 var(--mono);letter-spacing:.3px;color:#efca91;margin:9px 0 0}
+@media(max-width:640px){.route-explorer-export button{flex:1 1 130px;text-align:center}}

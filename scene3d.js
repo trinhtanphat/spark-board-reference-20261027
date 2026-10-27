@@ -122,9 +122,11 @@ function focusIllustrativeRoute(id){
  }
  if(route&&board&&scene){
   const points=route.points.map(([x,z])=>new THREE.Vector3(x,0,z));
-  const path=new THREE.CatmullRomCurve3(points,false,'centripetal');
+  // Use piecewise straight segments; Catmull-Rom smoothing would deviate from the manifest.
+  const path=new THREE.CurvePath();
+  for(let i=1;i<points.length;i++)path.add(new THREE.LineCurve3(points[i-1],points[i]));
   const mesh=new THREE.Mesh(
-   new THREE.TubeGeometry(path,42,.028,6,false),
+   new THREE.TubeGeometry(path,Math.max(24,(points.length-1)*12),.028,6,false),
    new THREE.MeshBasicMaterial({color:0xffdca0,depthTest:false,depthWrite:false,transparent:true,opacity:.94})
   );
   mesh.name='VISUAL_ROUTE_PROJECTION_NOT_COPPER';
@@ -488,7 +490,13 @@ function init(){
  getFocusedRouteDiagnostics(){
   const route=VISUAL_ROUTES.find(item=>item.id===focusedVisualRouteId);
   const layer=route?.layer??null;
+  const curves=routeFocusObject?.geometry?.parameters?.path?.curves||[];
+  const exactPolyline=!!route&&curves.length===route.points.length-1&&curves.every((curve,i)=>
+   curve instanceof THREE.LineCurve3&&
+   Math.hypot(curve.v1.x-route.points[i][0],curve.v1.z-route.points[i][1])<1e-8&&
+   Math.hypot(curve.v2.x-route.points[i+1][0],curve.v2.z-route.points[i+1][1])<1e-8);
   return {id:route?.id??null,layer,exploded,overlayPresent:!!routeFocusObject,
+   exactPolyline,segmentCount:curves.length,
    projectionY:routeFocusObject?Number(routeFocusObject.position.y.toFixed(4)):null,
    planeY:layer!==null&&layerMeshes[layer]?Number(layerMeshes[layer].position.y.toFixed(4)):null};
  },
@@ -524,7 +532,15 @@ function init(){
   }
   needsRender=true;
  },
- setExploded(on){exploded=Boolean(on);layerStack.visible=true;elTarget=exploded?.40:.82;distTarget=exploded?16.5:15.55;azTarget=exploded?.48:.43;needsRender=true},
+ setExploded(on){
+  exploded=Boolean(on);layerStack.visible=true;
+  elTarget=exploded?.40:.82;distTarget=exploded?16.5:15.55;azTarget=exploded?.48:.43;
+  // Immediately align selected route when entering/leaving exploded mode.
+  // Animation still follows subsequent per-layer easing frames.
+  const route=VISUAL_ROUTES.find(item=>item.id===focusedVisualRouteId);
+  if(route&&routeFocusObject)routeFocusObject.position.y=selectedRouteHeight(route.layer);
+  needsRender=true;
+ },
  selectPart(name){selectPart(name);needsRender=true},
  clearSelection(){clearSelection();needsRender=true},
  async capture(){
