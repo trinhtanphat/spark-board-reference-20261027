@@ -64,3 +64,42 @@ html{min-width:320px}body{margin:0;min-height:100vh;overflow-x:hidden;background
 
 /* Orbit and two-finger pinch are handled inside the 3D viewport; scrolling elsewhere remains native. */
 .scene-mount{touch-action:none;overscroll-behavior:contain}
+
+/* V4 — Engineering-grade product photography direction */
+:root{--mint:#c7d4c1;--cyan:#c6cfd0;--panel:#1d2325;--soft:#9ca9a8}
+body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619 100%);color:#e9eae5}
+.ambient{display:none}
+.sidebar{background:linear-gradient(165deg,#1c2528,#151d21 80%);border-color:#4d5554}
+.sidebar:before{background:linear-gradient(90deg,#bbb99c,transparent 52%);opacity:.55}
+.hero-stage{background:radial-gradient(ellipse at 50% 35%,#394044,#242c30 62%,#1b2225);border-color:#59605e;box-shadow:inset 0 1px #ffffff19,0 14px 40px #0005}
+.stage-gradient{background:linear-gradient(180deg,#151c1d60,transparent 34%,#151b1f45);opacity:.6}
+.stage-grid{opacity:.08}
+.stage-title h2>span:first-child{color:#e1dfcb}
+.stage-overline,.kicker,.section-index,.metric-index{color:#d2bd90}
+.live-square,.status-pulse,.green-dot{background:#bbbc9e;box-shadow:0 0 4px #fff2}
+.engine-status{background:#20282ba8;border-color:#67716d}
+.engine-status b,.engine-status span:last-child{color:#dce4df}
+.stage-title p,.stage-label{color:#b5c0ba}
+.logo-icon{background:linear-gradient(135deg,#ebdfbe,#8e9b90);color:#20292a;box-shadow:none}
+.logo-period{color:#d5c5a6}
+.side-intro h1 span{background:linear-gradient(110deg,#e3dbbd,#a9beb3);background-clip:text;-webkit-background-clip:text}
+.terminal{border-color:#52605a;background:#12191b}
+.terminal-header,.terminal-footer{background:#202a2c;border-color:#45524d}
+.terminal-footer{color:#c2cbb7}
+.terminal-code{background:#141c1d}
+.token-green{color:#abc6ad}.token-blue{color:#bbc5c5}.token-purple{color:#b7b0ce}.token-orange{color:#cbb99b}
+.metric-card,.metric-card.selected{background:linear-gradient(145deg,#2b3436,#1c2628);border-color:#505c58}
+.metric-state,.pill-button.active{border-color:#727f74;color:#d7decf}
+.metric-line.mint,.metric-line.violet,.metric-line.sky,.metric-line.amber{background:linear-gradient(90deg,#cbbd96,transparent)}
+.stat-card,.part-inspector{box-shadow:0 12px 36px #0004}
+.part-inspector{background:linear-gradient(145deg,#2d3536f5,#1b2525f5);border-color:#7b8479}
+.part-inspector-top,.inspector-led{color:#e0d1b4}
+.stage-controls{background:#22292cee;border-color:#64726b}
+.view-mode button.active{background:#c6c7b0;color:#222d2d}
+.quality-toggle{background:#313e3b;border-color:#79887b;color:#ede5cc}
+.pill-button{background:#293332c7;border-color:#68766e;color:#d2dad2}
+.pill-button:hover,.icon-control:hover{background:#3d4844;color:#fff}
+.quality-toggle[data-mode=ultra]{color:#e4d3b4;border-color:#a2936e}
+.quality-toggle[data-mode=eco]{color:#cfd8bd;border-color:#7e927d}
+.metric-sub span{color:#c5d6bf}
+@media(max-width:640px){.hero-stage{background:radial-gradient(ellipse at 45% 45%,#374145,#202729 77%)}}

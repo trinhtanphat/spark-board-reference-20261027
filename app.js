@@ -35,7 +35,13 @@ const parts={
 "RF / 24":["U2 / RADIO FRONT END","Illustrative 2.4 GHz radio-frequency package and signal routing network."],
 "NPU / 05":["U3 / NEURAL PROCESSOR","Illustrative co-processor package paired with simulated neural inference diagnostics."],
 "SOC / IO":["U4 / I/O CONTROLLER","I/O package illustrating peripheral, GPIO and JTAG signal access."],
-"FLASH / 32":["U5 / MEMORY","32 MB memory package and simulated firmware image storage."]
+"FLASH / 32":["U5 / MEMORY","32 MB memory package and simulated firmware image storage."],
+"L1 / POWER INDUCTOR":["L1 / MAGNETIC COMPONENT","Ferrite-cored switch-mode inductor with copper winding, modeled as a visual engineering reference."],
+"Y1 / 16 MHz CRYSTAL":["Y1 / CLOCK SOURCE","Surface-mount quartz oscillator housing with stamped metal can."],
+"J1 / USB TYPE-C":["J1 / USB-C RECEPTACLE","Board-edge connector with plated metallic shield and an inset contact tongue."],
+"J2 / DEBUG HEADER":["J2 / JTAG / DEBUG","2-by-5 plated pin-header, representative debug port arrangement."],
+"SW1 / RESET":["SW1 / TACTILE SWITCH","Small surface-mount reset push switch and metal actuator."],
+"U6 / POWER MANAGEMENT":["U6 / REGULATOR","Power-management shield can, modeled for the studio assembly."]
 };
 window.sparkInspectPart=name=>{
  const [type,desc]=parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];

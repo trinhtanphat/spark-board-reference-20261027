@@ -21,12 +21,17 @@ async function main(){try{
   await send("Emulation.setDeviceMetricsOverride",{width:screen.width,height:screen.height,deviceScaleFactor:1,mobile:screen.mobile});
   await send("Page.navigate",{url:target});await delay(350);for(let waited=0;waited<42;waited++){const state=await js("({ready:!!window.SPARK3D?.ready,failed:document.getElementById('engineLabel')?.textContent==='2D COMPATIBILITY MODE'})");if(state.ready||state.failed)break;await delay(400)}
   const r=await js(inspect);
+  await delay(400);
+  const firstFrame=await js("new Promise(resolve=>document.querySelector('#sceneMount canvas')?.toBlob(blob=>resolve({size:blob?.size||0,type:blob?.type||''}),'image/png'))");
+  console.log("FIRST_FRAME",JSON.stringify({screen:screen.name,...firstFrame}));
   const shot=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});
   fs.writeFileSync(path.join(__dirname,"test-"+screen.name+".png"),Buffer.from(shot.data,"base64"));
   const controls=await js("(()=>{const first=document.querySelector('.metric-card[data-stat=fable]');first.click();document.getElementById('viewTop').click();document.getElementById('layersToggle').click();document.getElementById('zoomIn').click();return{selected:first.classList.contains('selected'),top:document.getElementById('viewTop').classList.contains('active'),layers:document.getElementById('layersToggle').getAttribute('aria-pressed'),model:!!window.SPARK3D?.ready}})()");
   const advanced=await js("(()=>{document.getElementById('inspectCore').click();const shown=!document.getElementById('partInspector').hidden&&document.getElementById('partName').textContent==='SPARK / FABLE CORE';document.getElementById('viewIso').click();const iso=document.getElementById('viewIso').getAttribute('aria-pressed')==='true';document.getElementById('layersToggle').click();document.getElementById('explodeToggle').click();const exploded=document.getElementById('explodeToggle').getAttribute('aria-pressed')==='true';document.getElementById('closeInspector').click();const closed=document.getElementById('partInspector').hidden;return{shown,exploded,iso,closed,captureAvailable:typeof window.SPARK3D?.capture==='function'}})()");
   if(screen.name==="mobile"){await delay(1100);const image=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});fs.writeFileSync(path.join(__dirname,"test-mobile-exploded.png"),Buffer.from(image.data,"base64"));}
   console.log("ADVANCED",JSON.stringify({...screen,advanced}));
+  const newComponents=await js("(()=>{const parts=['J1 / USB TYPE-C','J2 / DEBUG HEADER','Y1 / 16 MHz CRYSTAL','SW1 / RESET','U6 / POWER MANAGEMENT'];const passed=parts.map(name=>{window.SPARK3D.selectPart(name);const text=document.getElementById('partName').textContent;return text===name});document.getElementById('closeInspector').click();return{passed,all:passed.every(Boolean)}})()");
+  console.log("REALISTIC_PART_INSPECTOR",JSON.stringify({screen:screen.name,...newComponents}));
   const quality=await js("(()=>{const q=document.getElementById('qualityToggle');q.click();const eco=q.textContent==='ECO'&&window.SPARK3D.getQuality()==='eco';q.click();const ultra=q.textContent==='ULTRA'&&window.SPARK3D.getQuality()==='ultra';q.click();const auto=q.textContent==='AUTO'&&window.SPARK3D.getQuality()==='auto';return{eco,ultra,auto}})()");
   await delay(2000);
   const perf=await js("({fps:window.SPARK3D?.getFPS?.()||0,status:document.getElementById('engineLabel')?.textContent})");
@@ -50,7 +55,7 @@ async function main(){try{
    idle={before,after,wake,resumed,ok:after-before<=2&&wake>after&&resumed};
    console.log("GPU_IDLE",JSON.stringify(idle));
   }
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok;
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000;
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }

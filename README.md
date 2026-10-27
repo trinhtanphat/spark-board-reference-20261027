@@ -62,3 +62,15 @@ This independent design project is not affiliated with Anthropic or any other re
 The scene no longer redraws continuously after Pause. Pending camera and exploded-layer transitions are resolved to their target poses, then WebGL submissions stop until the user changes the view, toggles a layer, selects a component, changes render quality, or requests PNG export. Resume restores normal animation. The HUD reports **GPU IDLE · PAUSED**.
 
 The Chrome E2E suite checks that total render submissions stay unchanged during a settled Pause interval and increase again when zooming while paused. This verifies fewer redundant WebGL submissions, not a measured electricity or battery saving. The render loop still uses `requestAnimationFrame` for state checks; hardware performance still requires direct testing.
+
+## October 2026 — Realistic PCB studio redesign
+
+This release replaces the earlier neon/cyberpunk procedural model with a **manufacturing-inspired, studio-lit reference assembly**. It features matte green FR-4 solder mask, restrained ENIG-style metal contacts, plated annular rings, subdued exposed routing, authentic-looking silkscreen and matte black laser-marked IC packages.
+
+New modeled features include distributed 0402/0603-style SMD passive banks, solder terminations, inductors, a metal-can quartz resonator, a USB Type-C receptacle, two-row debug header, tactile reset switch, regulator shield and accessible test points. These components use a mix of shared/instanced geometries and independent selectable model groups. The inspector now names the newly modeled packages.
+
+The hero uses neutral key/fill studio lighting, a contact-shadow plane and quieter PBR materials rather than neon lights, colored starfields and glowing outlines. Camera framing has been updated while preserving zoom/orbit, Top View, eight **conceptual** exploded layers, PNG export, simulated telemetry and GPU quality options.
+
+**Engineering scope:** The board, PCB routing and component footprints are artistically modeled. They are **not real KiCad/Altium board files, Gerbers, validated electrical circuits or manufacturing-ready data**. The product-render styling should not be taken as a claim of electrical functionality.
+
+Local verification: `node e2e-check.js`, with `TEST_WEBGL_RECOVERY=1` for optional simulated context-loss recovery.
