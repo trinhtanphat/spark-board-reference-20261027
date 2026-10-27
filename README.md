@@ -23,6 +23,15 @@ The GitHub Pages website is published directly from `main` in branch mode (no cu
 
 All metrics and hardware statuses are **synthetic demonstration data**, not a live connection to a real PCB, chip, firmware or build pipeline.
 
+
+## Render optimization (October 2026)
+
+- **GPU instancing:** repeated IC package leads and cylindrical capacitor parts use instanced meshes rather than separate draw calls. Shared box geometry is cached; chip picking/inspection remains interactive.
+- **Adaptive textures:** PCB and central-chip texture canvases use half-size backing images on mobile/tablet while preserving sharp desktop assets. The quality menu still offers Auto, Eco and Ultra.
+- **Adaptive lighting:** mobile disables expensive directional shadow mapping in Auto. Eco/Auto-Eco reduce the two accent point-light intensities as well as pixel ratio and render cadence.
+- **Touch interactions:** touch-drag rotates the 3D PCB; a two-finger pinch zooms the camera inside the model viewport. Use the rest of the page to scroll vertically. Native page pinch-zoom remains browser-dependent.
+- Browser integration tests verify single-finger rotation and two-finger zoom via pointer events, the approximate number of draw calls, export PNG and the previous camera/inspector controls. These tests run with **software-rendered WebGL in headless Chrome**; FPS is not a benchmark for real GPU hardware.
+
 ## Development and tests
 
 From the repository root:

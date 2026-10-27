@@ -31,9 +31,11 @@ async function main(){try{
   await delay(2000);
   const perf=await js("({fps:window.SPARK3D?.getFPS?.()||0,status:document.getElementById('engineLabel')?.textContent})");
   console.log("QUALITY",JSON.stringify({screen:screen.name,quality,perf}));
+  const gestures=await js("(() => {\n const m=document.getElementById('sceneMount'),b=window.SPARK3D.getCameraState();\n const dispatch=(type,id,x,y)=>m.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:id===10,clientX:x,clientY:y,button:0,buttons:type==='pointerup'?0:1}));\n dispatch('pointerdown',10,150,320);dispatch('pointermove',10,205,350);dispatch('pointerup',10,205,350);\n const rotated=window.SPARK3D.getCameraState(),orbit=Math.abs(rotated.azimuth-b.azimuth)>.1;\n dispatch('pointerdown',10,110,340);dispatch('pointerdown',11,210,340);\n const d0=window.SPARK3D.getCameraState().distance;\n dispatch('pointermove',11,260,340);const d1=window.SPARK3D.getCameraState().distance;\n dispatch('pointerup',10,110,340);dispatch('pointerup',11,260,340);\n return{orbit,pinch:d1<d0,drawCalls:window.SPARK3D.getRenderStats().drawCalls,geometryCount:window.SPARK3D.getRenderStats().geometryCount,cameraDistance:d1};\n})()");
+  console.log("GPU_TOUCH",JSON.stringify({screen:screen.name,...gestures}));
   const exportPng=await js("new Promise(resolve=>document.querySelector('#sceneMount canvas').toBlob(blob=>resolve({size:blob?.size||0,type:blob?.type||''}),'image/png'))");
   console.log("EXPORT",JSON.stringify({screen:screen.name,...exportPng}));
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0;
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110;
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }
