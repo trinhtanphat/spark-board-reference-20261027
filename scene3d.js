@@ -20,6 +20,7 @@ let dragged=false,pointer=null,touchStart=null;
 let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=false,selectionHelper=null,lastDraw=0;
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
+let focusedVisualRouteId=null,routeFocusObject=null;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -105,6 +106,33 @@ function boardShape(){
  for(const [x,z] of DRILL_LOCATIONS){const bore=new THREE.Path();bore.absarc(x,-z,.126,0,Math.PI*2,true);shape.holes.push(bore)}
  return shape;
 }
+/** Projection overlay for the selected illustrative corridor; never exposed as fabricated copper. */
+function focusIllustrativeRoute(id){
+ const route=VISUAL_ROUTES.find(item=>item.id===id);
+ focusedVisualRouteId=route?route.id:null;
+ if(routeFocusObject&&board){
+  board.remove(routeFocusObject);
+  routeFocusObject.geometry.dispose();
+  routeFocusObject.material.dispose();
+  routeFocusObject=null;
+ }
+ if(route&&board&&scene){
+  const points=route.points.map(([x,z])=>new THREE.Vector3(x,.78,z));
+  const path=new THREE.CatmullRomCurve3(points,false,'centripetal');
+  const mesh=new THREE.Mesh(
+   new THREE.TubeGeometry(path,42,.028,6,false),
+   new THREE.MeshBasicMaterial({color:0xffdca0,depthTest:false,depthWrite:false,transparent:true,opacity:.94})
+  );
+  mesh.name='VISUAL_ROUTE_PROJECTION_NOT_COPPER';
+  mesh.renderOrder=1200;
+  mesh.userData.routeId=route.id;
+  board.add(mesh);
+  routeFocusObject=mesh;
+ }
+ needsRender=true;
+}
+document.addEventListener('spark:visual-route-focus',event=>focusIllustrativeRoute(event.detail?.id||null));
+
 function createBoard(){
  board=new THREE.Group();root.add(board);
  // Matte FR-4 material with lightly bevelled, exposed fiberglass edges.
@@ -433,7 +461,7 @@ function init(){
  keyLight=new THREE.DirectionalLight(0xfff7ec,2.4);keyLight.position.set(-3,10,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);keyLight.shadow.camera.left=-9;keyLight.shadow.camera.right=9;keyLight.shadow.camera.top=9;keyLight.shadow.camera.bottom=-9;keyLight.shadow.bias=-.0003;scene.add(keyLight);
  cyanLight=new THREE.PointLight(0xe4edf0,14,19,2);cyanLight.position.set(-6,7,-1);scene.add(cyanLight);
  violetLight=new THREE.PointLight(0xffecd8,10,20,2);violetLight.position.set(7,6,4);scene.add(violetLight);
- root=new THREE.Group();scene.add(root);createBoard();createSky();
+ root=new THREE.Group();scene.add(root);createBoard();createSky();if(focusedVisualRouteId)focusIllustrativeRoute(focusedVisualRouteId);
  updateCamera(true);resize();interactions();
  renderer.render(scene,camera);totalRenders++;lastDraw=performance.now();
  meshReady=true;setEngineReady();fpsLabel.textContent='THREE.JS / STUDIO MATERIALS';
@@ -451,6 +479,7 @@ function init(){
  setQuality(mode){applyQuality(mode)},
  getFPS(){return actualFPS},
  getRenderCount(){return totalRenders},
+ getFocusedVisualRoute(){return focusedVisualRouteId},
  getVisualRoutingAudit(){return auditIllustrativeGeometry()},
  getVisualRoutingRevision(){return ROUTING_REVISION},
  getBoardDiagnostics(){

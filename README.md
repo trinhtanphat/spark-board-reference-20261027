@@ -122,3 +122,7 @@ Never treat a visualization geometry PASS as KiCad ERC/DRC or electrical sign-of
 The Routing Validation Details section now contains a **Route Explorer**. Visitors can choose any of the 8 conceptual layer artwork planes and filter the 4 RF/FLASH/IO/NPU **visual** corridors, then click or keyboard-select an individual line to inspect its path ID, point count and length in normalized *scene units*. The 2D SVG is derived directly from routing/visual-routing.mjs, the same frozen route manifest used by the 3D engine and audit, and works without a GPU/WebGL.
 
 This feature is NOT schematic capture, a PCB layout editor or a KiCad netlist browser. Labels are illustrative corridor categories and do not correspond to real electrical nets. An E2E test covers 28 paths on one artwork layer, filtering RF to 7, keyboard selection, mobile/tablet support and GPU-less fallback. The manufacturing gate remains **NOT READY FOR FABRICATION**.
+
+### Synchronized routing highlight
+Selecting a visual route in Route Explorer highlights the corresponding corridor as a temporary projection above the 3D reference board. Changing a layer or signal corridor removes the highlight. This projection is NOT a copper trace, electrical net or manufacturing geometry. The feature remains navigable in 2D when GPU support is unavailable.
+The Chrome E2E suite asserts that 2D selection and 3D focus agree, and that filtering clears any stale focus.

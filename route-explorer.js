@@ -22,13 +22,14 @@ const routeLength=route=>route.points.slice(1).reduce((sum,b,i)=>{
 let focusedId=null;
 function choose(route){
  focusedId=route.id;
- detail.textContent=route.corridor+" / "+route.id+" · "+route.points.length+" points · "+routeLength(route).toFixed(2)+" scene units (not mm)";
+ detail.textContent=route.corridor+" / "+route.id+" · "+route.points.length+" points · "+routeLength(route).toFixed(2)+" scene units (not mm) · 3D projection (not copper)";
  for(const p of canvas.querySelectorAll("[data-route-id]")){
   const selected=p.getAttribute("data-route-id")===focusedId;
   p.setAttribute("stroke-width",selected?"8":"3.0");
   p.setAttribute("opacity",selected?"1":".62");
   p.setAttribute("aria-pressed",String(selected));
  }
+ document.dispatchEvent(new CustomEvent("spark:visual-route-focus",{detail:{id:route.id,layer:route.layer,corridor:route.corridor}}));
 }
 function render(){
  const level=Number(layer.value),filter=group.value;
@@ -54,6 +55,7 @@ function render(){
  }
  count.textContent=selected.length+" / "+VISUAL_ROUTES.length+" visual routes";
  focusedId=null;
+ document.dispatchEvent(new CustomEvent("spark:visual-route-focus",{detail:{id:null}}));
  detail.textContent="Select a colored line for illustrative corridor details. No real PCB net connections.";
  panel.dataset.ready="true";
  panel.dataset.layer=String(level);
@@ -71,6 +73,6 @@ group.addEventListener("change",render);
 render();
 window.SPARK_ROUTE_EXPLORER={getState:()=>({
  ready:panel.dataset.ready==="true",layer:Number(layer.value),corridor:group.value,
- visibleRoutes:canvas.querySelectorAll("[data-route-id]").length,
+ visibleRoutes:canvas.querySelectorAll("[data-route-id]").length,focusedId,
  auditPassed:audit.visualGeometryPass,manufacturingApproved:false
 })};
