@@ -1,0 +1,5 @@
+*.log
+*.png
+node_modules/
+.env*
+.wrangler/
