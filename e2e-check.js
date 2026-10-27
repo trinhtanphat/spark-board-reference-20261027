@@ -25,7 +25,8 @@ async function main(){try{
    state=await js("(()=>{const e=document.getElementById('engineLabel'),detail=document.getElementById('routingDetails');return{engine:e?.textContent,routeCount:document.getElementById('routingCount')?.textContent,detailStatus:detail?.dataset.visualPass,warning:document.querySelector('[data-routing-status]')?.dataset.routingStatus}})()");
    if(state.engine==='2D COMPATIBILITY MODE'&&state.routeCount==='224 / 8')break;
   }
-  const pass=state.engine==='2D COMPATIBILITY MODE'&&state.routeCount==='224 / 8'&&state.detailStatus==='true'&&state.warning==='not-verified';
+  const explorer=await js("window.SPARK_ROUTE_EXPLORER?.getState()||null");
+  const pass=state.engine==='2D COMPATIBILITY MODE'&&state.routeCount==='224 / 8'&&state.detailStatus==='true'&&state.warning==='not-verified'&&explorer?.ready===true&&explorer.visibleRoutes===28&&explorer.manufacturingApproved===false;
   console.log("WEBGL_FALLBACK_WITH_ROUTING_AUDIT",JSON.stringify({...state,pass}));
   if(!pass)process.exitCode=2;
   return;
@@ -42,6 +43,8 @@ async function main(){try{
   const readiness=await js("(()=>{const details=document.getElementById('routingDetails');details.open=true;const text=document.getElementById('codeLines').textContent;const fields=['routingCount','routingCrossings','routingSpacing'].map(k=>document.getElementById(k).textContent);return{hasDetails:!!details,opens:details.open,counts:fields[0]==='224 / 8',crossings:fields[1]==='0',spacing:fields[2]==='0 / 0',noFakeDRC:!text.includes('verifyDRC()'),showsEngineeringLimit:document.getElementById('routingAuditContent').textContent.includes('No real netlist')}})()");
   console.log("TRUTHFUL_ENGINEERING_UI",JSON.stringify({screen:screen.name,...readiness}));
 
+  const explorer=await js("(()=>{const p=document.getElementById('routeExplorer'),level=document.getElementById('routeExplorerLayer'),corr=document.getElementById('routeExplorerGroup'),svg=document.getElementById('routeExplorerMap');const all=svg.querySelectorAll('[data-route-id]').length===28;level.value='3';level.dispatchEvent(new Event('change'));corr.value='RF';corr.dispatchEvent(new Event('change'));const paths=svg.querySelectorAll('[data-route-id]');const first=paths[0];first?.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));const selected=first?.getAttribute('aria-pressed')==='true';return {ready:p.dataset.ready==='true',all,filtered:paths.length===7,selected,layer:p.dataset.layer==='3',group:p.dataset.corridor==='RF',visualOnly:window.SPARK_ROUTE_EXPLORER?.getState().manufacturingApproved===false}})()");
+  console.log("ROUTE_EXPLORER",JSON.stringify({screen:screen.name,...explorer}));
   const drilled=await js("window.SPARK3D?.getBoardDiagnostics?.()||null");
   console.log("PCB_DRILLED_HOLES",JSON.stringify({screen:screen.name,...drilled}));
   await delay(400);
@@ -78,7 +81,7 @@ async function main(){try{
    idle={before,after,wake,resumed,ok:after-before<=2&&wake>after&&resumed};
    console.log("GPU_IDLE",JSON.stringify(idle));
   }
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true&&qaBanner.present&&qaBanner.status==='not-verified'&&qaBanner.clearlyUnverified&&routing?.visualGeometryPass===true&&routing?.illustrativeRoutes===224&&routing?.sameLayerIntersections===0&&routing?.sameLayerClearanceWarnings===0&&routing?.fabricationApproved===false&&Object.values(readiness).every(Boolean);
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true&&qaBanner.present&&qaBanner.status==='not-verified'&&qaBanner.clearlyUnverified&&routing?.visualGeometryPass===true&&routing?.illustrativeRoutes===224&&routing?.sameLayerIntersections===0&&routing?.sameLayerClearanceWarnings===0&&routing?.fabricationApproved===false&&Object.values(readiness).every(Boolean)&&Object.values(explorer).every(Boolean);
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }

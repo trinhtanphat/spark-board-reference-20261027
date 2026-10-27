@@ -57,6 +57,17 @@
         <span>Visual spacing / body keepout warnings</span><strong id="routingSpacing">LOADING</strong>
         <span>Electrical verification</span><strong class="audit-not-verified">NOT VERIFIED</strong>
       </div>
+      <section id="routeExplorer" class="route-explorer" aria-label="Interactive illustrated routing explorer" data-ready="false">
+        <h4>ROUTE EXPLORER <span>VISUAL-ONLY</span></h4>
+        <div class="route-explorer-filters">
+          <label>Conceptual layer <select id="routeExplorerLayer" aria-label="Choose illustrative PCB layer"></select></label>
+          <label>Signal corridor <select id="routeExplorerGroup" aria-label="Choose illustrative routing corridor"></select></label>
+        </div>
+        <div class="route-explorer-map">
+          <svg id="routeExplorerMap" viewBox="0 0 1170 720" role="group" aria-label="Illustrative PCB route paths and conceptual component outlines"></svg>
+        </div>
+        <div class="route-explorer-meta"><strong id="routeExplorerCount">LOADING</strong><span id="routeExplorerSelection">Select a corridor to inspect illustrative paths.</span></div>
+      </section>
       <p class="routing-detail-note">These checks use scene units, not millimeters. No real netlist, chip pinout, or manufacturer-defined DRC rules are present.</p>
     </div>
   </details>
@@ -74,5 +85,6 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script defer src="app.js"></script>
 <script type="module" src="scene3d.js"></script>
+<script type="module" src="route-explorer.js"></script>
 </body>
 </html>

@@ -128,3 +128,21 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .routing-detail-body .routing-detail-note{font-size:10px;color:#a9b0ab}
 @media(max-width:640px){.routing-detail summary{font-size:9px;padding:13px}.routing-detail-body{padding:13px}.routing-detail-grid{font-size:10px;gap:10px 8px}.routing-detail-grid strong{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.routing-detail-chevron{transition:none}}
+
+/* Route Explorer — shared visual manifest, no claim of electrical connectivity */
+.route-explorer{margin:16px 0;border:1px solid #687768;border-radius:9px;background:#151d1c;padding:15px;min-width:0}
+.route-explorer h4{margin:0 0 12px;font:700 11px var(--mono);letter-spacing:.45px;color:#e6eddf;display:flex;justify-content:space-between;gap:9px}
+.route-explorer h4 span{color:#e1c48b;font-weight:600}
+.route-explorer-filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
+.route-explorer-filters label{display:flex;flex-direction:column;gap:6px;font:600 10px var(--mono);color:#c2cec1;min-width:0}
+.route-explorer-filters select{width:100%;min-width:0;appearance:auto;border-radius:5px;background:#293b34;color:#edf0e7;border:1px solid #7a9083;font:600 11px var(--mono);padding:9px 8px}
+.route-explorer-filters select:focus-visible{outline:2px solid #efd6a0;outline-offset:2px}
+.route-explorer-map{overflow:hidden;background:#122720;border-radius:6px;border:1px solid #4a6352}
+.route-explorer-map svg{display:block;width:100%;aspect-ratio:1170/720;max-height:370px}
+.route-explorer-map svg [data-route-id]{cursor:pointer;transition:opacity .1s ease}
+.route-explorer-map svg [data-route-id]:focus-visible{outline:none;stroke:#ffffff;stroke-width:9}
+.route-explorer-map svg [data-route-id]:hover{opacity:1}
+.route-explorer-meta{display:flex;flex-direction:column;gap:6px;margin-top:11px;font:500 10px/1.55 var(--mono);color:#becabd}
+.route-explorer-meta strong{color:#e2d5b0;font-size:11px}
+@media(max-width:640px){.route-explorer{padding:10px}.route-explorer h4{font-size:10px}.route-explorer-filters{grid-template-columns:1fr;gap:7px}.route-explorer-map svg{max-height:240px}.route-explorer-filters label{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.route-explorer-map svg [data-route-id]{transition:none}}
