@@ -13,6 +13,10 @@ The GitHub Pages website is published directly from `main` in branch mode (no cu
 - Local, vendored Three.js 0.186.1; no third-party 3D CDN.
 - Actual 3D circuit board: extruded eight-layer-inspired substrate, physically based metallic materials, central SPARK/FABLE 5.1 chip, surrounding chips, package pins, capacitors, dozens of component geometries, hundreds of solder vias and custom high-resolution PCB copper-trace texture.
 - Adjustable orbit camera, drag to rotate, mouse wheel to zoom, 3D and top views, reset, zoom buttons, trace visibility control, motion control and selectable 3D components.
+- **Exploded 8-layer teaching view** with independently rendered conceptual routing planes and selectable 3D component inspection panels.
+- **Export PNG** of the WebGL board using the download control; the render is generated locally in the browser.
+- Keyboard shortcuts: **E** explode/assemble, **R** reset camera, **Esc** close inspector, arrow keys rotate while board has keyboard focus.
+- Adaptive rendering resolution for handheld devices and support for reduced-motion preferences.
 - Hardware-style diagnostics, 4 metric cards, animated simulated telemetry and code editor panel.
 - WebGL2 fallback artwork with a meaningful status when GPU/WebGL is unavailable.
 - Mobile-first 3D hero, responsive desktop and tablet layouts, accessible button labels and reduced-motion support.
@@ -28,7 +32,7 @@ node server.js
 node e2e-check.js
 ```
 
-The local server allows only the website's exact public asset filenames. All other paths, including `.git/`, return HTTP 404. Chrome headless E2E tests use their own temporary profiles, validate real WebGL2 initialization with software GPU, controls, simulated metrics, JavaScript exceptions, and horizontal overflow on 1440px desktop, 768px tablet and 390px phone. The test writes ignored `test-*.png` screenshots.
+The local server allows only the website's exact public asset filenames. All other paths, including `.git/`, return HTTP 404. Chrome headless E2E tests use their own temporary profiles, validate real WebGL2 initialization with software GPU, controls, simulated metrics, JavaScript exceptions, and horizontal overflow on 1440px desktop, 768px tablet and 390px phone. The test writes ignored `test-*.png` screenshots and checks inspect, exploded layer state, camera controls and JavaScript errors on all three form factors.
 
 ## Dependencies and license
 

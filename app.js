@@ -29,5 +29,41 @@ const stats={mesh:["GEOMETRY","12.1k triangles in the reference assembly. This i
 document.querySelectorAll(".metric-card").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll(".metric-card").forEach(el=>{const on=el===btn;el.classList.toggle("selected",on);el.setAttribute("aria-pressed",String(on))});const [name,desc]=stats[btn.dataset.stat]||["SYSTEM",""];notify(name+" · "+desc);window.SPARK3D?.highlight(btn.dataset.stat)}));
 $("sceneMount").addEventListener("keydown",ev=>{if(ev.key==="ArrowLeft")window.SPARK3D?.nudge(-1,0);if(ev.key==="ArrowRight")window.SPARK3D?.nudge(1,0);if(ev.key==="ArrowUp")window.SPARK3D?.nudge(0,1);if(ev.key==="ArrowDown")window.SPARK3D?.nudge(0,-1)});
 $("sceneMount").tabIndex=0;
+
+const parts={
+"SPARK / FABLE CORE":["U1 / SYSTEM CORE","Central FABLE 5.1 processing package with simulated memory bus and high-density solder contacts."],
+"RF / 24":["U2 / RADIO FRONT END","Illustrative 2.4 GHz radio-frequency package and signal routing network."],
+"NPU / 05":["U3 / NEURAL PROCESSOR","Illustrative co-processor package paired with simulated neural inference diagnostics."],
+"SOC / IO":["U4 / I/O CONTROLLER","I/O package illustrating peripheral, GPIO and JTAG signal access."],
+"FLASH / 32":["U5 / MEMORY","32 MB memory package and simulated firmware image storage."]
+};
+window.sparkInspectPart=name=>{
+ const [type,desc]=parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];
+ $("partInspector").hidden=false;$("partType").textContent=type;$("partName").textContent=name;$("partDescription").textContent=desc;
+};
+$("inspectCore").addEventListener("click",()=>{
+ if(!window.SPARK3D?.ready){notify("3D model is still loading");return}
+ window.SPARK3D.selectPart("SPARK / FABLE CORE");
+});
+$("closeInspector").addEventListener("click",()=>{ $("partInspector").hidden=true;window.SPARK3D?.clearSelection() });
+let exploded=false;
+$("explodeToggle").addEventListener("click",()=>{
+ exploded=!exploded;$("explodeToggle").classList.toggle("active",exploded);
+ $("explodeToggle").setAttribute("aria-pressed",String(exploded));
+ $("explodeToggle").textContent=exploded?"⫶ ASSEMBLE":"⫶ EXPLODE 8L";
+ window.SPARK3D?.setExploded(exploded);
+ notify(exploded?"Exploded view · 8 conceptual signal layers":"Board assembly restored");
+});
+$("captureScene").addEventListener("click",()=>{
+ if(!window.SPARK3D?.ready){notify("3D capture requires WebGL");return}
+ window.SPARK3D.capture();
+});
+document.addEventListener("keydown",ev=>{
+ if(["INPUT","TEXTAREA"].includes(document.activeElement?.tagName))return;
+ if(ev.key==="Escape"){$("partInspector").hidden=true;window.SPARK3D?.clearSelection();}
+ if((ev.key==="e"||ev.key==="E")&&!ev.repeat)$("explodeToggle").click();
+ if((ev.key==="r"||ev.key==="R")&&!ev.repeat)$("resetView").click();
+});
+
 document.addEventListener("visibilitychange",()=>{lastTick=Date.now()});
 })();

@@ -27,3 +27,30 @@ html{min-width:320px}body{margin:0;min-height:100vh;overflow-x:hidden;background
   .label-a{top:155px}
   .stage-bottom{bottom:80px}
 }
+
+/* SPARK 3D interactive inspector and exploded-stack controls */
+.part-inspector[hidden]{display:none}
+.part-inspector{position:absolute;z-index:12;right:24px;top:228px;width:230px;overflow:hidden;border:1px solid #4b877d;border-radius:10px;background:linear-gradient(155deg,rgba(17,40,51,.94),rgba(9,21,33,.95));box-shadow:0 20px 55px #0009,0 0 25px #66ffd00b;backdrop-filter:blur(15px);color:#e9fff9;animation:inspectReveal .2s ease-out}
+.part-inspector-top{height:41px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #426c7360;padding:0 13px;font:700 9px var(--mono);letter-spacing:.7px;color:#74f0d2}
+.inspector-led{display:inline-block;width:5px;height:5px;background:#82ffdb;border-radius:50%;margin-left:4px;box-shadow:0 0 9px #82ffdb}
+.part-inspector-top button{width:26px;height:26px;border:1px solid #54727b;border-radius:5px;background:#1a3542;color:#dffaf7;font-size:20px;line-height:18px}
+.part-inspector-content{padding:17px 15px}
+.part-inspector-content>span{font:700 9px var(--mono);color:#6da9c5;letter-spacing:1px}
+.part-inspector-content>strong{display:block;font:700 19px/1.2 "Space Grotesk",sans-serif;margin:9px 0;letter-spacing:-.5px}
+.part-inspector-content>p{font-size:11px;line-height:1.65;color:#a3baca;margin:10px 0 18px}
+.part-inspector-meta{border-top:1px solid #4062748a;padding-top:12px;display:flex;gap:6px;justify-content:space-between;font:600 8px var(--mono);color:#74969b}
+.pill-button:not(.active):hover{border-color:#78d4bf;color:#dcfff3}
+@keyframes inspectReveal{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(min-width:1261px){.board-badges{gap:6px}.pill-button{padding:8px}}
+@media(max-width:1260px){.stage-bottom{bottom:78px}.board-badges{justify-content:flex-end;gap:5px;flex-wrap:wrap}.pill-button{padding:7px 8px;font-size:8px}}
+@media(max-width:640px){
+ .stage-bottom{bottom:76px;left:12px;right:12px}
+ .board-badges{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;width:100%}
+ .pill-button{padding:8px 2px;font-size:7px;letter-spacing:-.1px;text-align:center}
+ .stage-controls{bottom:14px}
+ .part-inspector{right:12px;left:12px;top:auto;bottom:142px;width:auto;max-width:none}
+ .part-inspector-content{padding:12px 14px}
+ .part-inspector-content>strong{font-size:16px;margin:5px 0}
+ .part-inspector-content>p{font-size:10px;margin:6px 0 10px}
+}
+@media(max-width:375px){.board-badges{grid-template-columns:repeat(2,minmax(0,1fr))}.stage-bottom{bottom:76px}.view-instructions{display:none}.pill-button{font-size:8px;padding:7px 3px}}

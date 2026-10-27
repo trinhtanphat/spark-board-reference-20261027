@@ -24,7 +24,12 @@ async function main(){try{
   const shot=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});
   fs.writeFileSync(path.join(__dirname,"test-"+screen.name+".png"),Buffer.from(shot.data,"base64"));
   const controls=await js("(()=>{const first=document.querySelector('.metric-card[data-stat=fable]');first.click();document.getElementById('viewTop').click();document.getElementById('layersToggle').click();document.getElementById('zoomIn').click();return{selected:first.classList.contains('selected'),top:document.getElementById('viewTop').classList.contains('active'),layers:document.getElementById('layersToggle').getAttribute('aria-pressed'),model:!!window.SPARK3D?.ready}})()");
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl;
+  const advanced=await js("(()=>{document.getElementById('inspectCore').click();const shown=!document.getElementById('partInspector').hidden&&document.getElementById('partName').textContent==='SPARK / FABLE CORE';document.getElementById('viewIso').click();const iso=document.getElementById('viewIso').getAttribute('aria-pressed')==='true';document.getElementById('layersToggle').click();document.getElementById('explodeToggle').click();const exploded=document.getElementById('explodeToggle').getAttribute('aria-pressed')==='true';document.getElementById('closeInspector').click();const closed=document.getElementById('partInspector').hidden;return{shown,exploded,iso,closed,captureAvailable:typeof window.SPARK3D?.capture==='function'}})()");
+  if(screen.name==="mobile"){await delay(1100);const image=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});fs.writeFileSync(path.join(__dirname,"test-mobile-exploded.png"),Buffer.from(image.data,"base64"));}
+  console.log("ADVANCED",JSON.stringify({...screen,advanced}));
+  const exportPng=await js("new Promise(resolve=>document.querySelector('#sceneMount canvas').toBlob(blob=>resolve({size:blob?.size||0,type:blob?.type||''}),'image/png'))");
+  console.log("EXPORT",JSON.stringify({screen:screen.name,...exportPng}));
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000;
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }
