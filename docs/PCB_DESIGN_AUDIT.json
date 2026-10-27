@@ -1,95 +1,58 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "project": "SPARK 3D",
-  "auditMode": "static-source + procedural-visual-geometry",
+  "scope": "illustrative routing geometry only",
   "verdict": "NOT_ELECTRICALLY_VERIFIED",
-  "approvedForManufacturing": false,
-  "electricallyVerified": false,
-  "routing": {
-    "visualTexturePaths": 310,
-    "visualTextureCrossingPairs": 3063,
-    "crossingExamples": [
-      [
-        0,
-        48
-      ],
-      [
-        0,
-        55
-      ],
-      [
-        0,
-        95
-      ],
-      [
-        0,
-        105
-      ],
-      [
-        0,
-        127
-      ],
-      [
-        0,
-        143
-      ],
-      [
-        0,
-        202
-      ],
-      [
-        0,
-        206
-      ]
-    ],
-    "visualOverlayPaths": 150,
-    "conceptualPlanes": 8,
-    "pathsPerConceptualPlane": 115
+  "manufacturingApproved": false,
+  "KiCadERC": "NOT_RUN_NO_SCHEMATIC",
+  "KiCadDRC": "NOT_RUN_NO_BOARD",
+  "visualRoutingRevision": "visual-corridors-1",
+  "visualGeometry": {
+    "revision": "visual-corridors-1",
+    "category": "VISUAL_GEOMETRY_ONLY",
+    "conceptualLayerCount": 8,
+    "illustrativeRoutes": 224,
+    "sameLayerIntersections": 0,
+    "sameLayerClearanceWarnings": 0,
+    "minimumVisibleEdgeGap": 0.0738,
+    "outOfBounds": 0,
+    "nonFiniteCoordinates": 0,
+    "packageKeepoutWarnings": 0,
+    "visualGeometryPass": true,
+    "fabricationApproved": false,
+    "ercVerified": false,
+    "kicadDrcVerified": false,
+    "firstIssues": [],
+    "stitchingMarkers": 84,
+    "requiredGap": 0.065,
+    "units": "normalized 3D units (not millimeters)"
   },
-  "evidence": {
-    "schematics": [],
-    "boards": [],
-    "netlists": [],
-    "gerbers": [],
-    "drills": []
+  "originalArtBaseline": {
+    "proceduralRoutes": 310,
+    "intersectionCandidatePairs": 3063,
+    "status": "replaced and retained for historical comparison"
   },
-  "findings": [
-    {
-      "severity": "CRITICAL",
-      "message": "No KiCad board and schematic were supplied; true ERC, DRC and net-to-pin checks cannot run"
-    },
-    {
-      "severity": "CRITICAL",
-      "message": "310 L-shaped decorative copper-texture paths have no net ID or layer assignment"
-    },
-    {
-      "severity": "HIGH",
-      "message": "3063 pairs of illustrated texture routes geometrically intersect; these are NOT proven electrical shorts"
-    },
-    {
-      "severity": "HIGH",
-      "message": "8 exploded view planes are procedural illustrations, not a fabrication stackup"
-    },
-    {
-      "severity": "HIGH",
-      "message": "Footprints and component names are visual references; real pin mapping and datasheets absent"
-    },
-    {
-      "severity": "HIGH",
-      "message": "No voltage, current, clearance, trace width, controlled impedance or fab constraints"
-    },
-    {
-      "severity": "POSITIVE",
-      "message": "Existing WebGL automated tests cover rendered geometry and controls, not circuitry"
-    }
+  "physicalFiles": {
+    "schematic": [],
+    "board": [],
+    "netlist": [],
+    "gerber": [],
+    "drill": []
+  },
+  "blockers": [
+    "No schematic, netlist or device/power specification",
+    "Visual corridors do not terminate on verified footprint pins",
+    "3D body keepouts cover only five conceptual IC packages, not vendor footprint courtyards or all SMD placements",
+    "Stitching markers are cosmetic not proven plated vias",
+    "Eight conceptual layers have no physical stackup or material thickness",
+    "No manufacturer constraints or electrical DRC/DFM"
   ],
-  "requiredNextSteps": [
-    "Real schematic and power/signal specification",
-    "Datasheet-accurate footprints and BOM",
-    "KiCad board with actual net-class tracks and vias",
-    "Manufacturer-specific stackup and design rules",
-    "ERC + schematic parity DRC + DFM",
-    "Human engineering signoff"
+  "requiredWork": [
+    "Specify real part numbers and voltage/current/interfaces",
+    "Build schematic and datasheet-accurate footprints",
+    "Assign nets and real copper widths/clearances/impedance as required",
+    "Run KiCad ERC and DRC on actual EDA files",
+    "Approve fabrication with human engineer"
   ],
   "references": [
     "https://docs.kicad.org/10.0/en/cli/cli.html",

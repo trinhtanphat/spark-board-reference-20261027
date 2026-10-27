@@ -83,3 +83,16 @@ Local verification: `node e2e-check.js`, with `TEST_WEBGL_RECOVERY=1` for option
 ## Electrical layout cross-check (2026-10-27)
 
 The 3D PCB is NOT a verified circuit. Run `node scripts/pcb-routing-audit.js` for a reproducible static analysis of the decorative copper routing and `node scripts/pcb-routing-audit.js --require-manufacturing-ready` for a **fail-closed** production gate. See [PCB design audit](docs/PCB_DESIGN_AUDIT.md) and its machine-readable [JSON](docs/PCB_DESIGN_AUDIT.json). The website itself now displays this status beside the 3D model. Native EDA schematic/board/netlist files are still required for KiCad ERC/DRC; no 3D visual QA should be interpreted as manufacturing approval.
+
+## Layer-aware visual routing (2026-10-27)
+
+The original 310 pseudo-random Canvas traces with 3,063 2D crossing candidates and independent random exploded layers have been replaced with one shared source of truth: routing/visual-routing.mjs.
+
+- Eight **conceptual** art layers, 224 labelled visual corridors (28 per layer).
+- Top-face copper artwork, interactive trace overlay, and exploded layer view all use the identical route manifest.
+- Deterministic stitching-marker positions replace randomly scattered via-like decoration.
+- A reusable pure-ESM checker verifies zero same-layer art crossings, checks minimum **scene-unit** visual spacing, checks board bounds and approximate 3D IC body keepouts. Decorative SMD placement skips the route corridors.
+- Browser E2E checks the exact same geometry result; separate negative unit tests inject crossings, duplicates, nonfinite coordinates, out-of-bounds points and package overlaps.
+- Run node scripts/test-visual-routing.mjs; run node scripts/pcb-routing-audit.js to regenerate the report and JSON. The release gate node scripts/pcb-routing-audit.js --require-manufacturing-ready intentionally returns 3 because **electrical correctness remains unverified**.
+
+No route is tied to a vendor component pin. Units are normalized 3D world dimensions, **not millimeters**. This is neither KiCad ERC nor PCB DRC; real routing needs a schematic, real netlist, package footprints, physical stackup and manufacturer rules.

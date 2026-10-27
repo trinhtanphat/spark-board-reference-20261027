@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { VISUAL_ROUTES, ILLUSTRATIVE_STITCHING, LAYER_LABELS, ROUTING_REVISION, auditIllustrativeGeometry, isIllustrativeRoutingCorridor } from './routing/visual-routing.mjs';
 
 /* SPARK 3D hardware board · procedural meshes and textures · Three.js 0.186.1
  * No glTF asset or remote network dependency. All telemetry is illustrative.
@@ -57,13 +58,12 @@ function circuitTexture(){
  for(let i=0;i<12000;i++){g.fillStyle=rnd()>.5?'#ffffff05':'#00000005';g.fillRect(rnd()*ww,rnd()*hh,1+rnd()*3,1+rnd()*3)}
  const px=x=>(x/W+.5)*ww,pz=z=>(.5-z/D)*hh;
  g.lineCap='round';g.lineJoin='round';
- const hubs=[[-3.7,-1.6],[3.55,1.76],[3.77,-.8],[-3.65,1.65],[0,.1]];
- for(let i=0;i<310;i++){
-  const hub=hubs[Math.floor(rnd()*hubs.length)],edge=rnd()>.68;
-  const ax=edge?rnd()*ww:px(hub[0])+(rnd()-.5)*320,ay=edge?rnd()*hh:pz(hub[1])+(rnd()-.5)*250;
-  const bx=edge?rnd()*ww:px(hub[0])+(rnd()-.5)*520,by=edge?rnd()*hh:pz(hub[1])+(rnd()-.5)*350;
-  g.beginPath();g.moveTo(ax,ay);g.lineTo(bx,ay);g.lineTo(bx,by);
-  g.strokeStyle=i%8===0?'#9d967049':'#73967e30';g.lineWidth=1.3+rnd()*2;g.stroke();
+ // Render only layer-0 illustrative corridors through the same shared manifest used by Node QA.
+ // These shapes are intentionally NOT electrically connected to real IC pin nets.
+ for(const route of VISUAL_ROUTES.filter(route=>route.layer===0)){
+  g.beginPath();route.points.forEach(([x,z],i)=>i?g.lineTo(px(x),pz(z)):g.moveTo(px(x),pz(z)));
+  g.strokeStyle=route.corridor==='RF'||route.corridor==='IO'?'#a6a68178':'#87a39870';
+  g.lineWidth=Math.max(2,route.width*ww/W);g.stroke();
  }
  g.strokeStyle='#ced9cc9a';g.lineWidth=2;
  const outlines=[[-3.7,-1.6,1.6,1.35],[3.55,1.76,1.85,1.5],[3.77,-.8,1.4,1.15],
@@ -75,9 +75,11 @@ function circuitTexture(){
  for(const [label,x,z] of [['U1',-1.87,.3],['U2',-4.7,-2.45],['U3',4.64,2.7],['U4',4.62,-1.55],
  ['U5',-4.63,2.5],['L1',-4.6,.9],['Y1',-1.95,3.08],['J1',-2.5,-3.08],['J2',2.6,-3.08],
  ['GND',4.6,-2.9],['3V3',-4.75,-2.9],['TP1',1.88,2.6]])g.fillText(label,px(x),pz(z));
- for(let i=0;i<390;i++){
-  const x=60+rnd()*(ww-120),y=68+rnd()*(hh-136),rad=2.6+rnd()*1.8;
-  g.beginPath();g.arc(x,y,rad,0,Math.PI*2);g.fillStyle='#c7b17b9b';g.fill();
+ // Deterministic stitching/launch marks; do not imply a fabricated copper net.
+ const viaArt=[...ILLUSTRATIVE_STITCHING,...VISUAL_ROUTES.filter(route=>route.layer===0).flatMap(route=>[route.points[0],route.points.at(-1)])];
+ for(const [xx,zz] of viaArt){
+  const x=px(xx),y=pz(zz),rad=4.0;
+  g.beginPath();g.arc(x,y,rad,0,Math.PI*2);g.fillStyle='#b5a87a9b';g.fill();
   g.beginPath();g.arc(x,y,rad*.46,0,Math.PI*2);g.fillStyle='#0c211bbb';g.fill();
  }
  for(const [x,z,w,d] of outlines.slice(0,5)){
@@ -130,14 +132,12 @@ function createBoard(){
   const barrelWall=new THREE.Mesh(new THREE.CylinderGeometry(.126,.126,.21,32,1,true),solderMat);
   barrelWall.position.set(x,.08,z);barrelWall.material.side=THREE.DoubleSide;board.add(barrelWall);
  }
- const tmp=new THREE.Object3D(),rnd=seeded(7199),count=280;
+ const tmp=new THREE.Object3D(),count=ILLUSTRATIVE_STITCHING.length;
  const via=new THREE.InstancedMesh(new THREE.CylinderGeometry(.022,.022,.006,10),copperMat,count);
- for(let i=0;i<count;i++){
-  let x=(rnd()-.5)*10.5,z=(rnd()-.5)*5.85;
-  if(Math.abs(x)<1.72&&Math.abs(z)<1.58)x+=(x>=0?1:-1)*1.85;
-  tmp.position.set(clamp(x,-5.45,5.45),.214,clamp(z,-3.0,3.0));tmp.rotation.set(0,0,0);tmp.scale.setScalar(.9+rnd()*.22);
+ ILLUSTRATIVE_STITCHING.forEach(([x,z],i)=>{
+  tmp.position.set(x,.214,z);tmp.rotation.set(0,0,0);tmp.scale.setScalar(1);
   tmp.updateMatrix();via.setMatrixAt(i,tmp.matrix);
- }
+ });
  via.instanceMatrix.needsUpdate=true;via.computeBoundingSphere();board.add(via);
  buildDetailedAssembly();
  makeChip(-3.7,-1.6,1.3,1.08,'RF / 24',12);
@@ -175,7 +175,8 @@ function buildDetailedAssembly(){
    (Math.abs(x-3.77)<.91&&Math.abs(z+.8)<.82)||
    (Math.abs(x+3.65)<.93&&Math.abs(z-1.65)<.60)||
    (Math.abs(x)<.9&&z>2.25)||(z<-2.45&&Math.abs(x)<3.65)||
-   (x<-4.25&&Math.abs(z)<.85)||(x>4.55&&z>2.0);
+   (x<-4.25&&Math.abs(z)<.85)||(x>4.55&&z>2.0)||
+   isIllustrativeRoutingCorridor(x,z,.14);
   if(reserved||rnd()>.37)continue;
   const obj=(row+col)%3===0?'res':'cap';
   groups[obj].push([x,.26,z]);groups.pad.push([x-.09,.221,z],[x+.09,.221,z]);
@@ -251,39 +252,45 @@ function buildCore(){
 }
 function buildGlowTraces(){
  glowGroup=new THREE.Group();board.add(glowGroup);
- const verts=[];for(let i=0;i<150;i++){
-  let angle=r()*Math.PI*2,rad=1.85+r()*.9,px=Math.cos(angle)*rad,pz=Math.sin(angle)*rad;
-  const ex=(r()-.5)*10.5,ez=(r()-.5)*6.25;const bendX=px+(ex-px)*(.35+r()*.3);
-  const bendZ=pz+(ez-pz)*(.35+r()*.3);
-  const pts=[[px,.214,pz],[bendX,.214,pz],[bendX,.214,bendZ],[ex,.214,bendZ],[ex,.214,ez]];
-  for(let j=1;j<pts.length;j++)verts.push(...pts[j-1],...pts[j]);
+ const verts=[];
+ for(const route of VISUAL_ROUTES.filter(route=>route.layer===0)){
+  for(let k=1;k<route.points.length;k++){
+   const [x0,z0]=route.points[k-1],[x1,z1]=route.points[k];
+   verts.push(x0,.218,z0,x1,.218,z1);
+  }
  }
  const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
- const lines=new THREE.LineSegments(geom,new THREE.LineBasicMaterial({color:0x9da690,transparent:true,opacity:.075}));glowGroup.add(lines);
+ const lines=new THREE.LineSegments(geom,new THREE.LineBasicMaterial({color:0x98a995,transparent:true,opacity:.24}));
+ glowGroup.add(lines);
 }
 
 function buildLayerStack(){
- // Eight conceptual internal routing planes; not an actual EDA export.
+ // Same illustrated route data as the top artwork and Node static QA.
+ // Eight planes are conceptual only, NOT a real PCB stackup.
  layerStack=new THREE.Group();layerStack.visible=false;board.add(layerStack);
- const labels=["TOP SIGNAL","INNER GND","INNER POWER","ROUTING A","ROUTING B","RETURN","BOTTOM SIGNAL","SILK / VIAS"];
  const palette=["#aebfae","#a4afb0","#b7aa93","#929b96"];
- for(let n=0;n<8;n++){
-  const c=document.createElement("canvas");c.width=1024;c.height=640;const g=c.getContext("2d"),col=palette[n%4];
-  g.fillStyle="rgba(9,20,32,.27)";g.fillRect(0,0,c.width,c.height);
+ for(let n=0;n<LAYER_LABELS.length;n++){
+  const c=document.createElement('canvas');c.width=1024;c.height=640;
+  const g=c.getContext('2d'),col=palette[n%4];
+  const xCoord=x=>(x/W+.5)*1024,zCoord=z=>(.5-z/D)*640;
+  g.fillStyle='rgba(9,20,32,.27)';g.fillRect(0,0,c.width,c.height);
   g.strokeStyle=col;g.globalAlpha=.36;g.lineWidth=4;g.strokeRect(15,15,994,610);
-  const local=seeded(20261111+n);
-  for(let i=0;i<115;i++){
-    const x=30+local()*955,z=35+local()*575,dx=(local()-.5)*240,dz=(local()-.5)*180;
-    g.beginPath();g.moveTo(x,z);g.lineTo(x+dx*.5,z);g.lineTo(x+dx,z+dz*.5);g.lineTo(x+dx,z+dz);
-    g.strokeStyle=palette[(i+n)%4];g.lineWidth=1+local()*2;g.stroke();
+  g.lineJoin='round';g.lineCap='round';
+  for(const route of VISUAL_ROUTES.filter(route=>route.layer===n)){
+   g.beginPath();route.points.forEach(([x,z],i)=>i?g.lineTo(xCoord(x),zCoord(z)):g.moveTo(xCoord(x),zCoord(z)));
+   g.strokeStyle=palette[(n+(route.corridor==='RF'?0:route.corridor==='FLASH'?1:route.corridor==='NPU'?2:3))%4];
+   g.lineWidth=2.1;g.stroke();
   }
-  g.globalAlpha=.84;g.font="700 24px monospace";g.fillStyle=col;g.fillText("L"+(n+1)+" / "+labels[n],42,59);
+  g.globalAlpha=.86;g.font='700 24px monospace';g.fillStyle=col;
+  g.fillText('L'+(n+1)+' / '+LAYER_LABELS[n],42,59);
+  g.font='600 14px monospace';g.fillText('VISUAL ART · NOT GERBER',42,606);
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=8;
   const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.66,depthWrite:false,side:THREE.DoubleSide});
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(W-.17,D-.17).rotateX(-Math.PI/2),mat);
   mesh.position.y=.24+n*.003;mesh.renderOrder=2+n;layerStack.add(mesh);layerMeshes.push(mesh);
  }
 }
+
 function selectPart(name){
  const target=componentGroups.find(g=>g.userData.part===name);
  if(!target)return;
@@ -444,6 +451,8 @@ function init(){
  setQuality(mode){applyQuality(mode)},
  getFPS(){return actualFPS},
  getRenderCount(){return totalRenders},
+ getVisualRoutingAudit(){return auditIllustrativeGeometry()},
+ getVisualRoutingRevision(){return ROUTING_REVISION},
  getBoardDiagnostics(){
   const ray=new THREE.Raycaster(),direction=new THREE.Vector3(0,-1,0);
   const intersects=(mesh,x,z)=>{mesh.updateWorldMatrix(true,false);const origin=pcbTopMesh.localToWorld(new THREE.Vector3(x,0,z));ray.set(origin.clone().add(new THREE.Vector3(0,2,0)),direction);return ray.intersectObject(mesh,false).length>0};

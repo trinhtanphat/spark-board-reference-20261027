@@ -23,6 +23,8 @@ async function main(){try{
   const r=await js(inspect);
   const qaBanner=await js("(()=>{const e=document.querySelector('[data-routing-status]');return {present:!!e,status:e?.dataset.routingStatus,clearlyUnverified:e?.textContent.includes('NOT ELECTRICALLY VERIFIED')}})()");
   console.log('ELECTRICAL_DISCLOSURE',JSON.stringify({screen:screen.name,...qaBanner}));
+  const routing=await js("window.SPARK3D?.getVisualRoutingAudit?.()||null");
+  console.log("VISUAL_ROUTE_CHECK",JSON.stringify({screen:screen.name,...routing}));
   const drilled=await js("window.SPARK3D?.getBoardDiagnostics?.()||null");
   console.log("PCB_DRILLED_HOLES",JSON.stringify({screen:screen.name,...drilled}));
   await delay(400);
@@ -59,7 +61,7 @@ async function main(){try{
    idle={before,after,wake,resumed,ok:after-before<=2&&wake>after&&resumed};
    console.log("GPU_IDLE",JSON.stringify(idle));
   }
-  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true&&qaBanner.present&&qaBanner.status==='not-verified'&&qaBanner.clearlyUnverified;
+  const pass=r.scroll<=r.w+2&&r.bodyScroll<=r.w+2&&r.metricLast.right<=r.w+2&&r.metricCount===4&&r.canvas>0&&controls.selected&&controls.top&&controls.layers==="false"&&r.webgl&&Object.values(advanced).every(Boolean)&&exportPng.type==="image/png"&&exportPng.size>25000&&Object.values(quality).every(Boolean)&&perf.fps>0&&gestures.orbit&&gestures.pinch&&gestures.drawCalls>0&&gestures.drawCalls<110&&idle.ok&&newComponents.all&&firstFrame.size>25000&&drilled?.holesPassThroughMask===true&&drilled?.adjacentMaskSolid===true&&drilled?.mountingHoleCount===4&&drilled?.holesPassThroughFR4===true&&drilled?.adjacentFR4Solid===true&&qaBanner.present&&qaBanner.status==='not-verified'&&qaBanner.clearlyUnverified&&routing?.visualGeometryPass===true&&routing?.illustrativeRoutes===224&&routing?.sameLayerIntersections===0&&routing?.sameLayerClearanceWarnings===0&&routing?.fabricationApproved===false;
   good=good&&pass;
   console.log("VIEWPORT",JSON.stringify({...screen,pass,inspected:r,controls}));
  }
