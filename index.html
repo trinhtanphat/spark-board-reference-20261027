@@ -61,7 +61,7 @@
         <p class="dc-note">ConnectX-9 → InfiniBand · BlueField-4 → Ethernet storage · BMC → management RJ45. NVLink is internal to each NVL72 rack, not a pluggable external Ethernet link.</p>
       </div>
     </div>
-    <div class="dc-bottom"><p id="dcStatus" aria-live="polite">Select a device or plug compatible network ports.</p><div class="dc-actions"><button type="button" id="dcExport">EXPORT SIM JSON</button><button type="button" id="dcReset">RESET LAB</button></div></div>
+    <div class="dc-bottom"><p id="dcStatus" aria-live="polite">Select a device or plug compatible network ports.</p><div class="dc-actions"><button type="button" id="dcExport">EXPORT SIM JSON</button><label class="dc-import-label" for="dcImportFile">IMPORT SIM JSON<input type="file" id="dcImportFile" accept=".json,application/json" aria-label="Import previously exported Data Center simulation JSON"></label><button type="button" id="dcUndo" disabled>UNDO CHANGE</button><button type="button" id="dcReset">RESET LAB</button></div></div>
     <div id="dcEventLog" class="dc-event-log" aria-label="Recent simulated changes"></div>
     <span class="dc-disclaimer">UNOFFICIAL ARCHITECTURE STUDY · NO PHYSICAL HARDWARE CONTROL · NO VALIDATED INSTALLATION PLAN</span>
     </div>

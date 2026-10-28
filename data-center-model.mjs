@@ -67,6 +67,20 @@ export function createDataCenterState(){
  const slots=buildSlots(),ports=buildPorts(slots);
  const cables=[],events=[];
  let nextId=1,listener=()=>{};
+ const undoStack=[],MAX_UNDO=20;
+ const capture=()=>({
+  slots:slots.map(s=>({id:s.id,installed:s.installed,drawer:s.drawer})),
+  cables:cables.map(c=>({...c})),nextId
+ });
+ const checkpoint=()=>{
+  undoStack.push(capture());if(undoStack.length>MAX_UNDO)undoStack.shift();
+ };
+ const applyState=snapshot=>{
+  const byId=new Map(snapshot.slots.map(s=>[s.id,s]));
+  for(const s of slots){const next=byId.get(s.id);s.installed=next.installed;s.drawer=next.drawer}
+  cables.splice(0,cables.length,...snapshot.cables.map(c=>({...c})));
+  nextId=snapshot.nextId;
+ };
  const bySlot=id=>slots.find(s=>s.id===id),byPort=id=>ports.find(p=>p.id===id);
  const log=(action,detail)=>{
   events.unshift({action,detail});if(events.length>24)events.length=24;
@@ -78,6 +92,63 @@ export function createDataCenterState(){
   onChange(fn){listener=typeof fn==="function"?fn:()=>{}},
   slots,ports,cables,racks:DATA_CENTER_RACKS,
   getSnapshot(){return clone({slots,ports,cables,events,stats:this.stats(),disclaimer:DATA_CENTER_DISCLAIMER})},
+  canUndo(){return undoStack.length>0},
+  undoLastChange(){
+   if(!undoStack.length)throw new Error("No simulated change to undo");
+   const previous=undoStack.pop();
+   applyState(previous);
+   return log("undo","Restored preceding simulated configuration");
+  },
+  importSnapshot(input){
+   // Validate ALL provided data before touching any current simulation state.
+   if(!input||typeof input!=="object"||Array.isArray(input)||
+    input.format!=="SPARK-DATACENTER-SIM-1"||input.kind!=="BROWSER_ONLY_SIMULATION")
+    throw new Error("Unsupported or untrusted simulation JSON format");
+   if(!Array.isArray(input.slots)||input.slots.length!==slots.length||
+    !Array.isArray(input.ports)||input.ports.length!==ports.length||
+    !Array.isArray(input.cables)||input.cables.length>ports.length/2)
+    throw new Error("Simulation topology inventory has invalid lengths");
+   const actualSlots=new Map(slots.map(s=>[s.id,s]));
+   const importedSlots=new Map(),drawersByRack=new Set();
+   for(const s of input.slots){
+    const expected=actualSlots.get(s?.id);
+    if(!expected||importedSlots.has(s.id)||s.kind!==expected.kind||s.rack!==expected.rack||
+     typeof s.installed!=="boolean"||typeof s.drawer!=="boolean"||(!s.installed&&s.drawer))
+     throw new Error("Unknown, duplicate or inconsistent slot in simulation JSON");
+    if(s.drawer){if(drawersByRack.has(s.rack))throw new Error("Multiple extended drawers per rack");drawersByRack.add(s.rack)}
+    importedSlots.set(s.id,{id:s.id,installed:s.installed,drawer:s.drawer});
+   }
+   if(importedSlots.size!==slots.length)throw new Error("Missing simulated rack slots");
+   const expectedPorts=new Map(ports.map(p=>[p.id,p])),seenPorts=new Set();
+   for(const p of input.ports){
+    const expected=expectedPorts.get(p?.id);
+    if(!expected||seenPorts.has(p.id)||p.role!==expected.role||p.fabric!==expected.fabric||
+     p.media!==expected.media||p.slotId!==expected.slotId)
+     throw new Error("Port inventory does not match the simulated model");
+    seenPorts.add(p.id);
+   }
+   if(seenPorts.size!==ports.length)throw new Error("Missing simulated ports");
+   const sources=new Set(),targets=new Set(),ids=new Set(),importedCables=[];
+   let highest=0;
+   for(const c of input.cables){
+    const src=expectedPorts.get(c?.source),dst=expectedPorts.get(c?.target);
+    if(typeof c?.id!=="string"||!/^C[0-9]{3,8}$/.test(c.id)||ids.has(c.id)||
+     !src||!dst||src.role!=="source"||dst.role!=="target"||
+     src.fabric!==dst.fabric||src.media!==dst.media||
+     c.fabric!==src.fabric||c.media!==src.media||
+     sources.has(src.id)||targets.has(dst.id)||
+     !importedSlots.get(src.slotId).installed||!importedSlots.get(dst.slotId).installed)
+     throw new Error("Invalid, occupied or incompatible imported cable");
+    ids.add(c.id);sources.add(src.id);targets.add(dst.id);
+    highest=Math.max(highest,Number(c.id.slice(1)));
+    importedCables.push({id:c.id,source:src.id,target:dst.id,fabric:src.fabric,media:src.media});
+   }
+   const next=highest+1;
+   if(!Number.isSafeInteger(next)||next>99999999)throw new Error("Cable identifier exceeds supported range");
+   checkpoint();
+   applyState({slots:[...importedSlots.values()],cables:importedCables,nextId:next});
+   return log("import","Validated simulation JSON restored locally; no physical changes");
+  },
   rackSummaries(){
    // Computed from current simulation slots and virtual cables, never from
    // independently maintained/stale UI counters.
@@ -113,6 +184,7 @@ export function createDataCenterState(){
    const s=requireSlot(slotId);
    if(!s.installed)throw new Error("Install a compatible module first");
    const was=s.drawer;
+   checkpoint();
    for(const other of slots)if(other.rack===s.rack)other.drawer=false;
    s.drawer=!was;
    return log("drawer",s.id+" "+(s.drawer?"extended":"closed"));
@@ -122,14 +194,14 @@ export function createDataCenterState(){
    if(!s.installed)throw new Error("Slot already empty");
    if(cables.some(c=>byPort(c.source).slotId===s.id||byPort(c.target).slotId===s.id))
     throw new Error("Disconnect associated simulated cables before removing this module");
-   s.installed=false;s.drawer=false;
+   checkpoint();s.installed=false;s.drawer=false;
    return log("remove",s.id+" removed in simulation");
   },
   install(slotId,kind){
    const s=requireSlot(slotId);
    if(s.installed)throw new Error("Slot already occupied");
    if(kind!==s.kind)throw new Error("Incompatible module: expected "+s.kind);
-   s.installed=true;s.drawer=false;
+   checkpoint();s.installed=true;s.drawer=false;
    return log("install",s.id+" "+kind+" installed in simulation");
   },
   connect(sourceId,targetId){
@@ -138,7 +210,7 @@ export function createDataCenterState(){
    if(a.fabric!==b.fabric)throw new Error("Incompatible network: "+a.fabric+" cannot attach to "+b.fabric);
    if(a.media!==b.media)throw new Error("Connector mismatch: "+a.media+" / "+b.media);
    if(cables.some(c=>c.source===a.id||c.target===b.id))throw new Error("Port already occupied; unplug first");
-   const id="C"+String(nextId++).padStart(3,"0");
+   checkpoint();const id="C"+String(nextId++).padStart(3,"0");
    cables.push({id,source:a.id,target:b.id,fabric:a.fabric,media:a.media});
    log("connect",id+" "+a.id+" -> "+b.id);
    return id;
@@ -146,11 +218,11 @@ export function createDataCenterState(){
   disconnect(id){
    const i=cables.findIndex(c=>c.id===id);
    if(i<0)throw new RangeError("Cable not found");
-   const [c]=cables.splice(i,1);
+   checkpoint();const [c]=cables.splice(i,1);
    return log("disconnect",c.id+" "+c.source+" -> "+c.target);
   },
   reset(){
-   const clean=buildSlots();slots.splice(0,slots.length,...clean);
+   checkpoint();const clean=buildSlots();slots.splice(0,slots.length,...clean);
    cables.splice(0);nextId=1;events.splice(0);
    return log("reset","Reset simulated equipment and cables (no physical systems affected)");
   },
