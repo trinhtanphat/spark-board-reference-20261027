@@ -45,3 +45,22 @@ $env:TEST_WEBGL_RECOVERY='1'; node e2e-check.js
 ## Revision: documented power shelves & rack tray explorer
 
 The original demo used two generic power shelves. NVIDIA's hardware guide specifies **four** shelves at 3 RU each, with six air-cooled PSUs per shelf and 54 V DC busbar distribution. This revision corrects the modeled inventory and checks the counts against fixed official specifications. A rack tray navigator now provides 33 selectable elements (18 compute + 9 NVLink + 4 power + 2 TOR). The relative taller power shelf in the scene is an artistic approximation, **not a validated rack-unit drawing**. All data for display labels comes from NVIDIA's public hardware guide. Selecting a tray highlights the corresponding illustrated tray; this does not validate real locations, electrical connections or service procedures.
+
+
+## Visual fidelity revision — 28 October 2026
+
+This is a **closer artistic recreation**, not a 1:1 licensed replica of NVIDIA's rack. Compared with the prior simplified black/dark grid, the public WebGL rendering now includes:
+
+- A dark outer cabinet with four corner posts, side enclosures, base/top rails, and an architectural rear panel.
+- Champagne-gold metallic compute-tray faceplates and denser visible airflow grilles/fasteners to better resemble public NVIDIA rack photography.
+- Dark NVLink switch band, management hardware and power shelves, with different surface treatments.
+- Port silhouettes and separate GPU/CPU/NVSwitch visual indicators; repeated components are batched to limit draw calls.
+- An interactive REAR / ON control showing *illustrative* NVLink cable cartridges, cord bundles, busbar-like spines and liquid-cooling manifolds. The 3D interaction does **not** encode NVIDIA's true copper network topology or coolant routing.
+
+Grounding: NVIDIA's public images and official hardware user guide show a vertical black MGX-style rack, metal compute trays, rear NVLink passive-copper cable cartridge backplane and liquid manifold. The tray count and architecture are verified separately by the rack unit test.
+
+**Not verified:** Individual front-panel cutout dimensions, enclosure width/depth/height, rack-slot ordering, port locations, hole pitch, enclosure part numbers, exact cable geometry, manifold coolant flow, pressure drops, tolerances, thermal capacity, power wiring, EMI compliance, service clearances, pinouts, assembly steps or production material finishes. These require actual NVIDIA/OEM CAD and installation drawings. Do not use this visualization for fabrication, procurement, infrastructure installation, physical maintenance or certification. The model intentionally does not reproduce NVIDIA's official logos as a fake manufacturer deliverable.
+
+**Image reference:** https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/ and https://developer.nvidia.com/blog/nvidia-vera-rubin-pod-seven-chips-five-rack-scale-systems-one-ai-supercomputer/
+
+**E2E scope:** verify front↔rear mode switching, GPU-synchronized rear PNG export, batching, rack tray inventory (18 compute + 9 NVLink + 4 power + 2 management), Superchip/PCB modes, and GPU context loss/recovery. The tests verify app behaviour and published inventory—not physical similarity to a proprietary CAD model.

@@ -1,119 +1,186 @@
 /**
- * Unofficial rack-scale, service-tray architectural model of NVIDIA Vera Rubin
- * NVL72. Only component counts match publicly documented NVIDIA configuration.
- * Position, rack slot ordering, cooling path and dimensions are purely artistic.
+ * NVIDIA Vera Rubin NVL72 – unofficial high-detail WebGL architectural study.
+ *
+ * Engineering boundaries: official public tray counts and function; entirely
+ * illustrative mechanical geometry, cable route, rack slot order and dimensions.
+ * This is NOT NVIDIA production CAD, thermal engineering or an installation plan.
  */
 import {RACK_SPEC,validateRackArchitecture} from "./nvidia-rack-spec.mjs";
 
 export function createRackConcept(THREE){
  const group=new THREE.Group(),parts=[],trays=[],coolingParts=[];
  group.name="UNOFFICIAL_VERA_RUBIN_NVL72_RACK";
- const material=(c,metal=.2,rough=.5)=>new THREE.MeshStandardMaterial({color:c,metalness:metal,roughness:rough});
- const chassis=material("#202a2e",.66,.34),dark=material("#0b1317",.20,.58);
- const silver=material("#adb9b4",.73,.30),black=material("#10191b",.27,.49);
- const gpuColor=material("#88c63b",.48,.25),cpuColor=material("#82bcdb",.48,.33);
- const linkColor=material("#c6b17c",.55,.3),powerColor=material("#a6b5ba",.61,.33);
- const labelMats=new Map();
- const put=(parent,w,h,d,mat,x,y,z,name)=>{
-  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+ const mat=(c,metalness=.25,roughness=.43)=>new THREE.MeshStandardMaterial({color:c,metalness,roughness});
+ const black=mat("#0c1012",.48,.47),chassis=mat("#1e2526",.72,.3);
+ const iron=mat("#586363",.83,.28),darkPort=mat("#070c10",.24,.59);
+ const titanium=mat("#949a92",.8,.28),champagne=mat("#b7a47d",.78,.25);
+ const gold=mat("#ddc597",.78,.2),bronze=mat("#635742",.75,.29);
+ const switchMat=mat("#4c493d",.78,.25),torMat=mat("#29323b",.69,.30);
+ const powerMat=mat("#737b78",.65,.31),coolantMat=mat("#3a7179",.65,.23);
+ const ledG=mat("#a8cf6d",.15,.22),ledB=mat("#79b9d0",.1,.25);
+ const labelMats=new Map(),featureInstances=[];
+ const put=(parent,w,h,d,material,x,y,z,name)=>{
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
   m.position.set(x,y,z);if(name)m.name=name;
   m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
  };
  function labelTexture(head,sub,tint){
-  const key=head+"/"+sub;if(labelMats.has(key))return labelMats.get(key);
-  const cv=document.createElement("canvas");cv.width=512;cv.height=90;
-  const ctx=cv.getContext("2d");ctx.fillStyle="#101c1c";ctx.fillRect(0,0,512,90);
-  ctx.fillStyle=tint;ctx.font="bold 31px Arial";ctx.fillText(head,20,37);
-  ctx.fillStyle="#9eae9f";ctx.font="17px Arial";ctx.fillText(sub,21,69);
+  const key=head+"/"+sub;
+  if(labelMats.has(key))return labelMats.get(key);
+  const cv=document.createElement("canvas");cv.width=640;cv.height=110;
+  const ctx=cv.getContext("2d");
+  ctx.fillStyle="#202725";ctx.fillRect(0,0,640,110);
+  ctx.fillStyle=tint;ctx.font="bold 38px Arial";ctx.fillText(head,17,49);
+  ctx.fillStyle="#a4b0a8";ctx.font="23px Arial";ctx.fillText(sub,18,89);
   const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;
-  const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide});
-  labelMats.set(key,mat);return mat;
+  const m=new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide});
+  labelMats.set(key,m);return m;
  }
- const rowLabels={
-  compute:labelTexture("RUBIN / COMPUTE","4 GPU   +   2 VERA CPU","#a9e65f"),
-  nvlink:labelTexture("NVLINK 6 / SWITCH","4 NVSWITCH ASICs","#dfc58c"),
-  tor:labelTexture("TOP OF RACK","MANAGEMENT SWITCH","#9ac6d7"),
-  power:labelTexture("POWER SUPPLY","3 RU  /  54 V DC","#bdc6c9")
+ const labels={
+  compute:labelTexture("RUBIN COMPUTE","4 GPU / 2 VERA CPU","#e9d6a8"),
+  nvlink:labelTexture("NVLINK 6","4 x SWITCH ASIC","#d9c79d"),
+  tor:labelTexture("TOR MANAGEMENT","ETHERNET / MGMT","#b4c7d0"),
+  power:labelTexture("POWER / 54 VDC","3RU / CONCEPT","#d6dbd5")
  };
- // The slot order is NOT a published hardware placement drawing.
+ const labelTop=labelTexture("VERA RUBIN NVL72","UNOFFICIAL WEBGL STUDY","#e9d6a6");
  const rows=[
   ...Array.from({length:RACK_SPEC.powerShelves},()=>({kind:"power"})),
-  ...Array.from({length:9},()=>({kind:"compute"})),
-  ...Array.from({length:9},()=>({kind:"nvlink"})),
-  ...Array.from({length:9},()=>({kind:"compute"})),
-  ...Array.from({length:2},()=>({kind:"tor"}))
+  ...Array.from({length:8},()=>({kind:"compute"})),
+  ...Array.from({length:RACK_SPEC.switchTrays},()=>({kind:"nvlink"})),
+  ...Array.from({length:10},()=>({kind:"compute"})),
+  ...Array.from({length:RACK_SPEC.managementTorSwitches},()=>({kind:"tor"}))
  ];
- const colorByType={compute:chassis,nvlink:material("#44412c",.65,.32),
-  tor:material("#263943",.65,.29),power:powerColor};
  const typeIndex={compute:0,nvlink:0,power:0,tor:0};
  const positionsGPU=[],positionsCPU=[],positionsSwitch=[];
+ const grille=[],grilleCompute=[],fasteners=[],portCovers=[],goldFins=[],statusLights=[];
  let rackY=-.82;
  for(let i=0;i<rows.length;i++){
   const {kind}=rows[i],number=++typeIndex[kind];
   const trayHeight=kind==="power"?.57:.20;
-  const y=rackY+trayHeight*.5;
-  rackY+=trayHeight+.02;
+  const y=rackY+trayHeight*.5;rackY+=trayHeight+.02;
   const tray=new THREE.Group();tray.position.y=y;
-  tray.userData.part="NVIDIA / NVL72 "+(kind==="compute"?"COMPUTE TRAY":kind==="nvlink"?"NVLINK SWITCH TRAY":kind==="tor"?"TOR SWITCH":"POWER SHELF")+" "+String(number).padStart(2,"0");
   tray.name="RACK_"+kind.toUpperCase()+"_"+String(number).padStart(2,"0");
+  tray.userData.part="NVIDIA / NVL72 "+(kind==="compute"?"COMPUTE TRAY":kind==="nvlink"?"NVLINK SWITCH TRAY":kind==="tor"?"TOR SWITCH":"POWER SHELF")+" "+String(number).padStart(2,"0");
   group.add(tray);parts.push(tray);
   trays.push({kind,number,y,height:trayHeight,part:tray.userData.part});
-  put(tray,3.92,trayHeight-.012,1.92,black,0,0,-.04);
-  put(tray,3.90,trayHeight-.024,.23,colorByType[kind],0,0,1.00);
-  put(tray,3.85,.026,.08,silver,0,trayHeight*.43,1.06);
-  // Matching front labels are shared textures, not a separate unique draw per tray.
-  const tag=new THREE.Mesh(new THREE.PlaneGeometry(1.72,Math.min(.17,trayHeight-.03)),rowLabels[kind]);
-  tag.position.set(-.92,0,1.133);tray.add(tag);
-  put(tray,.055,Math.min(.17,trayHeight-.03),.055,silver,-1.84,0,1.136);
-  put(tray,.055,Math.min(.17,trayHeight-.03),.055,silver,1.84,0,1.136);
+  // Rack drawer; gold anodized compute front and vent metal contrast with black rails.
+  put(tray,3.91,trayHeight-.015,1.90,black,0,0,-.03);
+  put(tray,3.85,trayHeight-.024,.18,
+    kind==="compute"?champagne:kind==="nvlink"?switchMat:kind==="tor"?torMat:powerMat,
+    0,0,1.025);
+  put(tray,3.84,.020,.075,kind==="compute"?gold:iron,0,trayHeight*.42,1.120);
+  put(tray,.044,Math.min(trayHeight-.03,.19),.06,iron,-1.83,0,1.155);
+  put(tray,.044,Math.min(trayHeight-.03,.19),.06,iron,1.83,0,1.155);
+  const tag=new THREE.Mesh(new THREE.PlaneGeometry(1.20,Math.min(.155,trayHeight-.03)),labels[kind]);
+  tag.position.set(-.77,0,1.132);tray.add(tag);
+  for(let j=0;j<2;j++)fasteners.push([-1.78+j*3.55,y,1.190]);
   if(kind==="compute"){
-   for(let k=0;k<4;k++)positionsGPU.push([.47+k*.23,y,1.144]);
-   for(let k=0;k<2;k++)positionsCPU.push([1.42+k*.21,y,1.144]);
+   // A denser grille and black double NIC port arrangement, seen in product photography.
+   for(let j=0;j<12;j++)grilleCompute.push([-.06+j*.105,y,1.148]);
+   for(let j=0;j<2;j++){
+    portCovers.push([.24+j*.26,y,1.161]);
+    statusLights.push([1.49+j*.12,y,1.181]);
+   }
+   for(let k=0;k<4;k++)positionsGPU.push([.47+k*.23,y,1.167]);
+   for(let k=0;k<2;k++)positionsCPU.push([1.42+k*.21,y,1.167]);
   }else if(kind==="nvlink"){
-   for(let k=0;k<4;k++)positionsSwitch.push([.68+k*.23,y,1.144]);
+   for(let j=0;j<11;j++)grille.push([-.01+j*.13,y,1.16]);
+   for(let k=0;k<4;k++)positionsSwitch.push([.68+k*.23,y,1.178]);
+  }else if(kind==="power"){
+   // PSU ventilation: a stylized six-column honeycomb field, not real PSU geometry.
+   for(let row=0;row<4;row++)for(let col=0;col<18;col++){
+    grille.push([-.12+col*.09,y-.17+row*.105,1.16]);
+   }
+   for(let k=0;k<6;k++)goldFins.push([.65+k*.20,y,1.17]);
+  }else{
+   for(let j=0;j<8;j++)grille.push([.04+j*.15,y,1.16]);
   }
  }
- function installIndicators(positions,color,width=.14){
-  const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(width,.083,.045),color,positions.length);
-  const o=new THREE.Object3D();
-  positions.forEach(([x,y,z],i)=>{o.position.set(x,y,z);o.updateMatrix();mesh.setMatrixAt(i,o.matrix)});
-  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();group.add(mesh);return mesh;
+ // Batch repetitive front details, avoiding a large number of WebGL draw calls.
+ function instances(positions,geometry,material,name){
+  if(!positions.length)return;
+  const im=new THREE.InstancedMesh(geometry,material,positions.length),o=new THREE.Object3D();
+  positions.forEach(([x,y,z],i)=>{
+   o.position.set(x,y,z);o.updateMatrix();im.setMatrixAt(i,o.matrix);
+  });
+  im.instanceMatrix.needsUpdate=true;im.computeBoundingSphere();im.name=name;
+  group.add(im);featureInstances.push(im);
  }
- installIndicators(positionsGPU,gpuColor);
- installIndicators(positionsCPU,cpuColor,.12);
- installIndicators(positionsSwitch,linkColor);
- // Enclosure posts, service frames, and back panel: design study, not measured.
- for(const x of [-2.05,2.05]){
-  for(const z of [-1.04,1.17])put(group,.14,9.35,.13,silver,x,3.66,z);
+ instances(grilleCompute,new THREE.BoxGeometry(.060,.060,.038),bronze,"BRASS_COMPUTE_VENTS");
+ instances(grille,new THREE.BoxGeometry(.055,.050,.040),darkPort,"RACK_PERFORATED_GRILLES");
+ instances(fasteners,new THREE.CylinderGeometry(.022,.022,.022,8).rotateX(Math.PI/2),titanium,"TRAY_FASTENERS");
+ instances(portCovers,new THREE.BoxGeometry(.19,.076,.045),darkPort,"DUAL_NIC_PORTS_ILLUSTRATIVE");
+ instances(positionsGPU,new THREE.BoxGeometry(.13,.077,.040),gold,"GPU_STATUS_INDICATORS_72");
+ instances(positionsCPU,new THREE.BoxGeometry(.11,.079,.040),ledB,"VERA_CPU_STATUS_INDICATORS_36");
+ instances(positionsSwitch,new THREE.BoxGeometry(.12,.077,.048),gold,"NVSWITCH_INDICATORS_36");
+ instances(goldFins,new THREE.BoxGeometry(.065,.078,.050),bronze,"POWER_SHELF_RELEASES");
+ instances(statusLights,new THREE.BoxGeometry(.036,.035,.024),ledG,"COMPUTE_STATUS_LEDS");
+ // Tall, black MGX-inspired enclosure with champagne-colored metal blades inside.
+ for(const x of [-2.14,2.14]){
+  for(const z of [-1.13,1.21]){
+   put(group,.14,9.37,.14,chassis,x,3.64,z,"ENCL_CABINET_POST");
+   put(group,.045,9.0,.06,iron,x*.94,3.64,z>0?1.19:-1.08);
+  }
+  put(group,.27,9.25,2.23,chassis,x,3.64,.03);
+  for(let k=0;k<15;k++)put(group,.025,.045,.42,iron,x, .02+k*.50,.87);
  }
- for(const y of [-.99,8.30]){
-  put(group,4.31,.13,2.34,chassis,0,y,.05);
+ for(const y of [-1.03,8.29]){
+  put(group,4.45,.16,2.53,chassis,0,y,0,"CABINET_CROSSBAR");
  }
- put(group,4.10,9.1,.07,black,0,3.66,-1.12);
- for(const x of [-2.20,2.20]){
-  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.078,.078,8.77,12),material("#478c97",.74,.25));
-  pipe.position.set(x,3.67,-.76);group.add(pipe);coolingParts.push(pipe);
-  const inlet=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.25,12),silver);
-  inlet.position.set(x,8.22,-.76);group.add(inlet);coolingParts.push(inlet);
+ put(group,4.13,9.11,.055,black,0,3.64,-1.14,"REAR_CHASSIS_PANEL");
+ // Dark inner ceiling and base, with prominent perforated fan/switch sections.
+ for(const y of [7.99,.16]){
+  put(group,3.78,.28,.27,black,0,y,1.14,"BLACK_FAN_GRILLE");
  }
- const rearSpine=put(group,.19,8.64,.20,linkColor,0,3.68,-1.20,"ILLUSTRATIVE_NVLINK_SPINE");coolingParts.push(rearSpine);
- // Label above rack: distinguish study from genuine NVIDIA rack CAD.
- const header=new THREE.Mesh(new THREE.PlaneGeometry(3.82,.27),
-  labelTexture("VERA RUBIN NVL72","UNOFFICIAL RACK STUDY","#cef29a"));
- header.position.set(0,8.23,1.20);group.add(header);
- return {group,parts,trays,coolingParts,
+ // Rear manifolds, NVLink spine and cable cartridge silhouette – artistic.
+ const hose=mat("#252e2e",.22,.57),connector=mat("#989c8e",.85,.25);
+ for(const x of [-2.29,2.29]){
+  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.069,.069,8.88,12),coolantMat);
+  pipe.position.set(x,3.63,-.77);group.add(pipe);coolingParts.push(pipe);
+  for(const y of [-.57,2.12,4.76,7.96]){
+   const fitting=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.22,12),connector);
+   fitting.position.set(x,y,-.77);group.add(fitting);coolingParts.push(fitting);
+  }
+ }
+ // Functional-looking cable cartridges: four broad vertical rails and bundled
+ // radial link cords. These are not NVIDIA's real copper connection map.
+ for(const x of [-1.37,-.46,.46,1.37]){
+  put(group,.24,8.68,.22,bronze,x,3.65,-1.28,"BACKPLANE_CARTRIDGE");
+  for(let j=0;j<16;j++){
+   const y=-.18+j*.48;
+   put(group,.14,.050,.04,connector,x,y,-1.43);
+  }
+ }
+ const cableCurves=[];
+ for(let j=0;j<14;j++){
+  const yy=.22+j*.51;
+  for(let k=0;k<2;k++){
+   const x1=k===0?-1.6:1.6,x2=k===0?-.46:.46;
+   cableCurves.push(new THREE.CatmullRomCurve3([
+    new THREE.Vector3(x1,yy,-1.27),
+    new THREE.Vector3(x1*.9,yy+.12,-1.48),
+    new THREE.Vector3(x2,yy+.11,-1.48)
+   ]));
+  }
+ }
+ const cableMat=mat("#222b2c",.35,.48);
+ for(const curve of cableCurves){
+  const cord=new THREE.Mesh(new THREE.TubeGeometry(curve,12,.023,5,false),cableMat);
+  group.add(cord);coolingParts.push(cord);
+ }
+ // Studio branding: deliberately say UNOFFICIAL, rather than impersonating
+ // NVIDIA's exact logos or official product label.
+ const header=new THREE.Mesh(new THREE.PlaneGeometry(3.83,.28),labelTop);
+ header.position.set(0,8.06,1.25);group.add(header);
+ return {group,parts,trays,coolingParts,featureInstances,
   diagnostics:()=>({
-   scope:"UNOFFICIAL_RACK_ARCHITECTURE_ONLY",
-   visible:group.visible,
-   counts:validateRackArchitecture(),
-   renderedTrays:trays.length,
-   racksPowerShelves:typeIndex.power,
-   powerShelfVisualHeightRatio:Number((.57/.20).toFixed(2)),
-   gpuIndicators:positionsGPU.length,
-   cpuIndicators:positionsCPU.length,
-   nvSwitchIndicators:positionsSwitch.length,
-   typeCounts:{...typeIndex},
-   notActualRackGeometry:true,
-   manufacturingApproved:false
+   scope:"UNOFFICIAL_RACK_ARCHITECTURE_ONLY",visible:group.visible,
+   counts:validateRackArchitecture(),renderedTrays:trays.length,
+   racksPowerShelves:typeIndex.power,powerShelfVisualHeightRatio:Number((.57/.20).toFixed(2)),
+   gpuIndicators:positionsGPU.length,cpuIndicators:positionsCPU.length,
+   nvSwitchIndicators:positionsSwitch.length,typeCounts:{...typeIndex},
+   facade:"champagne-metallic-with-dense-grilles",
+   rearComponents:coolingParts.length,instancedDetails:featureInstances.length,
+   notActualRackGeometry:true,manufacturingApproved:false
   })};
 }

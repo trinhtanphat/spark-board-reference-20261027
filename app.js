@@ -157,6 +157,17 @@ for(const [step,id] of [[-1,"rackTrayPrev"],[1,"rackTrayNext"]]){
  });
 }
 
+
+const rearBtn=$("rackRearView");
+rearBtn.addEventListener("click",()=>{
+ if(window.SPARK3D?.getModelMode?.()!=="rack")return;
+ const rear=!window.SPARK3D.getRackRear();
+ window.SPARK3D.setRackRear(rear);
+ rearBtn.setAttribute("aria-pressed",String(rear));
+ rearBtn.textContent=rear?"REAR / ON":"REAR / OFF";
+ notify(rear?"Rack back: conceptual NVLink cable cartridges and coolant manifolds":"Rack front: illustrated service trays");
+});
+
 const viewButtons={nvidia:$("modelNvidia"),rack:$("modelRack"),reference:$("modelReference")};
 function updateModelView(mode){
  lines=mode==="reference"?referenceLines:nvidiaLines;
@@ -180,6 +191,7 @@ function updateModelView(mode){
  $("layersToggle").disabled=mode!=="reference";
  $("coolingToggle").disabled=mode!=="nvidia";
  rackPanel.hidden=mode!=="rack";
+ rearBtn.textContent="REAR / OFF";rearBtn.setAttribute("aria-pressed","false");
  if(mode==="rack")populateRackTrays();
  $("coolingToggle").setAttribute("aria-pressed",String(Boolean(window.SPARK3D?.getNvidiaCooling?.())));
  $("inspectCore").setAttribute("aria-label",mode==="rack"?"Inspect NVIDIA NVL72 compute tray":mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");

@@ -25,7 +25,7 @@ let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=fa
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 let focusedVisualRouteId=null,routeFocusObject=null;
-let nvidiaModel=null,rackModel=null,modelMode='nvidia',nvidiaCoolingVisible=false;
+let nvidiaModel=null,rackModel=null,modelMode='nvidia',nvidiaCoolingVisible=false,rackRear=false;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -361,6 +361,7 @@ function applyModelMode(mode){
  modelMode=mode;
  exploded=false;
  if(mode==='rack'){
+  rackRear=false;
   distTarget=23.3;elTarget=.24;azTarget=.33;
   center.y=3.65;
  }else if(previousMode==='rack'){
@@ -516,6 +517,8 @@ function init(){
  keyLight=new THREE.DirectionalLight(0xfff7ec,2.4);keyLight.position.set(-3,10,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);keyLight.shadow.camera.left=-9;keyLight.shadow.camera.right=9;keyLight.shadow.camera.top=9;keyLight.shadow.camera.bottom=-9;keyLight.shadow.bias=-.0003;scene.add(keyLight);
  cyanLight=new THREE.PointLight(0xe4edf0,14,19,2);cyanLight.position.set(-6,7,-1);scene.add(cyanLight);
  violetLight=new THREE.PointLight(0xffecd8,10,20,2);violetLight.position.set(7,6,4);scene.add(violetLight);
+ // Studio fill for rear manifold/cable-cartridge inspection; shadows disabled for GPU budget.
+ const rearFill=new THREE.DirectionalLight(0xe6d5b1,1.75);rearFill.position.set(2.8,7,-8);scene.add(rearFill);
  root=new THREE.Group();scene.add(root);createBoard();nvidiaModel=createRubinConcept(THREE);root.add(nvidiaModel.group);rackModel=createRackConcept(THREE);root.add(rackModel.group);applyModelMode('nvidia');createSky();if(focusedVisualRouteId)focusIllustrativeRoute(focusedVisualRouteId);
  updateCamera(true);resize();interactions();
  renderer.render(scene,camera);totalRenders++;lastDraw=performance.now();
@@ -531,6 +534,16 @@ function init(){
  window.SPARK3D={ready:true,
  getModelMode(){return modelMode},
  getRackDiagnostics(){return rackModel?.diagnostics()||null},
+ setRackRear(show){
+  rackRear=Boolean(show);
+  if(modelMode==='rack'){
+   azTarget=rackRear?Math.PI+.33:.33;
+   elTarget=.24;
+   distTarget=23.3;
+   needsRender=true;
+  }
+ },
+ getRackRear(){return rackRear},
  getRackTrays(){return rackModel?.trays.map(t=>({kind:t.kind,number:t.number,part:t.part,height:t.height}))||[]},
  getRackTrayDetails(part){const t=rackModel?.trays.find(t=>t.part===part);return t?{...rackTrayFacts(t.kind),kind:t.kind,number:t.number,part:t.part}:null},
  getRackViewDiagnostics(){return {mode:modelMode,cameraDistance:Number(dist.toFixed(2)),cameraTargetY:Number(center.y.toFixed(2)),cameraElevation:Number(el.toFixed(2))}},
