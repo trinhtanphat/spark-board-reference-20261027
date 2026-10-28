@@ -77,6 +77,7 @@
   optfill(target,state.availableTargets(sourcePort?.fabric).map(x=>[x.id,x.label]));
   optfill(cable,state.cables.map(x=>[x.id,x.id+" "+x.source+" → "+x.target]));
   $("dcDisconnect").disabled=!state.cables.length;
+  $("dcUndo").disabled=!state.canUndo();
   $("dcHighlightCable").disabled=!state.cables.length;
   const fabric=$("dcCableFabric").value,scope=$("dcCableScope").value;
   window.SPARK3D?.setDataCenterCableView?.(fabric,scope,rack.value);
@@ -173,6 +174,18 @@
  $("dcOverview").addEventListener("click",()=>{
   window.SPARK3D?.resetDataCenterOverview?.();
   say("Viewing all 16 close-packed racks");render();
+ });
+ $("dcUndo").addEventListener("click",()=>run(()=>api().undoLastChange(),"Previous simulated configuration restored"));
+ $("dcImportFile").addEventListener("change",async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  try{
+   if(file.size>2_000_000)throw new Error("Simulation JSON exceeds 2 MB limit");
+   const text=await file.text(),payload=JSON.parse(text);
+   api().importSnapshot(payload);
+   say("Validated simulation restored from "+file.name+"; no real hardware affected");
+   render();
+  }catch(err){say("Import rejected: "+(err.message||String(err)),true);render()}
+  finally{e.target.value=""}
  });
  $("dcReset").addEventListener("click",()=>run(()=>api().reset(),"Lab reset; no physical system affected"));
  document.addEventListener("spark:datacenter-update",render);
