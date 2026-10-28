@@ -193,7 +193,32 @@ export function createDataCenterConcept(THREE,model){
  }
  setRearLayer("all");
  group.add(cableGroup);
- let renderedCables=0;
+ let renderedCables=0,cableFabricFilter="all",cableScope="all",cableRackId=null,cableHighlight=null;
+ const cableHighlightMaterial=new THREE.MeshStandardMaterial({color:"#fff3b5",emissive:"#b4862d",emissiveIntensity:.38,metalness:.25,roughness:.38});
+ const cableFabricOptions=["all",...Object.keys(FABRICS)];
+ function refreshCableVisibility(){
+  let matched=0;
+  for(const mesh of cableGroup.children){
+   const cable=mesh.userData;
+   const correctFabric=cableFabricFilter==="all"||cable.fabric===cableFabricFilter;
+   const correctRack=cableScope==="all"||cableRackId!==null&&(cable.fromRack===cableRackId||cable.toRack===cableRackId);
+   mesh.visible=correctFabric&&correctRack;
+   mesh.material=cable.id===cableHighlight?cableHighlightMaterial:cableMaterials[cable.fabric];
+   mesh.renderOrder=cable.id===cableHighlight?33:0;
+   if(mesh.visible)matched++;
+  }
+  return matched;
+ }
+ function setCableView(fabric="all",scope="all",rackId=null){
+  if(!cableFabricOptions.includes(fabric)||!["all","rack"].includes(scope))return false;
+  if(scope==="rack"&&!rackInfo.has(rackId))return false;
+  cableFabricFilter=fabric;cableScope=scope;cableRackId=scope==="rack"?rackId:null;
+  refreshCableVisibility();return true;
+ }
+ function highlightCable(id=null){
+  if(id!==null&&!model.cables.some(c=>c.id===id))return false;
+  cableHighlight=id;refreshCableVisibility();return true;
+ }
  function clearCables(){
   for(const child of [...cableGroup.children]){cableGroup.remove(child);child.geometry.dispose();}
  }
@@ -234,13 +259,18 @@ export function createDataCenterConcept(THREE,model){
    const curve=cablePath(from,to,cable.id);if(!curve)continue;
    const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,20,.024,5,false),cableMaterials[cable.fabric]);
    mesh.name="SIMULATED_CABLE_"+cable.id;
+   mesh.userData={id:cable.id,fabric:cable.fabric,fromRack:from.slotId.split("-")[0],toRack:to.slotId.split("-")[0]};
    cableGroup.add(mesh);renderedCables++;
   }
+  if(cableHighlight&&!model.cables.some(c=>c.id===cableHighlight))cableHighlight=null;
+  refreshCableVisibility();
  }
  refresh();
  function focusRack(id){
   if(id!==null&&!rackInfo.has(id))return false;
   selectedRack=id;
+  if(cableScope==="rack")cableRackId=id;
+  refreshCableVisibility();
   rackOutline.visible=id!==null;
   if(id!==null){const point=rackCenters.get(id);rackOutline.position.set(point.x,3.63,point.z)}
   return true;
@@ -269,7 +299,7 @@ export function createDataCenterConcept(THREE,model){
    componentCount:entry.drawables.filter(r=>r.kind==="rearModule").length};
  }
  return {
-  group,parts,pickTargets,refresh,slotGroups,focusRack,rackPosition,createSlotSelectionFrame,clearSlotSelection,setRearLayer,getRearModuleState,
+  group,parts,pickTargets,refresh,slotGroups,focusRack,rackPosition,createSlotSelectionFrame,clearSlotSelection,setRearLayer,getRearModuleState,setCableView,highlightCable,
   diagnostics:()=>({
    scope:"DENSE_16_RACK_BROWSER_SIMULATION",visible:group.visible,
    gpuRacks:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length,
@@ -291,7 +321,10 @@ export function createDataCenterConcept(THREE,model){
    selectedRack,selectedSlot,selectedRackOutlined:rackOutline.visible,
    selectedSlotBoxOffset:slotFrame?.position.z??null,selectedSlotBoxDepth:slotFrame?.userData.boxDepth??null,
    instanceBatches:batches.length,instances:batches.reduce((n,b)=>n+b.count,0),
-   drawnCables:renderedCables,selectedDrawers:model.slots.filter(s=>s.drawer).length,
+   drawnCables:renderedCables,visibleCables:cableGroup.children.filter(c=>c.visible).length,
+   cableFabricFilter,cableScope,cableRackId,cableHighlight,
+   visibleCableIds:cableGroup.children.filter(c=>c.visible).map(c=>c.userData.id),
+   selectedDrawers:model.slots.filter(s=>s.drawer).length,
    installed:model.stats().modulesInstalled,notOfficialCAD:true,
    physicalNetworkChanges:false,disclaimer:DATA_CENTER_DISCLAIMER
   })
