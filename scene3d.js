@@ -387,6 +387,7 @@ function applyModelMode(mode){
   distTarget=28.3;elTarget=.34;azTarget=.22;center.y=3.68;
  }else if(mode==='rack'){
   rackRear=false;
+  rackModel?.setRearSystemFocus("all");
   distTarget=23.3;elTarget=.24;azTarget=.33;
   center.y=3.65;
  }else if(previousMode==='rack'||previousMode==='datacenter'){
@@ -577,6 +578,7 @@ function init(){
  },
  setRackRear(show){
   rackRear=Boolean(show);
+  if(!rackRear)rackModel?.setRearSystemFocus("all");
   if(rackRear&&rackModel?.getServiceState().open){rackModel.clearService();clearSelection();clearRackServiceFocus()}
   if(modelMode==='rack'){
    azTarget=rackRear?Math.PI+.33:.33;
@@ -586,6 +588,12 @@ function init(){
   }
  },
  getRackRear(){return rackRear},
+ setRackRearSystem(focus){
+  if(modelMode!=="rack"||!rackRear)return false;
+  const ok=rackModel?.setRearSystemFocus(focus)||false;
+  if(ok)needsRender=true;
+  return ok;
+ },
  getRackTrays(){return rackModel?.trays.map(t=>({kind:t.kind,number:t.number,part:t.part,height:t.height}))||[]},
  getRackTrayDetails(part){const t=rackModel?.trays.find(t=>t.part===part);return t?{...rackTrayFacts(t.kind),kind:t.kind,number:t.number,part:t.part}:null},
  getRackViewDiagnostics(){return {mode:modelMode,cameraDistance:Number(dist.toFixed(2)),cameraTargetY:Number(center.y.toFixed(2)),cameraElevation:Number(el.toFixed(2)),serviceFocusY:rackServiceFocusY}},

@@ -208,6 +208,8 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .rack-tray-controls #rackServiceDrawer{border-color:#b7a57c;color:#eee0bb;background:#3b392e}
 .rack-tray-controls #rackServiceDrawer[aria-pressed="true"]{background:#6c5737;color:#fff2d2;border-color:#eac893}
 .rack-tray-controls #rackServiceDrawer:disabled{opacity:.38;cursor:not-allowed}
+.rack-tray-controls #rackRearSystem{min-width:185px;max-width:340px;flex:1 1 185px;border-color:#5a8792;background:#20373c;color:#dcf5ee}
+.rack-tray-controls #rackRearSystem:disabled{opacity:.48;cursor:not-allowed}
 
 /* Interactive three-rack NVIDIA AI data center — browser-only simulator */
 .product-view-selector #modelDatacenter{border-color:#8ab795;color:#cdecd5}

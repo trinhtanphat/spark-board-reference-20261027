@@ -74,9 +74,11 @@
       <button type="button" id="rackTrayNext" aria-label="Next rack tray">NEXT →</button>
       <button type="button" id="rackServiceDrawer" aria-pressed="false" title="Display the selected rack tray in an illustrative pulled-out service view; not a maintenance procedure">PULL TRAY / OFF</button>
       <button type="button" id="rackRearView" aria-pressed="false" title="View illustrative rear cooling manifolds and link cable cartridges">REAR / OFF</button>
+      <label for="rackRearSystem">REAR LAYERS</label>
+      <select id="rackRearSystem" aria-label="Show one illustrated rear infrastructure system" disabled><option value="all">ALL SYSTEMS</option><option value="nvlink">NVLINK 6 / COPPER CARTRIDGES</option><option value="cooling">LIQUID / MANIFOLDS</option><option value="power">POWER / 54 VDC BUSBAR</option></select>
     </div>
     <p id="rackTrayDetails" aria-live="polite">Select a tray to inspect its published component configuration.</p>
-    <span class="rack-tray-caveat">Published tray contents · Pull-out and interior chips are illustrative, NOT physical service instructions or NVIDIA CAD.</span>
+    <span class="rack-tray-caveat">Published tray counts · Rear-layer visibility, busbar and coolant connectors are illustrative only. NOT verified cable routing, 54 V electrical layout, CAD or physical service instructions.</span>
   </section>
   <section class="hero-stage" aria-label="Interactive 3D NVIDIA Vera Rubin architecture concept">
     <div class="stage-gradient"></div><div class="stage-grid"></div>

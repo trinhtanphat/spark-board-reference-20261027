@@ -184,11 +184,17 @@ for(const [step,id] of [[-1,"rackTrayPrev"],[1,"rackTrayNext"]]){
 }
 
 
-const rearBtn=$("rackRearView");
+const rearBtn=$("rackRearView"),rearFocusPicker=$("rackRearSystem");
+rearFocusPicker.addEventListener("change",()=>{
+ if(window.SPARK3D?.getModelMode?.()!=="rack"||!window.SPARK3D.getRackRear())return;
+ if(window.SPARK3D.setRackRearSystem(rearFocusPicker.value))notify("Rear inspection: "+rearFocusPicker.selectedOptions[0].textContent+" · artistic only");
+});
 rearBtn.addEventListener("click",()=>{
  if(window.SPARK3D?.getModelMode?.()!=="rack")return;
  const rear=!window.SPARK3D.getRackRear();
  window.SPARK3D.setRackRear(rear);
+ rearFocusPicker.value="all";
+ rearFocusPicker.disabled=!rear;
  syncTrayPullButton();
  rearBtn.setAttribute("aria-pressed",String(rear));
  rearBtn.textContent=rear?"REAR / ON":"REAR / OFF";
@@ -222,6 +228,7 @@ function updateModelView(mode){
  $("coolingToggle").disabled=mode!=="nvidia";
  rackPanel.hidden=mode!=="rack";
  rearBtn.textContent="REAR / OFF";rearBtn.setAttribute("aria-pressed","false");
+ rearFocusPicker.value="all";rearFocusPicker.disabled=true;
  if(mode==="rack")populateRackTrays();
  syncTrayPullButton();
  $("coolingToggle").setAttribute("aria-pressed",String(Boolean(window.SPARK3D?.getNvidiaCooling?.())));
