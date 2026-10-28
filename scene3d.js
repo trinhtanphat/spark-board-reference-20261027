@@ -27,7 +27,7 @@ let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=fa
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 let focusedVisualRouteId=null,routeFocusObject=null;
-let nvidiaModel=null,rackModel=null,dataCenterModel=null,dataCenterScene=null,modelMode='nvidia',nvidiaCoolingVisible=false,rackRear=false,rackServiceFocusY=null;
+let nvidiaModel=null,rackModel=null,dataCenterModel=null,dataCenterScene=null,modelMode='nvidia',nvidiaCoolingVisible=false,rackRear=false,rackServiceFocusY=null,dcFocus=null;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -361,7 +361,10 @@ function selectPart(name){
  const target=dcTarget||rackTarget||nvidiaTarget||componentGroups.find(g=>g.userData.part===name);
  if(!target)return;
  if(selectionHelper){selectionHelper.removeFromParent();selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
- if(rackTarget){
+ dataCenterScene?.clearSlotSelection();
+ if(dcTarget){
+  selectionHelper=dataCenterScene.createSlotSelectionFrame(name);
+ }else if(rackTarget){
   selectionHelper=rackModel.createTraySelectionFrame(name);
   if(selectionHelper)selectionHelper.visible=!rackRear;
  }else{
@@ -373,6 +376,7 @@ function selectPart(name){
 }
 function clearSelection(){
  if(selectionHelper){selectionHelper.removeFromParent();selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
+ dataCenterScene?.clearSlotSelection();
 }
 
 function nvidiaExplodedHeight(assembly){
@@ -389,8 +393,9 @@ function applyModelMode(mode){
  rackServiceFocusY=null;
  if(mode!=='rack'&&rackModel)rackModel.clearService();
  exploded=false;
+ dcFocus=null;dataCenterScene?.focusRack(null);
  if(mode==='datacenter'){
-  distTarget=39;elTarget=1.07;azTarget=.50;center.y=3.68;
+  distTarget=39;elTarget=1.07;azTarget=.50;center.x=0;center.z=0;center.y=3.68;
  }else if(mode==='rack'){
   rackRear=false;
   rackModel?.setRearSystemFocus("all");
@@ -438,13 +443,23 @@ function createSky(){
 }
 function updateCamera(hard=false){
  if(hard){az=azTarget;el=elTarget;dist=distTarget}else{az+=(azTarget-az)*.13;el+=(elTarget-el)*.13;dist+=(distTarget-dist)*.13}
- const c=Math.cos(el);camera.position.set(dist*c*Math.sin(az),dist*Math.sin(el),dist*c*Math.cos(az));center.y+=(((modelMode==='rack'||modelMode==='datacenter')?(rackServiceFocusY??3.68):exploded?.75:0)-center.y)*.09;camera.lookAt(center);
+ const targetX=modelMode==='datacenter'&&dcFocus?dcFocus.x:0;
+ const targetZ=modelMode==='datacenter'&&dcFocus?dcFocus.z:0;
+ const targetY=modelMode==='rack'?(rackServiceFocusY??3.65):modelMode==='datacenter'?3.68:exploded?.75:0;
+ if(hard)center.set(targetX,targetY,targetZ);
+ else {center.x+=(targetX-center.x)*.13;center.y+=(targetY-center.y)*.09;center.z+=(targetZ-center.z)*.13}
+ const c=Math.cos(el);
+ camera.position.set(center.x+dist*c*Math.sin(az),center.y+dist*Math.sin(el),center.z+dist*c*Math.cos(az));
+ camera.lookAt(center);
 }
 function resize(){
  if(!renderer||!camera)return;
  const w=Math.max(2,mount.clientWidth),h=Math.max(2,mount.clientHeight);
  if(w<3||h<3)return;
- renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<640?42:35;if(root)root.scale.setScalar(w<640?.53:w<860?.82:1);camera.updateProjectionMatrix();
+ renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<640?42:35;
+ if(root)root.scale.setScalar(w<640?.53:w<860?.82:1);
+ if(dcFocus&&dataCenterScene){const at=dataCenterScene.rackPosition(dcFocus.id);if(at){dcFocus.x=at.x*root.scale.x;dcFocus.z=at.z*root.scale.z}}
+ camera.updateProjectionMatrix();
  needsRender=true;
  if(!meshReady&&!contextLost&&scene)renderer.render(scene,camera);
 }
@@ -590,6 +605,29 @@ function init(){
  getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-tray-cuboid"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getDataCenterDiagnostics(){return dataCenterScene?.diagnostics()||null},
+ getDataCenterFocusState(){return {rack:dcFocus?.id??null,x:dcFocus?.x??0,z:dcFocus?.z??0,distance:distTarget,elevation:elTarget,selectedSlot:dataCenterScene?.diagnostics().selectedSlot??null}},
+ getDataCenterPickPoint(slotId){
+  if(modelMode!=='datacenter'||!renderer||!camera)return null;
+  const body=dataCenterScene?.pickTargets.find(t=>t.userData.part==='DC / '+slotId);
+  if(!body)return null;
+  scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+  const point=body.localToWorld(new THREE.Vector3(0,0,.065)).project(camera);
+  const rect=renderer.domElement.getBoundingClientRect();
+  return {slotId,x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2,
+   inside:Math.abs(point.x)<1&&Math.abs(point.y)<1};
+ },
+ focusDataCenterRack(id){
+  if(modelMode!=='datacenter')return false;
+  const point=dataCenterScene?.rackPosition(id);if(!point)return false;
+  const scale=root?.scale.x??1;
+  dcFocus={id,x:point.x*scale,z:point.z*scale};dataCenterScene.focusRack(id);
+  distTarget=17.5;elTarget=.88;azTarget=.38;needsRender=true;if(camera)updateCamera(true);return true;
+ },
+ resetDataCenterOverview(){
+  if(modelMode!=='datacenter')return false;
+  dcFocus=null;dataCenterScene?.focusRack(null);
+  distTarget=39;elTarget=1.07;azTarget=.50;needsRender=true;if(camera)updateCamera(true);return true;
+ },
  selectDataCenterSlot(id){selectPart('DC / '+id)},
 
  getRackServiceState(){return rackModel?.getServiceState()||{open:false}},
@@ -672,8 +710,17 @@ function init(){
  getRenderStats(){return {drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,dpr:renderer.getPixelRatio(),textureCount:renderer.info.memory.textures,geometryCount:renderer.info.memory.geometries}},
  getCameraState(){return {azimuth:azTarget,elevation:elTarget,distance:distTarget}},
  zoom(dir){distTarget=clamp(distTarget+dir*(modelMode==='datacenter'?1.4:.8),8.5,modelMode==='datacenter'?65:26);needsRender=true},
- setView(mode){azTarget=mode==='top'?0:modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;elTarget=mode==='top'?1.57:modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;distTarget=modelMode==='datacenter'?(mode==='top'?39:39):modelMode==='rack'?(mode==='top'?22:23.3):(mode==='top'?15.2:15.55);needsRender=true},
- reset(){azTarget=modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;elTarget=modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;distTarget=modelMode==='rack'?23.3:modelMode==='datacenter'?39:15.55;needsRender=true},
+ setView(mode){
+  if(modelMode==='datacenter'&&dcFocus){
+   azTarget=mode==='top'?0:.38;elTarget=mode==='top'?1.57:.88;distTarget=mode==='top'?19:17.5;
+  }else{
+   azTarget=mode==='top'?0:modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;
+   elTarget=mode==='top'?1.57:modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;
+   distTarget=modelMode==='datacenter'?39:modelMode==='rack'?(mode==='top'?22:23.3):(mode==='top'?15.2:15.55);
+  }
+  needsRender=true
+ },
+ reset(){if(modelMode==='datacenter'){dcFocus=null;dataCenterScene?.focusRack(null)}azTarget=modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;elTarget=modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;distTarget=modelMode==='rack'?23.3:modelMode==='datacenter'?39:15.55;needsRender=true},
  nudge(x,y){azTarget+=x*.14;elTarget=clamp(elTarget+y*.12,.18,1.57);needsRender=true},
  showTraces(show){traceVisible=show;glowGroup.visible=show;coreIndicator.intensity=show?2:0;needsRender=true},
  setMotion(val){motion=val;needsRender=true},
@@ -683,7 +730,7 @@ function init(){
   if(!running){
    if(nvidiaModel)for(const assembly of nvidiaModel.assemblies)assembly.group.position.y=nvidiaExplodedHeight(assembly);
    // Pause resolves pending transitions in one draw, then leaves the GPU idle.
-   az=azTarget;el=elTarget;dist=distTarget;center.y=exploded?.75:0;updateCamera(true);
+   az=azTarget;el=elTarget;dist=distTarget;updateCamera(true);
    if(layerStack){
     for(let i=0;i<layerMeshes.length;i++)layerMeshes[i].position.y=exploded?.35+i*.23:.24+i*.003;
     for(const group of componentGroups)group.position.y=exploded?2.50:0;
@@ -722,7 +769,8 @@ function init(){
  const visible=!document.hidden,ambientNow=visible&&running&&motion&&!prefersReducedMotion;
  // Camera and exploded layers keep easing after the user releases a pointer,
  // but settled scenes no longer submit redundant WebGL frames.
- const cameraMoving=Math.abs(az-azTarget)+Math.abs(el-elTarget)+Math.abs(dist-distTarget)+Math.abs(center.y-(modelMode==='rack'?(rackServiceFocusY??3.68):exploded?.75:0))>.002;
+ const targetY=modelMode==='rack'?(rackServiceFocusY??3.65):modelMode==='datacenter'?3.68:exploded?.75:0;
+ const cameraMoving=Math.abs(az-azTarget)+Math.abs(el-elTarget)+Math.abs(dist-distTarget)+Math.abs(center.y-targetY)+Math.abs(center.x-(modelMode==='datacenter'&&dcFocus?dcFocus.x:0))+Math.abs(center.z-(modelMode==='datacenter'&&dcFocus?dcFocus.z:0))>.002;
  let layersMoving=false;
  if(ambientNow){
   root.rotation.y=Math.sin(t*.00014)*.085;

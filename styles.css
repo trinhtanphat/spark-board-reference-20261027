@@ -34,6 +34,12 @@ html{min-width:320px}body{margin:0;min-height:100vh;overflow-x:hidden;background
 .part-inspector-top{height:41px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #426c7360;padding:0 13px;font:700 9px var(--mono);letter-spacing:.7px;color:#74f0d2}
 .inspector-led{display:inline-block;width:5px;height:5px;background:#82ffdb;border-radius:50%;margin-left:4px;box-shadow:0 0 9px #82ffdb}
 .part-inspector-top button{width:26px;height:26px;border:1px solid #54727b;border-radius:5px;background:#1a3542;color:#dffaf7;font-size:20px;line-height:18px}
+/* On narrow screens, Inspector must not mask server click targets.
+   Keep the explicit close button clickable. All info text is read-only. */
+@media(max-width:640px){
+ .part-inspector{pointer-events:none}
+ .part-inspector-top button{pointer-events:auto}
+}
 .part-inspector-content{padding:17px 15px}
 .part-inspector-content>span{font:700 9px var(--mono);color:#6da9c5;letter-spacing:1px}
 .part-inspector-content>strong{display:block;font:700 19px/1.2 "Space Grotesk",sans-serif;margin:9px 0;letter-spacing:-.5px}
@@ -227,6 +233,9 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .dc-floor-rack[data-rack="F"]{background:#445033;border-color:#a5b36a;color:#e4f4b0}
 .dc-floor-rack:hover,.dc-floor-rack[aria-pressed="true"]{background:#527e5d;border-color:#dcf2a8;color:#fff;box-shadow:0 0 0 1px #83c98855 inset}
 .dc-floor-rack:focus-visible{outline:2px solid #e4ffb5;outline-offset:2px}
+.dc-overview-btn{font:700 10px/1.4 var(--mono);border:1px solid #8aa789;color:#e1f7d1;border-radius:5px;background:#284437;padding:8px 11px;cursor:pointer;align-self:center}
+.dc-overview-btn:hover{background:#41634c}
+.dc-overview-btn:focus-visible{outline:2px solid #e4ffb5;outline-offset:2px}
 @media(max-width:680px){.dc-floor-map{flex-basis:100%;width:100%;max-width:340px}.dc-head strong{text-align:left}}
 .dc-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px}
 .dc-pane{padding:13px;border:1px solid #405e59;background:#202f32;border-radius:9px;display:flex;flex-direction:column;gap:7px}

@@ -33,6 +33,7 @@
    b.title=info.label+" · visual-only rack selection";
    b.textContent=info.id+(info.kind==="fabric"?" / NET":" / GPU");
    b.addEventListener("click",()=>{
+    window.SPARK3D?.focusDataCenterRack?.(info.id);
     rack.value=info.id;slot.value="";render();
     const s=state.slots.find(s=>s.rack===info.id);
     if(s)window.SPARK3D?.selectDataCenterSlot?.(s.id);
@@ -63,7 +64,10 @@
  function run(fn,ok){
   try{fn();say(ok);render()}catch(e){say(e.message||String(e),true);render()}
  }
- rack.addEventListener("change",()=>{slot.value="";render()});
+ rack.addEventListener("change",()=>{
+  window.SPARK3D?.focusDataCenterRack?.(rack.value);
+  slot.value="";render();
+ });
  slot.addEventListener("change",()=>{
   const s=api()?.slots.find(v=>v.id===slot.value);
   if(s){replacement.value=s.kind;window.SPARK3D?.selectDataCenterSlot?.(s.id);}
@@ -85,6 +89,10 @@
    setTimeout(()=>URL.revokeObjectURL(url),1200);
    say("Simulation topology JSON exported (not a live config)");
   }catch(e){say(e.message||String(e),true)}
+ });
+ $("dcOverview").addEventListener("click",()=>{
+  window.SPARK3D?.resetDataCenterOverview?.();
+  say("Viewing all 16 close-packed racks");render();
  });
  $("dcReset").addEventListener("click",()=>run(()=>api().reset(),"Lab reset; no physical system affected"));
  document.addEventListener("spark:datacenter-update",render);
