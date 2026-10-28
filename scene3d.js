@@ -622,6 +622,19 @@ function init(){
  getDataCenterAPI(){return dataCenterModel},
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
  getFloor100RouteImpact(){return floor100Scene?.getRouteImpact()||null},
+ getFloor100PowerModel(){return floor100Scene?.getPowerModel()||null},
+ setFloor100LoadPercent(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setPowerLoadPercent(value)===true;
+  if(ok)needsRender=true;
+  return ok;
+ },
+ setFloor100PowerHeatmap(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setPowerHeatmap(value)===true;
+  if(ok)needsRender=true;
+  return ok;
+ },
  getFloor100HardwareInfo(){return floor100Scene?.getHardwareInfo()||null},
  setFloor100HardwarePart(value){
   if(modelMode!=='floor100')return false;

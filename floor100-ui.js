@@ -6,6 +6,10 @@
  const rackSelector=$("floor100Rack"),filter=$("floor100Layer"),rear=$("floor100Rear"),description=$("floor100Selected");
  const power=$("floor100PowerScenario"),cooling=$("floor100CoolingCircuit"),scenarioStatus=$("floor100ScenarioStatus");
  const hardwareSelect=$("floor100HardwarePart"),hardwareResult=$("floor100HardwareResult");
+ const loadSelect=$("floor100LoadPercent"),heatButton=$("floor100Heatmap");
+ const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
+ const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
+ const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
  let racks=[];
  function selectRack(id){
   if(!state()?.focusFloor100Rack?.(id||null))return;
@@ -15,6 +19,22 @@
   const d=state()?.getFloor100Diagnostics?.();
   if(!d)return;
   const focus=d.selected||"";
+  const modeledPower=state()?.getFloor100PowerModel?.();
+  const powerByRack=new Map((modeledPower?.entries||[]).map(r=>[r.id,r]));
+  if(modeledPower){
+   $("floor100TotalKW").textContent=showKW(modeledPower.totalKW);
+   $("floor100TotalW").textContent=showW(modeledPower.totalW);
+   $("floor100PeakKW").textContent=showKW(modeledPower.peakKW);
+   $("floor100PeakW").textContent=showW(modeledPower.peakW);
+   $("floor100FacilityKW").textContent=showKW(modeledPower.facilityKW);
+   $("floor100FacilityW").textContent=showW(modeledPower.facilityW);
+   $("floor100AvgKW").textContent=showKW(modeledPower.averageKW);
+   $("floor100LoadNotice").textContent=modeledPower.loadPercent+"% SCENARIO · NOT TELEMETRY";
+   loadSelect.value=String(modeledPower.loadPercent);
+  }
+  heatButton.setAttribute("aria-pressed",String(d.powerHeatmap));
+  heatButton.textContent="WATT HEATMAP / "+(d.powerHeatmap?"ON":"OFF");
+  map.dataset.heatmap=String(d.powerHeatmap);
   hardwareSelect.value=d.hardwarePart;
   const hardwareInfo=state()?.getFloor100HardwareInfo?.();
   hardwareResult.dataset.active=String(d.hardwareHighlightVisible);
@@ -29,10 +49,15 @@
    const route=routeById.get(b.dataset.id);
    b.setAttribute("aria-pressed",String(b.dataset.id===focus));
    if(route){
+    const powerEntry=powerByRack.get(b.dataset.id);
+    if(powerEntry){
+     b.dataset.heatBand=powerEntry.heatBand;
+     b.setAttribute("data-power-w",String(powerEntry.estimatedW));
+    }
     b.dataset.route=route.status;
-    b.title=b.dataset.id+" · "+(route.feed==="unmapped"?"feed not modeled":route.feed+" route "+route.status)+
+    b.title=b.dataset.id+" · "+(powerEntry?showKW(powerEntry.estimatedKW)+" / "+showW(powerEntry.estimatedW)+" · ":"")+(route.feed==="unmapped"?"feed not modeled":route.feed+" route "+route.status)+
      " · SCHEMATIC ONLY / NO ACTUAL RACK TELEMETRY";
-    b.setAttribute("aria-label",b.dataset.id+" "+(route.feed==="unmapped"?"feed path not modeled":route.feed+" feed path "+route.status)+", conceptual only");
+    b.setAttribute("aria-label",b.dataset.id+" "+(powerEntry?showW(powerEntry.estimatedW)+" estimated · ":"")+(route.feed==="unmapped"?"feed path not modeled":route.feed+" feed path "+route.status)+", conceptual only");
    }
   }
   const stats=$("floor100RouteCounts");
@@ -51,11 +76,22 @@
    for(const row of impact.rows){
     const chip=rowMap.children[row.row-1];
     chip.dataset.route=row.dimmed?"dimmed":"visible";
-    chip.textContent="ROW "+row.row+" · "+row.visible+"/"+row.dimmed+"/"+row.unmapped;
+    const rowPower=modeledPower?.rows[row.row-1];
+    chip.textContent="ROW "+row.row+" · "+row.visible+"/"+row.dimmed+"/"+row.unmapped+
+     (rowPower?" · "+showKW(rowPower.estimatedKW):"");
     chip.title="Row "+row.row+": "+row.visible+" routes shown, "+row.dimmed+
      " dimmed, "+row.unmapped+" unmodeled — not measured rack uptime";
    }
   }
+  const currentPower=powerByRack.get(focus);
+  $("floor100RackPower").textContent=currentPower?
+   (focus+" · "+showKW(currentPower.estimatedKW)+" / "+showW(currentPower.estimatedW)+
+    " EST. IT · PEAK "+showKW(currentPower.peakKW)+" · A+B PATHS DRAWN, NOT VALIDATED"):
+   "Select a rack to view individual W and kW estimate.";
+  const rowEstimate=currentPower?modeledPower.rows[currentPower.row]:null;
+  $("floor100RowPower").textContent=rowEstimate?
+   ("ROW "+rowEstimate.row+" · "+showKW(rowEstimate.estimatedKW)+" / "+showW(rowEstimate.estimatedW)+" IT"):
+   "ROW TOTAL: select a rack";
   if(focus){
    const r=racks.find(r=>r.id===focus);
    if(r){
@@ -96,6 +132,22 @@
    map.appendChild(b);
   }
  }
+ loadSelect.addEventListener("change",()=>{
+  state()?.setFloor100LoadPercent?.(Number(loadSelect.value));render();
+ });
+ heatButton.addEventListener("click",()=>{
+  state()?.setFloor100PowerHeatmap?.(!state()?.getFloor100Diagnostics?.()?.powerHeatmap);render();
+ });
+ $("floor100ExportPower").addEventListener("click",()=>{
+  const profile=state()?.getFloor100PowerModel?.();if(!profile)return;
+  const data=JSON.stringify({format:"SPARK-FLOOR100-POWER-ESTIMATE-1",
+   source:"BROWSER_ONLY_DEMO_ASSUMPTIONS",createdAt:new Date().toISOString(),...profile},null,2);
+  const blob=new Blob([data],{type:"application/json"});
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download="spark-floor100-power-estimate-NOT-TELEMETRY.json";
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+ });
  power.addEventListener("change",()=>{
   state()?.setFloor100PowerScenario?.(power.value);render();
  });

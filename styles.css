@@ -381,3 +381,30 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-hardware-facts b{font:800 16px/1.2 var(--mono);color:#ffe2a7;margin-right:5px}
 #floor100OfficialGuide{font:700 10px/1.5 var(--mono);color:#b4e8dd;text-decoration:underline;text-underline-offset:3px}
 .floor100-hardware-inspector small{font:500 9px/1.5 var(--mono);color:#acc5bf}
+
+/* Floor 100: estimated watts, heatmap, and A/B conduit explorer */
+.floor100-power-panel{margin:8px 0 14px;padding:12px 13px;border:1px solid #698e86;background:linear-gradient(115deg,#193339,#203a36 55%,#33362b);border-radius:9px}
+.floor100-power-panel-head{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:12px}
+.floor100-power-panel-head strong{font:800 11px/1.5 var(--mono);color:#f9e4af}
+.floor100-power-panel-head>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.floor100-power-panel-head label{font:700 9px/1.5 var(--mono);color:#c2d6c6}
+.floor100-power-panel select,.floor100-power-panel button{min-height:35px;border:1px solid #789b8f;background:#264947;color:#ecf7e9;padding:7px 9px;border-radius:5px;font:700 10px/1.4 var(--mono)}
+.floor100-power-panel button{cursor:pointer}
+.floor100-power-panel button[aria-pressed="true"]{background:#634b32;border-color:#f5be6c;color:#fff3d6}
+.floor100-power-panel button:focus-visible,.floor100-power-panel select:focus-visible{outline:2px solid #ffdda7;outline-offset:2px}
+.floor100-power-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.floor100-power-metrics>div{display:flex;flex-direction:column;gap:3px;padding:10px;border:1px solid #567973;background:#142e30;border-radius:6px;min-width:0}
+.floor100-power-metrics small{color:#a0c3b7;font:700 9px/1.4 var(--mono)}
+.floor100-power-metrics strong{color:#fff0c8;font:800 clamp(14px,1.5vw,22px)/1.2 "Space Grotesk",sans-serif}
+.floor100-power-metrics output{color:#b9e6d9;font:700 10px/1.4 var(--mono)}
+.floor100-power-panel p{margin:9px 0 0;color:#afcbc2;font:600 9px/1.6 var(--mono)}
+.floor100-rack-power{display:flex;flex-direction:column;gap:6px;margin:9px 0;padding:10px;border:1px solid #ad9a72;border-radius:6px;background:#302f29}
+.floor100-rack-power>strong{color:#f3db9f;font:800 10px/1.5 var(--mono)}
+.floor100-rack-power>output{color:#ecf5d5;font:700 10px/1.6 var(--mono)}
+.floor100-rack-power small{color:#bcd1be;font:500 9px/1.55 var(--mono)}
+.floor100-map[data-heatmap="true"] button[data-heat-band="high"]{background:#885039;border-color:#ef9667;color:#fff6df;box-shadow:inset 0 -4px #ff9d61}
+.floor100-map[data-heatmap="true"] button[data-heat-band="medium"]{background:#7e6d39;border-color:#e8cb73;color:#fff4d4;box-shadow:inset 0 -4px #f4d479}
+.floor100-map[data-heatmap="true"] button[data-heat-band="low"]{background:#356870;border-color:#76c9ca;color:#eafffc;box-shadow:inset 0 -4px #79ced4}
+.floor100-map button[aria-pressed="true"],.floor100-map[data-heatmap="true"] button[aria-pressed="true"]{outline:2px solid #ffe3a1;outline-offset:0;border-color:#f5d49a;filter:brightness(1.18)}
+@media(max-width:850px){.floor100-power-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:450px){.floor100-power-panel-head>div{width:100%}.floor100-power-panel select,.floor100-power-panel button{flex:1 1 150px}}

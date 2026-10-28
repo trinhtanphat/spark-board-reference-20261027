@@ -4,6 +4,7 @@
  * All geometry is procedural, with InstancedMesh used for repeated fascias.
  */
 import {buildFloor100Impact} from './floor100-impact.mjs';
+import {buildFloor100PowerModel} from './floor100-power.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
 export const FLOOR100_SPEC=Object.freeze({
  rows:10,columns:10,rackCount:100,rackWidth:3.72,rackDepth:2.52,
@@ -164,14 +165,49 @@ export function createFloor100Concept(THREE){
   makeBox(g,"steel",-27,3.65,z,1,.45,1);
   makeBox(g,"generatorLive",-27,3.98,z,.8,.14,.8);
  }
+ // Dedicated A/B visual utility routing from equipment gallery to rack trunks.
+ // These schematic conduits are NOT actual cable sizing, safe busway installation
+ // or a verified UPS/generator connection sequence.
+ for(const [dx,kind,y] of [[-20.7,"powerA",8.87],[-20.3,"powerB",9.02]]){
+  cube(kind,dx,y,0,.15,.12,55,zones.power);
+ }
+ for(let bank=0;bank<4;bank++){
+  const z=(bank-1.5)*12.0;
+  for(const [kind,dx,y] of [["powerA",-20.7,8.87],["powerB",-20.3,9.02]]){
+   cube(kind,dx,5.4,z,.12,7.05,.13,zones.power);
+   cube(kind,-23.32,y,z,6.2,.11,.14,zones.power);
+   cube(kind,-26.1,5.4,z,.12,7.05,.12,zones.power);
+  }
+ }
+ // Visual emergency generator / UPS and battery-gallery feeders only.
+ // No physical transfer time, isolation, load sharing or rating is implied.
+ for(const generatorZ of [-25,25]){
+  cube("source",-26.3,4.35,generatorZ,.16,2.25,.15,zones.power);
+  cube("source",-26.3,4.4,generatorZ>0?21.5:-21.5,.15,.13,7.1,zones.power);
+ }
+ for(let i=0;i<8;i++){
+  const z=(i-3.5)*6.7;
+  cube("source",-29.2,4.0,z,5.4,.13,.13,zones.power);
+  cube("source",-32,3.5,z,.12,1.85,.12,zones.power);
+ }
  // Dual electrical distribution visualization. Not engineering wiring geometry.
  for(let row=0;row<10;row++){
   cube("powerA",-10.0,8.87,zR(row),53,.08,.13,zones.power);
   cube("powerB",-10.0,9.02,zR(row)+.3,53,.08,.11,zones.power);
  }
- for(let row=0;row<10;row++)for(let c=0;c<10;c++)if(c<8){
-  cube("coolant",xR(c),8.04,zR(row),.065,.18,2.20,zones.cooling);
-  cube(c%2===0?"powerA":"powerB",xR(c),8.95,zR(row),.085,.13,2.00,zones.power);
+ for(let row=0;row<10;row++)for(let c=0;c<10;c++){
+  const x=xR(c),z=zR(row);
+  if(c<8)cube("coolant",x,8.04,z,.065,.18,2.20,zones.cooling);
+  // Every cabinet gets TWO independent schematic rear-side feed drops (A/B).
+  // The current single-column parity feed-status map remains a separate
+  // simplified route illustration, not a rack power availability assertion.
+  for(const [dx,kind,headerZ,top] of [[-1.35,"powerA",z,8.87],[1.35,"powerB",z+.3,9.02]]){
+   cube(kind,x+dx,4.7,z-1.64,.095,8.1,.105,zones.power);
+   const dz=(headerZ+z-1.64)/2;
+   cube(kind,x+dx,top,dz,.09,.09,Math.abs(headerZ-(z-1.64))+.08,zones.power);
+   cube(kind,x+dx,2.75,z-1.78,.25,.24,.16,zones.power);
+   cube("steel",x+dx,2.75,z-1.9,.30,.29,.09,zones.power);
+  }
  }
  // Place repeating details into one InstancedMesh per (zone, material).
  const groups=new Map();
@@ -197,12 +233,35 @@ export function createFloor100Concept(THREE){
   routeIndicators.setMatrixAt(i,o.matrix);
  });
  routeIndicators.instanceMatrix.needsUpdate=true;routeIndicators.computeBoundingSphere();group.add(routeIndicators);
+ // Single-draw-call heatmap strip above each rack's front-facing panel.
+ const heatMat=new THREE.MeshBasicMaterial({color:"#ffffff",toneMapped:false});
+ const heatIndicators=new THREE.InstancedMesh(boxGeom,heatMat,racks.length);
+ heatIndicators.name="FLOOR100_ESTIMATED_POWER_HEATMAP";heatIndicators.frustumCulled=false;
+ racks.forEach((r,i)=>{o.position.set(r.x,7.09,r.z+1.49);o.rotation.set(0,0,0);o.scale.set(1.5,.14,.07);
+  o.updateMatrix();heatIndicators.setMatrixAt(i,o.matrix)});
+ heatIndicators.instanceMatrix.needsUpdate=true;heatIndicators.visible=false;
+ group.add(heatIndicators);
  // Rack frame selection is 12 unwarped cuboid edges.
  const outline=new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(3.78,8.30,2.59)),
   new THREE.LineBasicMaterial({color:0xf8d18a,depthTest:false,transparent:true,opacity:.97}));
  outline.renderOrder=70;outline.visible=false;group.add(outline);
  let selected=null,filter="all",serviceSide="front";
+ let loadPercent=100,powerHeatmap=false,powerModel=buildFloor100PowerModel(racks,loadPercent);
+ const powerHeatColors={high:new THREE.Color("#ed8359"),medium:new THREE.Color("#e6c66f"),low:new THREE.Color("#73c5c8")};
+ function refreshPowerEstimate(){
+  powerModel=buildFloor100PowerModel(racks,loadPercent);
+  powerModel.entries.forEach((r,i)=>heatIndicators.setColorAt(i,powerHeatColors[r.heatBand]));
+  heatIndicators.instanceColor.needsUpdate=true;heatIndicators.visible=powerHeatmap;
+ }
+ function setPowerLoadPercent(value){
+  if(![60,80,100].includes(value))return false;
+  loadPercent=value;refreshPowerEstimate();return true;
+ }
+ function setPowerHeatmap(value){
+  if(typeof value!=="boolean")return false;
+  powerHeatmap=value;refreshPowerEstimate();return true;
+ }
  let hardwarePart='none';
  const highlightMat=new THREE.MeshBasicMaterial({color:'#ffe7a2',transparent:true,opacity:.49,depthTest:false,depthWrite:false,toneMapped:false});
  const highlight=new THREE.InstancedMesh(boxGeom,highlightMat,18);
@@ -273,6 +332,10 @@ export function createFloor100Concept(THREE){
  function diagnostics(){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
    powerScenario,coolingCircuit,
+   powerLoadPercent:loadPercent,powerHeatmap,
+   powerTotalW:powerModel.totalW,powerFacilityW:powerModel.facilityW,
+   powerDualDrops:200,powerHeatIndicators:heatIndicators.count,
+   powerHeatVisible:heatIndicators.visible,
    hardwarePart,hardwareHighlightVisible:highlight.visible,
    hardwareHighlightCount:highlight.count,
    hardwareHighlightFirstZ:(()=>{if(!highlight.visible)return null;const m=new THREE.Matrix4();highlight.getMatrixAt(0,m);return Number(m.elements[14].toFixed(3));})(),
@@ -304,7 +367,9 @@ export function createFloor100Concept(THREE){
  }
  group.visible=false;
  updateInfrastructureVisuals();
- return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,diagnostics,
+ refreshPowerEstimate();
+ return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,
+  setPowerLoadPercent,setPowerHeatmap,getPowerModel:()=>powerModel,diagnostics,
   getRouteImpact:()=>routeImpact,getHardwareInfo:()=>NVL72_INSPECTION_PARTS[hardwarePart],
   rackPosition:id=>rackById.get(id)||null,getSelected:()=>selected};
 }
