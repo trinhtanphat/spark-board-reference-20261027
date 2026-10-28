@@ -5,7 +5,7 @@
  */
 export const DATA_CENTER_DISCLAIMER="BROWSER-ONLY SIMULATION - NOT NVIDIA CAD, LIVE CABLING OR HOT-SWAP PROCEDURES";
 // Conceptual dense lab spacing, not an installation/service clearance plan.
-export const DATA_CENTER_LAYOUT=Object.freeze({rows:4,columns:4,pitchX:4.16,pitchZ:3.15,rackWidth:4.10,rackDepth:2.50});
+export const DATA_CENTER_LAYOUT=Object.freeze({rows:4,columns:4,pitchX:4.16,pitchZ:5.25,rackWidth:4.10,rackDepth:2.50});
 const gridIds=["A","B","C","D","E","G","H","I","J","K","L","M","N","O","P","F"];
 export const DATA_CENTER_RACKS=Object.freeze(gridIds.map((id,i)=>Object.freeze({
  id,label:id==="F"?"NETWORK / FABRIC RACK":"NVL72 GPU RACK "+id,
