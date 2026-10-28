@@ -35,6 +35,24 @@ async function main(){try{
  for(const screen of [{name:"desktop",width:1440,height:900,mobile:false},{name:"mobile",width:390,height:844,mobile:true},{name:"tablet",width:768,height:1000,mobile:true}]){
   await send("Emulation.setDeviceMetricsOverride",{width:screen.width,height:screen.height,deviceScaleFactor:1,mobile:screen.mobile});
   await send("Page.navigate",{url:target});await delay(350);for(let waited=0;waited<42;waited++){const state=await js("({ready:!!window.SPARK3D?.ready,failed:document.getElementById('engineLabel')?.textContent==='2D COMPATIBILITY MODE'})");if(state.ready||state.failed)break;await delay(400)}
+  const floorQA=await js("(()=>{document.getElementById('modelFloor100').click();const a=window.SPARK3D,u=window.SPARK_FLOOR100_UI,d=a.getFloor100Diagnostics(),buttons=document.querySelectorAll('#floor100Map button');const base={selectedMode:a.getModelMode()==='floor100',panel:!document.getElementById('floor100Lab').hidden,racks:d.racks===100&&buttons.length===100,distribution:d.computeRacks===80&&d.fabricRacks===10&&d.storageRacks===10&&d.gpuEquivalent===5760,services:d.cdu===8&&d.crah===12&&d.ups===4&&d.batteryCabinets===8&&d.generators===2,clearance:d.frontRearGap>3&&d.sideGap<.2,batching:d.batchCount<30&&d.instances>5000&&d.pickTargets===100};document.querySelector('#floor100Map button[data-id=R100]').click();base.focus=a.getFloor100Diagnostics().selected==='R100'&&u.getState().selected==='R100';document.getElementById('floor100Layer').value='cooling';document.getElementById('floor100Layer').dispatchEvent(new Event('change'));base.cooling=a.getFloor100Diagnostics().filter==='cooling';document.getElementById('floor100Layer').value='power';document.getElementById('floor100Layer').dispatchEvent(new Event('change'));base.power=a.getFloor100Diagnostics().filter==='power';document.getElementById('floor100Layer').value='all';document.getElementById('floor100Layer').dispatchEvent(new Event('change'));document.getElementById('floor100Rear').click();base.rear=a.getFloor100Diagnostics().serviceSide==='rear';document.getElementById('floor100Rear').click();base.front=a.getFloor100Diagnostics().serviceSide==='front';base.pickPoint=a.getFloor100PickPoint('R100');document.querySelector('.hero-stage').scrollIntoView({behavior:'instant',block:'center'});return base})()");
+  if(!floorQA.pickPoint?.inside)throw Error("Floor100 focus does not project onto viewport "+JSON.stringify(floorQA));
+  await delay(210);
+  const point100=await js("window.SPARK3D.getFloor100PickPoint('R100')");
+  await send("Input.dispatchMouseEvent",{type:"mouseMoved",x:point100.x,y:point100.y,button:"none"});
+  await send("Input.dispatchMouseEvent",{type:"mousePressed",x:point100.x,y:point100.y,button:"left",clickCount:1});
+  await send("Input.dispatchMouseEvent",{type:"mouseReleased",x:point100.x,y:point100.y,button:"left",clickCount:1});
+  const floorPointerQA=await js("(()=>{const a=window.SPARK3D;return {selected:a.getFloor100Diagnostics().selected==='R100',cameraTarget:a.getCameraState().distance<26,viewer:document.getElementById('floor100Selected').textContent.includes('R100'),legacy16:document.getElementById('dataCenterLab').hidden}})()");
+  const floorSummary={...floorQA,actualClick:Object.values(floorPointerQA).every(Boolean)};
+  delete floorSummary.pickPoint;
+  console.log("FLOOR100_BROWSER_E2E",JSON.stringify({screen:screen.name,...floorSummary,pointer:floorPointerQA}));
+  if(!Object.values(floorSummary).every(Boolean))throw Error("100-rack single-floor regression: "+JSON.stringify(floorSummary));
+  if(screen.name==='desktop'){
+   const photo=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});
+   fs.writeFileSync(path.join(__dirname,"test-floor100-focused.png"),Buffer.from(photo.data,"base64"));
+  }
+  await js("(()=>{document.getElementById('floor100Overview').click();document.getElementById('modelNvidia').click()})()");
+  if(process.env.TEST_FLOOR100_ONLY==='1')continue;
   // Browser storage survives a real same-origin reload, but active simulation
   // must not silently overwrite a previously saved, different configuration.
   const sessionBefore=await js("(()=>{document.getElementById('modelDatacenter').click();const m=window.SPARK3D.getDataCenterAPI(),s=id=>m.slots.find(x=>x.id===id),key='spark-datacenter-sim-session-v1';localStorage.removeItem(key);m.remove('B-C05');document.getElementById('dcSessionSave').click();const manual=!JSON.parse(localStorage.getItem(key)).slots.find(x=>x.id==='B-C05').installed;m.install('B-C05','compute');document.getElementById('dcSessionAuto').click();const autoEnabled=document.getElementById('dcSessionAuto').getAttribute('aria-pressed')==='true';m.remove('B-C05');const autoSaved=!JSON.parse(localStorage.getItem(key)).slots.find(x=>x.id==='B-C05').installed;document.getElementById('dcSessionAuto').click();m.install('B-C05','compute');const paused=!JSON.parse(localStorage.getItem(key)).slots.find(x=>x.id==='B-C05').installed&&s('B-C05').installed;return{manual,autoEnabled,autoSaved,paused}})()");
@@ -312,4 +330,4 @@ async function main(){try{
  console.log("JS_EXCEPTIONS",JSON.stringify(exceptions));console.log("CONSOLE_ERRORS",JSON.stringify(consoleErrors));console.log("RESULT",good&&exceptions.length===0&&consoleErrors.length===0?"PASS":"FAIL");
  if(!good||exceptions.length||consoleErrors.length)process.exitCode=2;
 }finally{try{ws?.close()}catch{};try{child?.kill()}catch{};setTimeout(()=>{try{fs.rmSync(profile,{recursive:true,force:true})}catch{}},1000)}}
-main().catch(err=>{console.error("E2E_ERROR",err.stack||err.message);process.exitCode=2;try{child?.kill()}catch{}});
+main().catch(err=>{console.error("E2E_ERROR",err.stack||err.message);console.error("CONSOLE_ERRORS",JSON.stringify(consoleErrors));console.error("JS_EXCEPTIONS",JSON.stringify(exceptions));process.exitCode=2;try{child?.kill()}catch{}});

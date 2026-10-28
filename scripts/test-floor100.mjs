@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {FLOOR100_SPEC as s,createFloor100Concept} from '../floor100-scene.mjs';
+assert.equal(s.rows*s.columns,100);
+assert.equal(s.computeRacks+s.fabricRacks+s.storageRacks,s.rackCount);
+assert.equal(s.rackCount,100);
+assert.equal(s.computeRacks*72,5760);
+assert.ok(s.pitchX-s.rackWidth>0&&s.pitchX-s.rackWidth<.15);
+assert.ok(s.pitchZ-s.rackDepth>3);
+assert.equal(s.cduCount,8);
+assert.equal(s.crahCount,12);
+assert.equal(s.upsCount,4);
+assert.equal(s.batteryCabinets,8);
+assert.equal(s.generators,2);
+assert.equal(typeof createFloor100Concept,'function');
+assert.equal(s.designStatus,'ILLUSTRATIVE ONLY');
+console.log(JSON.stringify({status:"PASS",floor:1,racks:s.rackCount,rows:s.rows,columns:s.columns,compute:s.computeRacks,fabric:s.fabricRacks,storage:s.storageRacks,gpuEquivalent:s.computeRacks*72,frontRearSceneGap:s.pitchZ-s.rackDepth,sideSceneGap:Number((s.pitchX-s.rackWidth).toFixed(2)),cooling:{cdu:s.cduCount,crah:s.crahCount},power:{ups:s.upsCount,battery:s.batteryCabinets,generator:s.generators},physicalCAD:false},null,2));
