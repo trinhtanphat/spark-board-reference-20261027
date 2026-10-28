@@ -19,6 +19,11 @@ export function createDataCenterConcept(THREE,model){
  const cableMaterials=Object.fromEntries(Object.entries(FABRICS).map(([key,value])=>[key,material(value.color,.2,.42)]));
  const instanceData=new Map(),batches=[];
  const rackCenters=new Map(),slotPositions=new Map(),dynamicRecords=[];
+ const rackInfo=new Map(DATA_CENTER_RACKS.map(r=>[r.id,r]));
+ let selectedRack=null,selectedSlot=null,slotFrame=null;
+ const rackOutlineGeometry=new THREE.EdgesGeometry(new THREE.BoxGeometry(4.12,8.76,2.51));
+ const rackOutline=new THREE.LineSegments(rackOutlineGeometry,new THREE.LineBasicMaterial({color:0xe2ca89,depthTest:false,transparent:true,opacity:.97}));
+ rackOutline.name="DENSE_DC_SELECTED_RACK_12_EDGE_FRAME";rackOutline.renderOrder=85;rackOutline.visible=false;group.add(rackOutline);
  const dummy=new THREE.Object3D();
  function instance(kind,w,h,d,x,y,z,slotId=null){
   if(!instanceData.has(kind))instanceData.set(kind,[]);
@@ -78,8 +83,10 @@ export function createDataCenterConcept(THREE,model){
    const root=new THREE.Group();root.position.set(x,y,z);
    root.userData.part="DC / "+id;
    group.add(root);parts.push(root);
-   // Invisible pick volumes render zero fragments but respond accurately to click.
-   const click=new THREE.Mesh(new THREE.BoxGeometry(3.52,Math.max(h-.006,.05),2.35),pickMaterial);
+   // Front-face-only click target. Full-depth ray volumes caused wrong slot
+   // selection from elevated/oblique angles by intersecting adjacent trays.
+   const click=new THREE.Mesh(new THREE.BoxGeometry(3.52,Math.max(h-.006,.05),.13),pickMaterial);
+   click.position.z=1.30;
    click.layers.set(29);click.userData.part=root.userData.part;
    click.name="DC_SLOT_HIT_"+id;root.add(click);pickTargets.push(click);
    instance("empty",3.48,h-.015,.14,x,y,z+1.11);
@@ -88,7 +95,7 @@ export function createDataCenterConcept(THREE,model){
     instance("dark",.42,Math.max(.04,h-.055),.06,x-1.19,y,z+1.39,id),
     instance(slot.kind==="compute"?"green":"frame",.38,.065,.04,x+.98,y,z+1.39,id)
    ];
-   slotGroups.set(id,{root,slotId:id,drawables:records});
+   slotGroups.set(id,{root,slotId:id,drawables:records,pick:click,height:h});
    slotPositions.set(id,{x,y,z:z+1.42});
    if(rack.kind!=="fabric")y+=h/2+.015;
   }
@@ -142,6 +149,8 @@ export function createDataCenterConcept(THREE,model){
   const slotIndex=new Map(model.slots.map(s=>[s.id,s]));
   for(const [id,entry] of slotGroups){
    const slot=slotIndex.get(id);
+   entry.pick.position.z=1.30+(slot.drawer?.82:0);
+   if(selectedSlot===id&&slotFrame)slotFrame.position.z=.035+(slot.drawer?.82:0);
    for(const record of entry.drawables){
     record.batch.setMatrixAt(record.index,matrixFor(record,slot.installed,slot.drawer));
     record.batch.instanceMatrix.needsUpdate=true;
@@ -159,8 +168,28 @@ export function createDataCenterConcept(THREE,model){
   }
  }
  refresh();
+ function focusRack(id){
+  if(id!==null&&!rackInfo.has(id))return false;
+  selectedRack=id;
+  rackOutline.visible=id!==null;
+  if(id!==null){const point=rackCenters.get(id);rackOutline.position.set(point.x,3.63,point.z)}
+  return true;
+ }
+ function rackPosition(id){const v=rackCenters.get(id);return v?{...v}:null}
+ function createSlotSelectionFrame(part){
+  const id=part.startsWith("DC / ")?part.slice(5):part;
+  const entry=slotGroups.get(id);if(!entry)return null;
+  if(slotFrame){slotFrame.removeFromParent();slotFrame.geometry.dispose();slotFrame.material.dispose();slotFrame=null}
+  const geometry=new THREE.EdgesGeometry(new THREE.BoxGeometry(3.54,Math.max(.055,entry.height-.007),2.37));
+  slotFrame=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:0xe4bd69,depthTest:false,transparent:true,opacity:.97}));
+  slotFrame.name="DENSE_DC_SELECTED_FULL_SERVER_BOX";slotFrame.renderOrder=86;
+  slotFrame.position.z=.035+(model.slots.find(s=>s.id===id)?.drawer?.82:0);
+  slotFrame.userData={kind:"full-chassis-slot",slotId:id,boxDepth:2.37,edgeCount:12};
+  entry.root.add(slotFrame);selectedSlot=id;return slotFrame;
+ }
+ function clearSlotSelection(){selectedSlot=null;slotFrame=null}
  return {
-  group,parts,pickTargets,refresh,slotGroups,
+  group,parts,pickTargets,refresh,slotGroups,focusRack,rackPosition,createSlotSelectionFrame,clearSlotSelection,
   diagnostics:()=>({
    scope:"DENSE_16_RACK_BROWSER_SIMULATION",visible:group.visible,
    gpuRacks:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length,
@@ -169,6 +198,8 @@ export function createDataCenterConcept(THREE,model){
    layout:{...DATA_CENTER_LAYOUT,clearanceX:Number((xPitch-DATA_CENTER_LAYOUT.rackWidth).toFixed(3)),
     clearanceZ:Number((zPitch-DATA_CENTER_LAYOUT.rackDepth).toFixed(3))},
    slotObjects:slotGroups.size,pickingVolumes:pickTargets.length,
+   selectedRack,selectedSlot,selectedRackOutlined:rackOutline.visible,
+   selectedSlotBoxOffset:slotFrame?.position.z??null,selectedSlotBoxDepth:slotFrame?.userData.boxDepth??null,
    instanceBatches:batches.length,instances:batches.reduce((n,b)=>n+b.count,0),
    drawnCables:renderedCables,selectedDrawers:model.slots.filter(s=>s.drawer).length,
    installed:model.stats().modulesInstalled,notOfficialCAD:true,
