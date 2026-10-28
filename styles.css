@@ -180,3 +180,13 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .product-view-selector .cooling-toggle{border-color:#527e86;color:#c3e0d9;background:#1d3136}
 .product-view-selector .cooling-toggle[aria-pressed="true"]{background:#2d5b62;border-color:#8fcad0;color:#e5f9f7}
 .product-view-selector .cooling-toggle:disabled{opacity:.35;cursor:not-allowed}
+
+/* NVL72 rack architectural inspection, original Superchip & SPARK modes retained */
+.rack-facts-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.rack-facts-strip span{display:flex;flex-direction:column;gap:6px;padding:12px 10px;border:1px solid #617353;border-radius:7px;background:#1b3028;color:#bcd5b7;font:700 9px/1.45 var(--mono)}
+.rack-facts-strip strong{color:#e1f4bf;font:700 15px/1.2 "Space Grotesk",sans-serif}
+.nvidia-rack-note{color:#b3c3b6;font:500 10px/1.7 var(--mono);margin:10px 0}
+.product-view-selector #modelRack{border-color:#91a36d;color:#d4e5b3}
+.product-view-selector #modelRack.active{background:linear-gradient(105deg,#779e32,#d5da76);color:#172117}
+@media(max-width:800px){.rack-facts-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.product-view-selector #modelRack{flex:1 1 190px}.rack-facts-strip strong{font-size:13px}}

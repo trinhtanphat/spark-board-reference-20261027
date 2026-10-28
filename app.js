@@ -92,12 +92,20 @@ const parts={
 "U6 / POWER MANAGEMENT":["U6 / REGULATOR","Power-management shield can, modeled for the studio assembly."]
 };
 window.sparkInspectPart=name=>{
- const [type,desc]=modelDescriptions[name]||parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];
+ const rackDescription=name.startsWith("NVIDIA / NVL72 COMPUTE TRAY")?
+ ["NVIDIA NVL72 / COMPUTE TRAY","One of 18 documented compute trays; each has 4 Rubin GPUs and 2 Vera CPUs. Placement and exterior design are illustrative, not factory CAD."]:
+ name.startsWith("NVIDIA / NVL72 NVLINK SWITCH TRAY")?
+ ["NVLINK 6 / SWITCH TRAY","One of 9 documented NVLink 6 switch trays. Each contains 4 NVSwitch ASICs. The rendered faceplate is conceptual."]:
+ name.startsWith("NVIDIA / NVL72 TOR SWITCH")?
+ ["TOP OF RACK / MANAGEMENT","One of 2 published top-of-rack management switches. The rendered front panel is artistic."]:
+ name.startsWith("NVIDIA / NVL72 POWER SHELF")?
+ ["POWER SHELF / CONCEPT","Illustrative power shelf; the number, capacity and physical location are not engineering data."]:null;
+ const [type,desc]=rackDescription||modelDescriptions[name]||parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];
  $("partInspector").hidden=false;$("partType").textContent=type;$("partName").textContent=name;$("partDescription").textContent=desc;
 };
 $("inspectCore").addEventListener("click",()=>{
  if(!window.SPARK3D?.ready){notify("3D model is still loading");return}
- window.SPARK3D.selectPart(window.SPARK3D.getModelMode?.()==="nvidia"?"NVIDIA / RUBIN GPU A":"SPARK / FABLE CORE");
+ window.SPARK3D.selectPart(window.SPARK3D.getModelMode?.()==="rack"?"NVIDIA / NVL72 COMPUTE TRAY 01":window.SPARK3D.getModelMode?.()==="nvidia"?"NVIDIA / RUBIN GPU A":"SPARK / FABLE CORE");
 });
 $("closeInspector").addEventListener("click",()=>{ $("partInspector").hidden=true;window.SPARK3D?.clearSelection() });
 let exploded=false;
@@ -110,30 +118,47 @@ $("explodeToggle").addEventListener("click",()=>{
 });
 
 
-const viewButtons={nvidia:$("modelNvidia"),reference:$("modelReference")};
+const viewButtons={nvidia:$("modelNvidia"),rack:$("modelRack"),reference:$("modelReference")};
 function updateModelView(mode){
- lines=mode==="nvidia"?nvidiaLines:referenceLines;
+ lines=mode==="reference"?referenceLines:nvidiaLines;
  renderTerminal();
  for(const [key,button] of Object.entries(viewButtons)){
   button.classList.toggle("active",key===mode);
   button.setAttribute("aria-pressed",String(key===mode));
  }
- document.querySelector(".stage-title h2").innerHTML=mode==="nvidia"?
-  'VERA <span>RUBIN</span><span class="h2-suffix"> / 2026</span>':
+ document.querySelector(".stage-title h2").innerHTML=mode==="rack"?
+  'VERA RUBIN <span>NVL72</span><span class="h2-suffix"> / RACK</span>':
+  mode==="nvidia"?'VERA <span>RUBIN</span><span class="h2-suffix"> / 2026</span>':
   'THE BARE <span>BOARD</span><span class="h2-suffix"> / 05</span>';
- document.querySelector(".stage-title p").textContent=mode==="nvidia"?
-  "2 Rubin GPUs · 1 Vera CPU · HBM4 memory":"Matte FR-4 · plated copper · assembly concept";
- document.querySelector(".label-a").textContent=mode==="nvidia"?"MODEL / VERA RUBIN":"MODEL / SPARK S3";
- $("explodeToggle").textContent=exploded?"⫶ ASSEMBLE":mode==="nvidia"?"⫶ EXPLODE MODULE":"⫶ EXPLODE 8L";
- $("layersToggle").disabled=mode==="nvidia";
+ document.querySelector(".stage-title p").textContent=mode==="rack"?
+  "18 compute trays · 9 NVLink 6 switch trays · 72 Rubin GPUs":
+  mode==="nvidia"?"2 Rubin GPUs · 1 Vera CPU · HBM4 memory":
+  "Matte FR-4 · plated copper · assembly concept";
+ document.querySelector(".label-a").textContent=mode==="rack"?"MODEL / NVL72 RACK":mode==="nvidia"?"MODEL / VERA RUBIN":"MODEL / SPARK S3";
+ if(exploded){exploded=false;$("explodeToggle").classList.remove("active");$("explodeToggle").setAttribute("aria-pressed","false")}
+ $("explodeToggle").textContent=mode==="rack"?"RACK / FIXED VIEW":mode==="nvidia"?"⫶ EXPLODE MODULE":"⫶ EXPLODE 8L";
+ $("explodeToggle").disabled=mode==="rack";
+ $("layersToggle").disabled=mode!=="reference";
  $("coolingToggle").disabled=mode!=="nvidia";
  $("coolingToggle").setAttribute("aria-pressed",String(Boolean(window.SPARK3D?.getNvidiaCooling?.())));
- $("inspectCore").setAttribute("aria-label",mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
+ $("inspectCore").setAttribute("aria-label",mode==="rack"?"Inspect NVIDIA NVL72 compute tray":mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
+ $("productFactsTitle").textContent=mode==="rack"?
+  "18 compute trays. 9 NVLink switch trays. One NVL72 rack.":
+  mode==="nvidia"?"Two GPUs. One Vera CPU. One Superchip.":
+  "NVIDIA architecture facts · independent study";
+ $("productFactsSummary").textContent=mode==="rack"?
+  "Published hardware counts; rack layout, cooling paths and placement are illustrative, not NVIDIA CAD.":
+  mode==="nvidia"?"Independent architectural visualization — not an official NVIDIA product render or manufacturing model.":
+  "The SPARK PCB reference is a separate fictional board; NVIDIA figures do not describe its components.";
+ document.querySelector(".label-b").innerHTML=mode==="rack"?
+  '001 <span class="label-hair"></span> UNOFFICIAL NVL72 RACK / 2026':
+  mode==="nvidia"?'001 <span class="label-hair"></span> UNOFFICIAL SUPERCHIP CONCEPT / 2026':
+  '001 <span class="label-hair"></span> SPARK REFERENCE PCB / VISUAL ONLY';
 }
 for(const [mode,button] of Object.entries(viewButtons))button.addEventListener("click",()=>{
  window.SPARK3D?.setModelMode?.(mode);
  updateModelView(mode);
- notify(mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
+ notify(mode==="rack"?"NVL72 rack study active · conceptual slot placement":mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
 });
 document.addEventListener("spark:model-mode-change",ev=>updateModelView(ev.detail.mode));
 $("coolingToggle").addEventListener("click",()=>{

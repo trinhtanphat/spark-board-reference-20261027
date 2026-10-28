@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {createRubinConcept} from './vera-rubin-concept.mjs';
+import {createRackConcept} from './vera-rubin-rack.mjs';
 import {NVIDIA_PRODUCT} from './nvidia-product.mjs';
 import { VISUAL_ROUTES, ILLUSTRATIVE_STITCHING, LAYER_LABELS, ROUTING_REVISION, auditIllustrativeGeometry, isIllustrativeRoutingCorridor } from './routing/visual-routing.mjs';
 
@@ -23,7 +24,7 @@ let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=fa
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 let focusedVisualRouteId=null,routeFocusObject=null;
-let nvidiaModel=null,modelMode='nvidia',nvidiaCoolingVisible=false;
+let nvidiaModel=null,rackModel=null,modelMode='nvidia',nvidiaCoolingVisible=false;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -331,10 +332,11 @@ function buildLayerStack(){
 }
 
 function selectPart(name){
+ const rackTarget=rackModel?.parts.find(g=>g.userData.part===name);
  const nvidiaTarget=nvidiaModel?.parts.find(g=>g.userData.part===name);
- if(nvidiaTarget&&modelMode!=='nvidia')applyModelMode('nvidia');
- if(!nvidiaTarget&&modelMode!=='reference')applyModelMode('reference');
- const target=nvidiaTarget||componentGroups.find(g=>g.userData.part===name);
+ const targetMode=rackTarget?'rack':nvidiaTarget?'nvidia':'reference';
+ if(modelMode!==targetMode)applyModelMode(targetMode);
+ const target=rackTarget||nvidiaTarget||componentGroups.find(g=>g.userData.part===name);
  if(!target)return;
  if(selectionHelper){scene.remove(selectionHelper);selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
  selectionHelper=new THREE.BoxHelper(target,0xd4b37d);
@@ -353,16 +355,27 @@ function nvidiaExplodedHeight(assembly){
  return .66;
 }
 function applyModelMode(mode){
- if(!['nvidia','reference'].includes(mode))return;
+ if(!['nvidia','reference','rack'].includes(mode))return;
+ const previousMode=modelMode;
  modelMode=mode;
+ exploded=false;
+ if(mode==='rack'){
+  distTarget=23.3;elTarget=.24;azTarget=.33;
+  center.y=3.65;
+ }else if(previousMode==='rack'){
+  distTarget=15.55;elTarget=.82;azTarget=.43;
+  center.y=0;
+ }
+ if(camera)updateCamera(true);
  if(board)board.visible=mode==='reference';
+ if(rackModel)rackModel.group.visible=mode==='rack';
  if(nvidiaModel){
   nvidiaModel.group.visible=mode==='nvidia';
   for(const coldplate of nvidiaModel.coolingGroups)coldplate.visible=mode==='nvidia'&&nvidiaCoolingVisible;
  }
  // Product mode uses a processor assembly exploded view; the reference retains the
  // existing conceptual PCB layer animation. Never confuse either with physical PCB CAD.
- if(mode==='nvidia'&&layerStack)layerStack.visible=false;
+ if(mode!=='reference'&&layerStack)layerStack.visible=false;
  clearSelection();
  if(nvidiaModel){
   for(const assembly of nvidiaModel.assemblies)assembly.group.position.y=
@@ -390,7 +403,7 @@ function createSky(){
 }
 function updateCamera(hard=false){
  if(hard){az=azTarget;el=elTarget;dist=distTarget}else{az+=(azTarget-az)*.13;el+=(elTarget-el)*.13;dist+=(distTarget-dist)*.13}
- const c=Math.cos(el);camera.position.set(dist*c*Math.sin(az),dist*Math.sin(el),dist*c*Math.cos(az));center.y+=((exploded?.75:0)-center.y)*.09;camera.lookAt(center);
+ const c=Math.cos(el);camera.position.set(dist*c*Math.sin(az),dist*Math.sin(el),dist*c*Math.cos(az));center.y+=((modelMode==='rack'?3.68:exploded?.75:0)-center.y)*.09;camera.lookAt(center);
 }
 function resize(){
  if(!renderer||!camera)return;
@@ -417,7 +430,7 @@ function interactions(){
   active.set(e.pointerId,current);
   if(active.size>=2){
    const next=span();
-   if(gesture?.distance&&next>0){distTarget=clamp(distTarget*gesture.distance/next,8.5,21)}
+   if(gesture?.distance&&next>0){distTarget=clamp(distTarget*gesture.distance/next,8.5,26)}
    gesture={distance:next};moved=true;return;
   }
   if(Math.abs(current.x-previous.x)+Math.abs(current.y-previous.y)>0.75){
@@ -434,7 +447,7 @@ function interactions(){
    const rect=renderer.domElement.getBoundingClientRect();
    const pt=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
    const ray=new THREE.Raycaster();ray.setFromCamera(pt,camera);
-   const intersections=ray.intersectObjects(modelMode==='nvidia'?nvidiaModel.group.children:board.children,true);
+   const intersections=ray.intersectObjects(modelMode==='rack'?rackModel.group.children:modelMode==='nvidia'?nvidiaModel.group.children:board.children,true);
    const item=intersections.map(v=>{let o=v.object;while(o&&!o.userData.part)o=o.parent;return o}).find(o=>o&&o.userData.part);
    if(item)notifyPart(item.userData.part);
   }
@@ -444,7 +457,7 @@ function interactions(){
  mount.addEventListener('pointercancel',e=>{active.delete(e.pointerId);gesture=null;clickPos=null;moved=true});
  mount.addEventListener('lostpointercapture',e=>{active.delete(e.pointerId);if(!active.size)gesture=null});
  mount.addEventListener('wheel',e=>{
-  e.preventDefault();distTarget=clamp(distTarget+Math.sign(e.deltaY)*.5,8.5,21);
+  e.preventDefault();distTarget=clamp(distTarget+Math.sign(e.deltaY)*.5,8.5,26);
  },{passive:false});
 }
 
@@ -491,7 +504,7 @@ function init(){
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
  renderer.toneMappingExposure=1.22;
  renderer.shadowMap.enabled=window.innerWidth>=900;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
- renderer.domElement.setAttribute('aria-label','Interactive 3D printed circuit board');
+ renderer.domElement.setAttribute('aria-label','Interactive unofficial Vera Rubin Superchip, NVL72 rack and SPARK reference board models');
  renderer.domElement.addEventListener('webglcontextlost',ev=>{ev.preventDefault();contextLost=true;meshReady=false;if(window.SPARK3D)window.SPARK3D.ready=false;engineLabel.textContent='GPU RECONNECTING';fpsLabel.textContent='WEBGL CONTEXT LOST';engineStatus.classList.add('offline');fallback.style.display='grid';fallback.querySelector('.fallback-note').textContent='GPU CONTEXT LOST · AWAITING RESTORE';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{contextLost=false;meshReady=true;if(window.SPARK3D)window.SPARK3D.ready=true;applyQuality(qualityMode);setEngineReady();lastSampleTime=performance.now();renderSamples=0;});
  mount.appendChild(renderer.domElement);
@@ -502,7 +515,7 @@ function init(){
  keyLight=new THREE.DirectionalLight(0xfff7ec,2.4);keyLight.position.set(-3,10,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);keyLight.shadow.camera.left=-9;keyLight.shadow.camera.right=9;keyLight.shadow.camera.top=9;keyLight.shadow.camera.bottom=-9;keyLight.shadow.bias=-.0003;scene.add(keyLight);
  cyanLight=new THREE.PointLight(0xe4edf0,14,19,2);cyanLight.position.set(-6,7,-1);scene.add(cyanLight);
  violetLight=new THREE.PointLight(0xffecd8,10,20,2);violetLight.position.set(7,6,4);scene.add(violetLight);
- root=new THREE.Group();scene.add(root);createBoard();nvidiaModel=createRubinConcept(THREE);root.add(nvidiaModel.group);applyModelMode('nvidia');createSky();if(focusedVisualRouteId)focusIllustrativeRoute(focusedVisualRouteId);
+ root=new THREE.Group();scene.add(root);createBoard();nvidiaModel=createRubinConcept(THREE);root.add(nvidiaModel.group);rackModel=createRackConcept(THREE);root.add(rackModel.group);applyModelMode('nvidia');createSky();if(focusedVisualRouteId)focusIllustrativeRoute(focusedVisualRouteId);
  updateCamera(true);resize();interactions();
  renderer.render(scene,camera);totalRenders++;lastDraw=performance.now();
  meshReady=true;setEngineReady();fpsLabel.textContent='THREE.JS / STUDIO MATERIALS';
@@ -516,6 +529,8 @@ function init(){
  }
  window.SPARK3D={ready:true,
  getModelMode(){return modelMode},
+ getRackDiagnostics(){return rackModel?.diagnostics()||null},
+ getRackViewDiagnostics(){return {mode:modelMode,cameraDistance:Number(dist.toFixed(2)),cameraTargetY:Number(center.y.toFixed(2)),cameraElevation:Number(el.toFixed(2))}},
  setNvidiaCooling(on){nvidiaCoolingVisible=Boolean(on);if(nvidiaModel){for(const coldplate of nvidiaModel.coolingGroups)coldplate.visible=modelMode==='nvidia'&&nvidiaCoolingVisible}needsRender=true},
  getNvidiaCooling(){return nvidiaCoolingVisible},
  setModelMode(mode){applyModelMode(mode)},
@@ -551,9 +566,9 @@ function init(){
  },
  getRenderStats(){return {drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,dpr:renderer.getPixelRatio(),textureCount:renderer.info.memory.textures,geometryCount:renderer.info.memory.geometries}},
  getCameraState(){return {azimuth:azTarget,elevation:elTarget,distance:distTarget}},
- zoom(dir){distTarget=clamp(distTarget+dir*.8,8.5,21);needsRender=true},
- setView(mode){azTarget=mode==='top'?0:.43;elTarget=mode==='top'?1.57:.69;distTarget=mode==='top'?15.2:15.55;needsRender=true},
- reset(){azTarget=.43;elTarget=.69;distTarget=15.55;needsRender=true},
+ zoom(dir){distTarget=clamp(distTarget+dir*.8,8.5,26);needsRender=true},
+ setView(mode){azTarget=mode==='top'?0:modelMode==='rack'?.33:.43;elTarget=mode==='top'?1.57:modelMode==='rack'?.24:.69;distTarget=modelMode==='rack'?(mode==='top'?22:23.3):(mode==='top'?15.2:15.55);needsRender=true},
+ reset(){azTarget=modelMode==='rack'?.33:.43;elTarget=modelMode==='rack'?.24:.69;distTarget=modelMode==='rack'?23.3:15.55;needsRender=true},
  nudge(x,y){azTarget+=x*.14;elTarget=clamp(elTarget+y*.12,.18,1.57);needsRender=true},
  showTraces(show){traceVisible=show;glowGroup.visible=show;coreIndicator.intensity=show?2:0;needsRender=true},
  setMotion(val){motion=val;needsRender=true},
@@ -602,7 +617,7 @@ function init(){
  const visible=!document.hidden,ambientNow=visible&&running&&motion&&!prefersReducedMotion;
  // Camera and exploded layers keep easing after the user releases a pointer,
  // but settled scenes no longer submit redundant WebGL frames.
- const cameraMoving=Math.abs(az-azTarget)+Math.abs(el-elTarget)+Math.abs(dist-distTarget)+Math.abs(center.y-(exploded?.75:0))>.002;
+ const cameraMoving=Math.abs(az-azTarget)+Math.abs(el-elTarget)+Math.abs(dist-distTarget)+Math.abs(center.y-(modelMode==='rack'?3.68:exploded?.75:0))>.002;
  let layersMoving=false;
  if(ambientNow){
   root.rotation.y=Math.sin(t*.00014)*.085;

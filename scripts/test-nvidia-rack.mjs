@@ -1,0 +1,18 @@
+import {strict as assert} from "node:assert";
+import {RACK_SPEC,validateRackArchitecture} from "../nvidia-rack-spec.mjs";
+const a=validateRackArchitecture();
+assert.equal(a.matchesPublishedCounts,true);
+assert.equal(a.computeTrays,18);
+assert.equal(a.switchTrays,9);
+assert.equal(a.managementTorSwitches,2);
+assert.equal(a.aggregateGpus,72);
+assert.equal(a.aggregateCpus,36);
+assert.equal(a.aggregateNvSwitchAsics,36);
+assert.equal(a.manufacturingApproved,false);
+assert.ok(RACK_SPEC.disclaimer.includes("NOT NVIDIA CAD"));
+assert.ok(RACK_SPEC.sources.some(u=>u.includes("docs.nvidia.com")));
+const broken=validateRackArchitecture({...RACK_SPEC,gpusPerComputeTray:3});
+assert.equal(broken.matchesPublishedCounts,false);
+const wrongSwitches=validateRackArchitecture({...RACK_SPEC,switchTrays:10});
+assert.equal(wrongSwitches.matchesPublishedCounts,false);
+console.log(JSON.stringify({status:"PASS",checks:"published architecture and fail-closed negative cases",architecture:a,provenance:"NVIDIA DGX Vera Rubin hardware user guide",actualMechanicalDimensionsValidated:false},null,2));
