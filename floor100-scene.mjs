@@ -4,6 +4,7 @@
  * All geometry is procedural, with InstancedMesh used for repeated fascias.
  */
 import {buildFloor100Impact} from './floor100-impact.mjs';
+import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
 export const FLOOR100_SPEC=Object.freeze({
  rows:10,columns:10,rackCount:100,rackWidth:3.72,rackDepth:2.52,
  pitchX:3.82,pitchZ:5.70,computeRacks:80,fabricRacks:10,storageRacks:10,
@@ -202,6 +203,26 @@ export function createFloor100Concept(THREE){
   new THREE.LineBasicMaterial({color:0xf8d18a,depthTest:false,transparent:true,opacity:.97}));
  outline.renderOrder=70;outline.visible=false;group.add(outline);
  let selected=null,filter="all",serviceSide="front";
+ let hardwarePart='none';
+ const highlightMat=new THREE.MeshBasicMaterial({color:'#ffe7a2',transparent:true,opacity:.49,depthTest:false,depthWrite:false,toneMapped:false});
+ const highlight=new THREE.InstancedMesh(boxGeom,highlightMat,18);
+ highlight.name='FLOOR100_GUIDE_BACKED_HARDWARE_HIGHLIGHT';highlight.renderOrder=66;highlight.frustumCulled=false;
+ highlight.visible=false;group.add(highlight);
+ function refreshHardwareHighlight(){
+  const rack=rackById.get(selected),part=NVL72_INSPECTION_PARTS[hardwarePart];
+  const parts=rack?.kind==='compute'?nvl72PartShapes(hardwarePart,rack.x,rack.z):[];
+  highlight.count=parts.length;highlight.visible=parts.length>0;
+  for(let i=0;i<parts.length;i++){
+   const p=parts[i];o.position.set(p.x,p.y,p.z);o.rotation.set(0,0,0);
+   o.scale.set(p.w,p.h,p.d);o.updateMatrix();highlight.setMatrixAt(i,o.matrix);
+  }
+  if(parts.length)highlight.instanceMatrix.needsUpdate=true;
+  return Boolean(part);
+ }
+ function setHardwarePart(next){
+  if(!Object.hasOwn(NVL72_INSPECTION_PARTS,next))return false;
+  hardwarePart=next;refreshHardwareHighlight();return true;
+ }
  let powerScenario="normal",coolingCircuit="both";
  let routeImpact=buildFloor100Impact(racks,powerScenario);
  const indicatorColors={visible:new THREE.Color('#a4e7aa'),dimmed:new THREE.Color('#dc6d52'),unmapped:new THREE.Color('#719cb5')};
@@ -241,7 +262,7 @@ export function createFloor100Concept(THREE){
   if(id!==null&&!rackById.has(id))return false;
   selected=id;outline.visible=Boolean(id);
   if(id){const r=rackById.get(id);outline.position.set(r.x,3.35,r.z)}
-  return true;
+  refreshHardwareHighlight();return true;
  }
  function setFilter(next){
   if(!["all","cooling","power","network","airflow"].includes(next))return false;
@@ -252,6 +273,11 @@ export function createFloor100Concept(THREE){
  function diagnostics(){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
    powerScenario,coolingCircuit,
+   hardwarePart,hardwareHighlightVisible:highlight.visible,
+   hardwareHighlightCount:highlight.count,
+   hardwareHighlightFirstZ:(()=>{if(!highlight.visible)return null;const m=new THREE.Matrix4();highlight.getMatrixAt(0,m);return Number(m.elements[14].toFixed(3));})(),
+   hardwareSelectedRackKind:rackById.get(selected)?.kind??null,
+   hardwareHighlightSide:NVL72_INSPECTION_PARTS[hardwarePart].side,
    routeStatusCounts:{...routeImpact.counts},routeIndicatorCount:routeIndicators.count,
    routeIndicatorColors:[0,1,8].map(i=>{const color=new THREE.Color();routeIndicators.getColorAt(i,color);return color.getHexString()}),
    routeRowCounts:routeImpact.rows.map(r=>({...r})),
@@ -278,7 +304,7 @@ export function createFloor100Concept(THREE){
  }
  group.visible=false;
  updateInfrastructureVisuals();
- return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,diagnostics,
-  getRouteImpact:()=>routeImpact,
+ return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,diagnostics,
+  getRouteImpact:()=>routeImpact,getHardwareInfo:()=>NVL72_INSPECTION_PARTS[hardwarePart],
   rackPosition:id=>rackById.get(id)||null,getSelected:()=>selected};
 }

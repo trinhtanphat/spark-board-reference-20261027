@@ -5,6 +5,7 @@
  const state=()=>window.SPARK3D;
  const rackSelector=$("floor100Rack"),filter=$("floor100Layer"),rear=$("floor100Rear"),description=$("floor100Selected");
  const power=$("floor100PowerScenario"),cooling=$("floor100CoolingCircuit"),scenarioStatus=$("floor100ScenarioStatus");
+ const hardwareSelect=$("floor100HardwarePart"),hardwareResult=$("floor100HardwareResult");
  let racks=[];
  function selectRack(id){
   if(!state()?.focusFloor100Rack?.(id||null))return;
@@ -14,6 +15,13 @@
   const d=state()?.getFloor100Diagnostics?.();
   if(!d)return;
   const focus=d.selected||"";
+  hardwareSelect.value=d.hardwarePart;
+  const hardwareInfo=state()?.getFloor100HardwareInfo?.();
+  hardwareResult.dataset.active=String(d.hardwareHighlightVisible);
+  hardwareResult.textContent=hardwareInfo&&(hardwareInfo.count>0)?
+   (d.hardwareSelectedRackKind!=="compute"?"This part is referenced for compute racks only. Select a green compute cabinet (R001–R008 in each row).":
+    (d.hardwareHighlightCount+" conceptual 3D positions highlighted / "+hardwareInfo.side.toUpperCase()+" VIEW · "+hardwareInfo.detail)):
+   "Select a compute rack and hardware group to highlight its schematic location in 3D.";
   const impact=state()?.getFloor100RouteImpact?.();
   const routeById=new Map((impact?.entries||[]).map(r=>[r.id,r]));
   rackSelector.value=focus;
@@ -97,6 +105,16 @@
  $("floor100ScenarioReset").addEventListener("click",()=>{
   state()?.setFloor100PowerScenario?.("normal");
   state()?.setFloor100CoolingCircuit?.("both");render();
+ });
+ hardwareSelect.addEventListener("change",()=>{
+  const part=hardwareSelect.value;
+  if(part!=="none"&&!state()?.getFloor100Diagnostics?.()?.selected)selectRack("R001");
+  if(!state()?.setFloor100HardwarePart?.(part)){hardwareSelect.value="none";return}
+  const info=state()?.getFloor100HardwareInfo?.();
+  const diagnostics=state()?.getFloor100Diagnostics?.();
+  if(part!=="none"&&diagnostics?.hardwareSelectedRackKind==="compute"&&info?.side)
+   state()?.setFloor100Side?.(info.side);
+  render();
  });
  $("floor100Overview").addEventListener("click",()=>selectRack(null));
  rackSelector.addEventListener("change",()=>selectRack(rackSelector.value));

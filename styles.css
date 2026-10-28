@@ -365,3 +365,19 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-map button[data-route="unmapped"]{box-shadow:inset 0 -3px #719cb5}
 .floor100-map button[aria-pressed="true"]{background:#92733c;border-color:#ffe2a7;color:#fff8df;box-shadow:0 0 0 2px #e6cb8380}
 @media(max-width:740px){.floor100-row-summary{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+/* Public-documentation backed rack hardware inspector; scene remains conceptual. */
+.floor100-hardware-inspector{margin:11px 0;padding:11px 12px;border:1px solid #648a83;border-radius:8px;background:linear-gradient(120deg,#1c3937,#1a303a);display:flex;flex-direction:column;gap:8px}
+.floor100-hardware-head{display:flex;flex-wrap:wrap;gap:4px;justify-content:space-between;align-items:center}
+.floor100-hardware-head strong{font:800 11px/1.4 var(--mono);color:#f9e6ab}
+.floor100-hardware-head span{font:600 8px/1.4 var(--mono);color:#afcec4}
+.floor100-hardware-inspector label{font:700 9px/1.4 var(--mono);color:#a7dbd1}
+#floor100HardwarePart{width:100%;min-height:36px;padding:7px 9px;border:1px solid #87a994;border-radius:5px;background:#183b40;color:#f7f9e3;font:700 10px/1.4 var(--mono)}
+#floor100HardwarePart:focus-visible{outline:2px solid #f6e5a1;outline-offset:2px}
+#floor100HardwareResult{display:block;min-height:50px;padding:8px;border:1px solid #527469;border-radius:5px;background:#142c2d;color:#c6dfd9;font:600 10px/1.6 var(--mono)}
+#floor100HardwareResult[data-active="true"]{border-color:#c2ac72;background:#433a29;color:#ffedc3}
+.floor100-hardware-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.floor100-hardware-facts span{padding:6px;border:1px solid #42685d;border-radius:5px;background:#214039;color:#d0e9d6;font:700 9px/1.4 var(--mono)}
+.floor100-hardware-facts b{font:800 16px/1.2 var(--mono);color:#ffe2a7;margin-right:5px}
+#floor100OfficialGuide{font:700 10px/1.5 var(--mono);color:#b4e8dd;text-decoration:underline;text-underline-offset:3px}
+.floor100-hardware-inspector small{font:500 9px/1.5 var(--mono);color:#acc5bf}
