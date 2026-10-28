@@ -77,6 +77,12 @@
   optfill(target,state.availableTargets(sourcePort?.fabric).map(x=>[x.id,x.label]));
   optfill(cable,state.cables.map(x=>[x.id,x.id+" "+x.source+" → "+x.target]));
   $("dcDisconnect").disabled=!state.cables.length;
+  $("dcHighlightCable").disabled=!state.cables.length;
+  const fabric=$("dcCableFabric").value,scope=$("dcCableScope").value;
+  window.SPARK3D?.setDataCenterCableView?.(fabric,scope,rack.value);
+  const dcView=window.SPARK3D?.getDataCenterDiagnostics?.();
+  $("dcCableVisible").textContent=(dcView?.visibleCables??0)+" / "+state.cables.length+
+   " virtual cables visible"+(scope==="rack"?" · RACK "+rack.value:"");
   const log=$("dcEventLog");
   log.replaceChildren(...v.events.slice(0,5).map(e=>{
    const p=document.createElement("p");p.textContent=e.action.toUpperCase()+" · "+e.detail;return p;
@@ -118,6 +124,20 @@
   render();
  });
  source.addEventListener("change",()=>{target.value="";render()});
+ $("dcCableFabric").addEventListener("change",render);
+ $("dcCableScope").addEventListener("change",render);
+ const highlightSelectedCable=()=>{
+  const selected=api()?.cables.find(c=>c.id===cable.value);
+  if(!selected)return;
+  $("dcCableFabric").value=selected.fabric;
+  $("dcCableScope").value="all";
+  render();
+  if(window.SPARK3D?.highlightDataCenterCable?.(selected.id)){
+   say("Highlighted virtual cable "+selected.id+" / "+selected.fabric+"; no live network changes");
+  }
+ };
+ cable.addEventListener("change",highlightSelectedCable);
+ $("dcHighlightCable").addEventListener("click",highlightSelectedCable);
  $("dcDrawerToggle").addEventListener("click",()=>run(()=>api().toggleDrawer(slot.value),"Device moved in virtual rack"));
  $("dcRemove").addEventListener("click",()=>run(()=>api().remove(slot.value),"Module removed from simulation; hardware untouched"));
  $("dcInstall").addEventListener("click",()=>run(()=>api().install(slot.value,replacement.value),"Compatible module installed in simulation"));

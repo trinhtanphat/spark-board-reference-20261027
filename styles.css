@@ -254,6 +254,10 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 #dcRearLayer{min-width:176px;max-width:260px;min-height:34px;padding:6px 9px;border-radius:5px;border:1px solid #709781;background:#20382d;color:#e8f1d3;font:700 10px/1.4 var(--mono)}
 #dcRearLayer:disabled{opacity:.42;cursor:not-allowed}
 #dcRearLayer:focus-visible{outline:2px solid #e4ffb5;outline-offset:2px}
+#dcCableFabric,#dcCableScope{min-width:144px;max-width:235px;min-height:34px;border-radius:5px;border:1px solid #618d91;background:#1c3440;color:#e0f2f4;padding:6px 8px;font:700 10px/1.4 var(--mono)}
+#dcCableFabric:focus-visible,#dcCableScope:focus-visible{outline:2px solid #d1ffff;outline-offset:2px}
+#dcCableVisible{font:700 10px/1.6 var(--mono);color:#c6ede6;min-width:155px;align-self:center}
+@media(max-width:680px){#dcCableFabric,#dcCableScope{flex:1 1 100%;max-width:none;width:100%}}
 @media(max-width:680px){.dc-floor-map{flex-basis:100%;width:100%;max-width:340px}.dc-head strong{text-align:left}}
 .dc-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px}
 .dc-pane{padding:13px;border:1px solid #405e59;background:#202f32;border-radius:9px;display:flex;flex-direction:column;gap:7px}

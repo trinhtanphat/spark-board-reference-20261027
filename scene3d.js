@@ -607,6 +607,16 @@ function init(){
  getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-tray-cuboid"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getDataCenterDiagnostics(){return dataCenterScene?.diagnostics()||null},
+ setDataCenterCableView(fabric,scope,rackId){
+  if(modelMode!=="datacenter")return false;
+  const ok=dataCenterScene?.setCableView(fabric,scope,rackId)===true;
+  if(ok)needsRender=true;return ok;
+ },
+ highlightDataCenterCable(id){
+  if(modelMode!=="datacenter")return false;
+  const ok=dataCenterScene?.highlightCable(id)===true;
+  if(ok)needsRender=true;return ok;
+ },
  getDataCenterRearModuleState(id){return dataCenterScene?.getRearModuleState(id)||null},
  setDataCenterRearLayer(value){
   if(modelMode!=="datacenter"||dcSide!=="rear")return false;
