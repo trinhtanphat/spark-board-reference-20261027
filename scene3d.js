@@ -623,6 +623,13 @@ function init(){
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
  getFloor100RouteImpact(){return floor100Scene?.getRouteImpact()||null},
  getFloor100PowerModel(){return floor100Scene?.getPowerModel()||null},
+ getFloor100PowerPaths(){return floor100Scene?.getPowerPaths()||[]},
+ setFloor100PowerPathMode(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setPowerPathMode(value)===true;
+  if(ok)needsRender=true;
+  return ok;
+ },
  setFloor100LoadPercent(value){
   if(modelMode!=='floor100')return false;
   const ok=floor100Scene?.setPowerLoadPercent(value)===true;
@@ -671,8 +678,17 @@ function init(){
   if(modelMode!=='floor100'||!renderer||!camera)return null;const rack=floor100Scene.rackPosition(id);if(!rack)return null;
   scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
   const side=floor100Scene.diagnostics().serviceSide==='rear'?-1.3:1.3;
-  const p=floor100Scene.group.localToWorld(new THREE.Vector3(rack.x,3.35,rack.z+side)).project(camera);
-  const rect=renderer.domElement.getBoundingClientRect();return{x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,inside:Math.abs(p.x)<1&&Math.abs(p.y)<1};
+  const rect=renderer.domElement.getBoundingClientRect();
+  // Pick above the floating 3D toolbar on narrow/tablet screens. A cabinet
+  // is vertically large, so use the first visible unobstructed fascia point.
+  let fallback=null;
+  for(const y of [5.65,6.4,4.9,3.35,2.3]){
+   const p=floor100Scene.group.localToWorld(new THREE.Vector3(rack.x,y,rack.z+side)).project(camera);
+   const hit={x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,inside:Math.abs(p.x)<1&&Math.abs(p.y)<1};
+   if(hit.inside&&document.elementFromPoint(hit.x,hit.y)===renderer.domElement)return hit;
+   if(!fallback||hit.inside)fallback=hit;
+  }
+  return fallback;
  },
  getDataCenterDiagnostics(){return dataCenterScene?.diagnostics()||null},
  setDataCenterCableView(fabric,scope,rackId){

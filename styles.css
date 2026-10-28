@@ -408,3 +408,25 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-map button[aria-pressed="true"],.floor100-map[data-heatmap="true"] button[aria-pressed="true"]{outline:2px solid #ffe3a1;outline-offset:0;border-color:#f5d49a;filter:brightness(1.18)}
 @media(max-width:850px){.floor100-power-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:450px){.floor100-power-panel-head>div{width:100%}.floor100-power-panel select,.floor100-power-panel button{flex:1 1 150px}}
+
+/* A/B selected-rack power path tracer — conceptual 3D lines, no live data. */
+.floor100-path-explorer{display:flex;flex-direction:column;gap:9px;padding:12px;margin:10px 0;border:1px solid #6b8f90;background:linear-gradient(130deg,#122e35,#283b3b);border-radius:8px}
+.floor100-path-head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.floor100-path-head strong{font:800 11px/1.45 var(--mono);color:#f4e9ba}
+.floor100-path-head span{font:700 9px/1.4 var(--mono);color:#aacbd0}
+.floor100-path-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.floor100-path-controls label{font:700 9px/1.4 var(--mono);color:#bbded5}
+.floor100-path-controls select,.floor100-path-controls button{min-height:34px;padding:6px 9px;border:1px solid #799894;background:#26464c;color:#e8f4ee;border-radius:5px;font:700 10px/1.45 var(--mono)}
+.floor100-path-controls select{flex:1;min-width:135px}
+.floor100-path-controls button{cursor:pointer;background:#526242}
+.floor100-path-controls :focus-visible{outline:2px solid #f9deb0;outline-offset:2px}
+#floor100TraceStatus{display:block;padding:8px;border:1px solid #507a7b;border-radius:5px;color:#d5ebe6;background:#17343a;min-height:35px;font:700 10px/1.55 var(--mono)}
+#floor100TraceStatus[data-active="true"]{border-color:#beab73;color:#fff0c4}
+.floor100-path-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.floor100-path-info span{padding:8px;border:1px solid #537e86;border-radius:5px;color:#bed8da;font:700 10px/1.5 var(--mono)}
+#floor100TraceA[data-visual="shown"]{border-color:#bda25c;color:#ffdb72}
+#floor100TraceB[data-visual="shown"]{border-color:#5aafcc;color:#7de5ff}
+.floor100-path-info [data-visual="dimmed"]{opacity:.65;text-decoration:line-through}
+#floor100TraceSteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:3px;margin:0;padding:0 0 0 18px;color:#bbd9d2;font:600 10px/1.6 var(--mono)}
+.floor100-path-explorer small{font:500 9px/1.6 var(--mono);color:#a7c4bf}
+@media(max-width:510px){#floor100TraceSteps{grid-template-columns:1fr}.floor100-path-info{grid-template-columns:1fr}}
