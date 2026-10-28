@@ -19,3 +19,12 @@ This design is a **browser-only visualization**. No real temperature, electricit
 
 ## QA and rollout rules
 Test on WIN11-181 in an isolated QA server (TCP 8789), without restarting the existing 8788 local service or touching user's Chrome session 2. Validate floor unit tests, original 16-rack model tests, full headless Chrome E2E desktop/mobile/tablet, WebGL fallback and public GitHub Pages asset checks. Merge main only after QA passes. Preserve the existing production web until GitHub Pages is independently verified.
+
+
+## Utility incident explorer and rear cabinet details (28 October 2026)
+
+The BACKUP POWER SCENARIO control offers Normal A+B, simulated A feed loss, simulated B feed loss, and simulated grid loss. It changes the actual conceptual 3D materials for independent A/B overhead paths and rear busbars. During grid-loss illustration, two generator indicators illuminate. This is **not** an electrical failover design: no UPS autonomy, ATS transfer time, battery runtime, fuel consumption, capacity or N+1/2N redundancy is computed. The user interface clearly marks every state as illustration only.
+
+The COOLING CIRCUIT VIEW control independently displays both supply and return, only supply, or only return geometry. The change affects the actual InstancedMesh visibility in the cooling group; it is not real thermal/hydraulic telemetry. Reset Utility View restores Normal A+B and both cooling paths. The modes preserve selected rack, front/rear view, row map and other system views. Compute-rack rear details now include 18 connector rows, status indicators and four illustrative rear PSU panels per rack. Detail is batched with instancing, not 80 individual sets of draw calls.
+
+Browser E2E tests check all four power scenarios, both cooling paths, unsupported inputs, reset and actual mesh/material appearance on desktop/mobile/tablet, alongside existing tests. The simulation does not control physical equipment.

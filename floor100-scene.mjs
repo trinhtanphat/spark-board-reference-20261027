@@ -26,6 +26,9 @@ export function createFloor100Concept(THREE){
   coolant:new THREE.MeshStandardMaterial({color:"#31c8de",metalness:.65,roughness:.25}),
   returnFlow:new THREE.MeshStandardMaterial({color:"#e0a278",metalness:.55,roughness:.3}),
   source:new THREE.MeshStandardMaterial({color:"#e3b46c",metalness:.7,roughness:.33}),
+  powerA:new THREE.MeshStandardMaterial({color:"#ffd06a",emissive:"#b1781d",emissiveIntensity:.35,metalness:.66,roughness:.32}),
+  powerB:new THREE.MeshStandardMaterial({color:"#68d2ed",emissive:"#176b8a",emissiveIntensity:.35,metalness:.68,roughness:.31}),
+  generatorLive:new THREE.MeshStandardMaterial({color:"#5b6a5b",emissive:"#25462a",emissiveIntensity:.06,metalness:.35,roughness:.48}),
   battery:new THREE.MeshStandardMaterial({color:"#a6b3a0",metalness:.45,roughness:.42}),
   floor:new THREE.MeshStandardMaterial({color:"#202c30",metalness:.1,roughness:.85}),
   aisleCold:new THREE.MeshBasicMaterial({color:"#2c879c",transparent:true,opacity:.37,depthWrite:false}),
@@ -74,13 +77,25 @@ export function createFloor100Concept(THREE){
    for(let i=0;i<4;i++)cube("psu",x,6.43+i*.195,z+1.34,3.20,.145,.06);
    for(let i=0;i<2;i++)cube("fabric",x,7.24+i*.14,z+1.34,3.18,.105,.06);
    // Rear cabinet cartridge columns + manifolds + dual power bars.
+   // 3D front and rear face connectors are placed in instanced rows;
+   // the orientation here is illustrative rather than actual electrical CAD.
+   for(let j=0;j<18;j++){
+    const y=-.49+j*.257;
+    for(const dx of [-1.37,-.97,-.57,-.17,.23,.63]){
+     cube("steel",x+dx,y,z-1.426,.22,.06,.028);
+    }
+    if(j%3===0)cube("led",x+1.08,y,z-1.455,.075,.047,.02);
+   }
+   for(let j=0;j<4;j++){
+    cube("psu",x-.9+j*.58,6.54,z-1.44,.43,.12,.05);
+   }
    for(const dx of [-1.1,-.37,.37,1.1]){
     cube("nv",x+dx,3.2,z-1.37,.17,7.1,.14);
     for(let j=0;j<13;j++)cube("steel",x+dx,.15+j*.49,z-1.455,.12,.077,.02);
    }
    for(const dx of [-1.6,1.6]){
     cube("coolant",x+dx,3.23,z-1.49,.11,7.6,.11,zones.cooling);
-    cube("source",x+dx*.88,3.2,z-1.48,.065,7.45,.07,zones.power);
+    cube(dx<0?"powerA":"powerB",x+dx*.88,3.2,z-1.48,.065,7.45,.07,zones.power);
    }
   }else{
    for(let j=0;j<18;j++){
@@ -145,15 +160,16 @@ export function createFloor100Concept(THREE){
   makeBox(g,"source",-27,1.25,z,7.7,3.55,3.7);
   for(let j=0;j<7;j++)makeBox(g,"face",-29.8+j*.9,1.5,z+1.94,.55,1.8,.08);
   makeBox(g,"steel",-27,3.65,z,1,.45,1);
+  makeBox(g,"generatorLive",-27,3.98,z,.8,.14,.8);
  }
  // Dual electrical distribution visualization. Not engineering wiring geometry.
  for(let row=0;row<10;row++){
-  cube("source",-10.0,8.87,zR(row),53,.08,.13,zones.power);
-  cube("source",-10.0,9.02,zR(row)+.3,53,.08,.11,zones.power);
+  cube("powerA",-10.0,8.87,zR(row),53,.08,.13,zones.power);
+  cube("powerB",-10.0,9.02,zR(row)+.3,53,.08,.11,zones.power);
  }
  for(let row=0;row<10;row++)for(let c=0;c<10;c++)if(c<8){
   cube("coolant",xR(c),8.04,zR(row),.065,.18,2.20,zones.cooling);
-  cube("source",xR(c),8.95,zR(row),.085,.13,2.00,zones.power);
+  cube(c%2===0?"powerA":"powerB",xR(c),8.95,zR(row),.085,.13,2.00,zones.power);
  }
  // Place repeating details into one InstancedMesh per (zone, material).
  const groups=new Map();
@@ -166,7 +182,7 @@ export function createFloor100Concept(THREE){
  }
  for(const {kind,owner,records} of groups.values()){
   const mesh=new THREE.InstancedMesh(boxGeom,materials[kind],records.length);
-  mesh.name="FLOOR100_BATCH_"+kind;mesh.frustumCulled=true;
+  mesh.name="FLOOR100_BATCH_"+kind;mesh.userData.kind=kind;mesh.frustumCulled=true;
   records.forEach((r,i)=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,0,0);o.scale.set(r.w,r.h,r.d);o.updateMatrix();mesh.setMatrixAt(i,o.matrix)});
   mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();owner.add(mesh);batched.push(mesh);
  }
@@ -176,6 +192,35 @@ export function createFloor100Concept(THREE){
   new THREE.LineBasicMaterial({color:0xf8d18a,depthTest:false,transparent:true,opacity:.97}));
  outline.renderOrder=70;outline.visible=false;group.add(outline);
  let selected=null,filter="all",serviceSide="front";
+ let powerScenario="normal",coolingCircuit="both";
+ const scenarioOptions=["normal","a-loss","b-loss","grid-loss"];
+ const coolingOptions=["both","supply","return"];
+ function updateInfrastructureVisuals(){
+  const unavailableA=powerScenario==="a-loss"||powerScenario==="grid-loss";
+  const unavailableB=powerScenario==="b-loss"||powerScenario==="grid-loss";
+  materials.powerA.color.set(unavailableA?"#373c42":"#ffd06a");
+  materials.powerA.emissiveIntensity=unavailableA?0:.35;
+  materials.powerB.color.set(unavailableB?"#30383b":"#68d2ed");
+  materials.powerB.emissiveIntensity=unavailableB?0:.35;
+  const generator=powerScenario==="grid-loss";
+  materials.generatorLive.color.set(generator?"#a6ff7a":"#5b6a5b");
+  materials.generatorLive.emissiveIntensity=generator?.85:.06;
+  for(const batch of batched){
+   const activeZone=batch.parent;
+   if(activeZone!==zones.cooling)continue;
+   const kind=batch.userData.kind;
+   if(kind==="coolant")batch.visible=coolingCircuit!=="return";
+   if(kind==="returnFlow")batch.visible=coolingCircuit!=="supply";
+  }
+ }
+ function setPowerScenario(next){
+  if(!scenarioOptions.includes(next))return false;
+  powerScenario=next;updateInfrastructureVisuals();return true;
+ }
+ function setCoolingCircuit(next){
+  if(!coolingOptions.includes(next))return false;
+  coolingCircuit=next;updateInfrastructureVisuals();return true;
+ }
  const rackById=new Map(racks.map(r=>[r.id,r]));
  function selectRack(id){
   if(id!==null&&!rackById.has(id))return false;
@@ -191,6 +236,20 @@ export function createFloor100Concept(THREE){
  function setSide(side){if(side!=="front"&&side!=="rear")return false;serviceSide=side;return true}
  function diagnostics(){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
+   powerScenario,coolingCircuit,
+   powerFeedAVisible:powerScenario==="normal"||powerScenario==="b-loss",
+   powerFeedBVisible:powerScenario==="normal"||powerScenario==="a-loss",
+   backupGeneratorIllustrated:powerScenario==="grid-loss",
+   coolingSupplyVisible:coolingCircuit!=="return",
+   coolingReturnVisible:coolingCircuit!=="supply",
+   visual:{
+    feedA:materials.powerA.color.getHexString(),
+    feedB:materials.powerB.color.getHexString(),
+    backupIndicator:materials.generatorLive.color.getHexString(),
+    supplyGeometryVisible:batched.some(m=>m.parent===zones.cooling&&m.userData.kind==="coolant"&&m.visible),
+    returnGeometryVisible:batched.some(m=>m.parent===zones.cooling&&m.userData.kind==="returnFlow"&&m.visible),
+    utilityBatchCount:batched.filter(m=>m.parent!==group).length
+   },
    fabricRacks:10,storageRacks:10,gpuEquivalent:5760,selected,filter,serviceSide,
    rackWidth:FLOOR100_SPEC.rackWidth,sideGap:FLOOR100_SPEC.serviceClearanceX,
    frontRearGap:FLOOR100_SPEC.serviceClearanceZ,rows:10,columns:10,
@@ -199,6 +258,7 @@ export function createFloor100Concept(THREE){
    pickTargets:pickTargets.length,serviceZones:Object.keys(zones),illustrative:true};
  }
  group.visible=false;
- return {group,racks,pickTargets,selectRack,setFilter,setSide,diagnostics,
+ updateInfrastructureVisuals();
+ return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,diagnostics,
   rackPosition:id=>rackById.get(id)||null,getSelected:()=>selected};
 }

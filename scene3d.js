@@ -621,6 +621,18 @@ function init(){
  getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-tray-cuboid"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
+ setFloor100PowerScenario(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setPowerScenario(value)===true;
+  if(ok)needsRender=true;
+  return ok;
+ },
+ setFloor100CoolingCircuit(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setCoolingCircuit(value)===true;
+  if(ok)needsRender=true;
+  return ok;
+ },
  getFloor100Racks(){return floor100Scene?.racks.map(({id,row,column,kind,gpuEquivalent})=>({id,row,column,kind,gpuEquivalent}))||[]},
  focusFloor100Rack(id){
   if(modelMode!=='floor100')return false;

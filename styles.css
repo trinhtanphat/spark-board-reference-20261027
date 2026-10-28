@@ -335,3 +335,15 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-details p{margin:10px 0 0}
 @media(max-width:840px){.floor100-head{flex-direction:column}.floor100-content{grid-template-columns:1fr}.floor100-lab{padding:12px}.floor100-controls select{flex:1 1 100%;max-width:100%}}
 @media(max-width:450px){.floor100-metrics{width:100%}.floor100-metrics strong{flex:1 1 33%}.floor100-map button{font-size:7px;height:25px}.floor100-map-title{flex-direction:column;align-items:flex-start}}
+
+/* Visual utility state explorer; all failure cases are synthetic demonstration. */
+.floor100-scenario{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 13px;border:1px solid #4d7772;background:#122c31;border-radius:8px;padding:10px 12px}
+.floor100-scenario-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%}
+.floor100-scenario-controls label{font:700 9px/1.5 var(--mono);color:#add9ce}
+.floor100-scenario select,.floor100-scenario button{min-height:34px;padding:7px 10px;border:1px solid #759695;border-radius:5px;background:#244348;color:#e1f6e6;font:700 10px/1.4 var(--mono)}
+.floor100-scenario button{cursor:pointer;background:#38644e;border-color:#81b591}
+.floor100-scenario button:focus-visible,.floor100-scenario select:focus-visible{outline:2px solid #edfaac;outline-offset:2px}
+#floor100ScenarioStatus{display:block;flex:1 1 100%;font:700 10px/1.6 var(--mono);color:#aee2cf}
+#floor100ScenarioStatus[data-scenario="a-loss"],#floor100ScenarioStatus[data-scenario="b-loss"]{color:#f7d79b}
+#floor100ScenarioStatus[data-scenario="grid-loss"]{color:#ffc4a5}
+@media(max-width:640px){.floor100-scenario-controls{display:grid;grid-template-columns:1fr}.floor100-scenario select{width:100%}}
