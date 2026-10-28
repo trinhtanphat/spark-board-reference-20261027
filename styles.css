@@ -279,6 +279,12 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .dc-import-label:hover{background:#3c656c}
 .dc-import-label:focus-within{outline:2px solid #d8f3ab;outline-offset:2px}
 .dc-import-label input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.dc-session-status{margin:4px 0 10px;font:600 10px/1.55 var(--mono);color:#c6e7da}
+.dc-session-status[data-error="true"]{color:#ffbca8}
+#dcSessionAuto[aria-pressed="true"]{background:#1c6256;color:#effff3;border-color:#87d6a8}
+#dcSessionSave,#dcSessionRestore{background:#285267;border-color:#739fac}
+#dcSessionClear{background:#47383a;border-color:#8c7374}
+.dc-bottom .dc-actions button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:800px){.dc-bottom{flex-wrap:wrap}.dc-bottom .dc-actions{width:100%}.dc-bottom .dc-actions>*{flex:1 1 135px}}
 .dc-event-log{display:grid;gap:4px;margin-bottom:8px}
 .dc-event-log p{font:500 9px/1.5 var(--mono);padding:5px 8px;background:#223c36;border-radius:4px;color:#a7dbc1;margin:0}

@@ -35,6 +35,19 @@ async function main(){try{
  for(const screen of [{name:"desktop",width:1440,height:900,mobile:false},{name:"mobile",width:390,height:844,mobile:true},{name:"tablet",width:768,height:1000,mobile:true}]){
   await send("Emulation.setDeviceMetricsOverride",{width:screen.width,height:screen.height,deviceScaleFactor:1,mobile:screen.mobile});
   await send("Page.navigate",{url:target});await delay(350);for(let waited=0;waited<42;waited++){const state=await js("({ready:!!window.SPARK3D?.ready,failed:document.getElementById('engineLabel')?.textContent==='2D COMPATIBILITY MODE'})");if(state.ready||state.failed)break;await delay(400)}
+  // Browser storage survives a real same-origin reload, but active simulation
+  // must not silently overwrite a previously saved, different configuration.
+  const sessionBefore=await js("(()=>{document.getElementById('modelDatacenter').click();const m=window.SPARK3D.getDataCenterAPI(),s=id=>m.slots.find(x=>x.id===id),key='spark-datacenter-sim-session-v1';localStorage.removeItem(key);m.remove('B-C05');document.getElementById('dcSessionSave').click();const manual=!JSON.parse(localStorage.getItem(key)).slots.find(x=>x.id==='B-C05').installed;m.install('B-C05','compute');document.getElementById('dcSessionAuto').click();const autoEnabled=document.getElementById('dcSessionAuto').getAttribute('aria-pressed')==='true';m.remove('B-C05');const autoSaved=!JSON.parse(localStorage.getItem(key)).slots.find(x=>x.id==='B-C05').installed;document.getElementById('dcSessionAuto').click();m.install('B-C05','compute');const paused=!JSON.parse(localStorage.getItem(key)).slots.find(x=>x.id==='B-C05').installed&&s('B-C05').installed;return{manual,autoEnabled,autoSaved,paused}})()");
+  await send("Page.navigate",{url:target});
+  await delay(350);
+  for(let waited=0;waited<42;waited++){
+   const ready=await js("!!window.SPARK3D?.ready");
+   if(ready)break;await delay(300);
+  }
+  const sessionAfter=await js("(()=>{const a=window.SPARK3D;document.getElementById('modelDatacenter').click();const m=a.getDataCenterAPI(),s=()=>m.slots.find(x=>x.id==='B-C05'),key='spark-datacenter-sim-session-v1',button=document.getElementById('dcSessionRestore');const available=!button.disabled,notOverwritten=!JSON.parse(localStorage.getItem(key)).slots.find(x=>x.id==='B-C05').installed,freshDefault=s().installed,autoOff=document.getElementById('dcSessionAuto').getAttribute('aria-pressed')==='false';button.click();const restored=!s().installed&&m.canUndo();document.getElementById('dcUndo').click();const undone=s().installed;localStorage.setItem(key,'{invalid-json');const original=JSON.stringify(m.getSnapshot());button.click();const rejected=document.getElementById('dcSessionStatus').dataset.error==='true'&&original===JSON.stringify(m.getSnapshot());document.getElementById('dcSessionClear').click();const cleared=!localStorage.getItem(key)&&document.getElementById('dcSessionRestore').disabled;m.reset();document.getElementById('modelNvidia').click();return{available,notOverwritten,freshDefault,autoOff,restored,undone,rejected,cleared}})()");
+  const savedSessionQA={...sessionBefore,...sessionAfter};
+  console.log("DC_BROWSER_SESSION_RELOAD",JSON.stringify({screen:screen.name,...savedSessionQA}));
+  if(!Object.values(savedSessionQA).every(Boolean))throw Error("Browser session persistence regression: "+JSON.stringify(savedSessionQA));
   if(process.env.TEST_DC_ONLY==="1"){
    await js("(()=>{document.getElementById('modelDatacenter').click();document.querySelector('#dcFloorMap [data-rack=N]').click();document.querySelector('.hero-stage').scrollIntoView({behavior:'instant',block:'center'})})()");
    await delay(750);
