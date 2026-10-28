@@ -679,14 +679,27 @@ function init(){
   scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
   const side=floor100Scene.diagnostics().serviceSide==='rear'?-1.3:1.3;
   const rect=renderer.domElement.getBoundingClientRect();
-  // Pick above the floating 3D toolbar on narrow/tablet screens. A cabinet
-  // is vertically large, so use the first visible unobstructed fascia point.
+  // Project only unobstructed FRONT/REAR CABINET FASCIA points whose 3D
+  // raycast actually resolves to this cabinet. Dense floor rows can occlude
+  // a visible canvas pixel, especially on mobile/tablet orbit angles.
+  // This helper supports deterministic QA without changing production
+  // user's drag/orbit/pointer event behavior.
+  const picker=new THREE.Raycaster();picker.layers.set(29);
   let fallback=null;
-  for(const y of [5.65,6.4,4.9,3.35,2.3]){
-   const p=floor100Scene.group.localToWorld(new THREE.Vector3(rack.x,y,rack.z+side)).project(camera);
-   const hit={x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,inside:Math.abs(p.x)<1&&Math.abs(p.y)<1};
-   if(hit.inside&&document.elementFromPoint(hit.x,hit.y)===renderer.domElement)return hit;
-   if(!fallback||hit.inside)fallback=hit;
+  for(const y of [5.65,6.4,4.9,3.35,2.3,7.0]){
+   for(const dx of [0,-.65,.65]){
+    const projected=floor100Scene.group.localToWorld(new THREE.Vector3(rack.x+dx,y,rack.z+side)).project(camera);
+    const hit={x:rect.left+(projected.x+1)*rect.width/2,
+     y:rect.top+(1-projected.y)*rect.height/2,
+     inside:Math.abs(projected.x)<1&&Math.abs(projected.y)<1};
+    if(!hit.inside)continue;
+    const canvasTop=document.elementFromPoint(hit.x,hit.y)===renderer.domElement;
+    picker.setFromCamera(new THREE.Vector2(projected.x,projected.y),camera);
+    const actual=picker.intersectObjects(floor100Scene.pickTargets,false)[0]?.object?.userData?.rackId??null;
+    const candidate={...hit,canvasTop,hitRack:actual};
+    if(canvasTop&&actual===id)return candidate;
+    if(!fallback||canvasTop)fallback=candidate;
+   }
   }
   return fallback;
  },
