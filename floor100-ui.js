@@ -8,6 +8,7 @@
  const hardwareSelect=$("floor100HardwarePart"),hardwareResult=$("floor100HardwareResult");
  const loadSelect=$("floor100LoadPercent"),heatButton=$("floor100Heatmap");
  const traceSelect=$("floor100TraceFeed"),traceStatus=$("floor100TraceStatus"),traceSteps=$("floor100TraceSteps");
+ const capSelect=$("floor100FeedCapacity"),feedRowGrid=$("floor100FeedRowAllocation");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -21,6 +22,44 @@
   if(!d)return;
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
+  const plan=state()?.getFloor100FeedAllocation?.();
+  if(plan){
+   capSelect.value=String(plan.capacityKW);
+   for(const feed of ["A","B"]){
+    const value=feed==="A"?plan.aKW:plan.bKW;
+    const percent=feed==="A"?plan.aPct:plan.bPct;
+    const status=value>plan.capacityKW?"over":value===0?"idle":percent>=85?"watch":"within";
+    $("floor100Feed"+feed).dataset.status=status;
+    $("floor100Feed"+feed+"KW").textContent=showKW(value)+" / "+showKW(plan.capacityKW);
+    $("floor100Feed"+feed+"Pct").textContent=percent+"% TARGET · "+showW(value*1000);
+    $("floor100Feed"+feed+"Bar").style.width=Math.min(100,percent)+"%";
+   }
+   const summary=$("floor100FeedPlanStatus");
+   summary.dataset.status=plan.status==="OVER_CAPACITY"?"over":
+    plan.status==="UNASSIGNED_DEMAND"?"unassigned":"within";
+   summary.textContent=plan.status==="OVER_CAPACITY"?
+    ("DEMO CAPACITY WARNING · "+showKW(Math.max(0,plan.aKW-plan.capacityKW)+Math.max(0,plan.bKW-plan.capacityKW))+
+     " OVER ASSUMED FEED CAPACITY · NO ACTUAL TRANSFER VERIFIED"):
+    plan.status==="UNASSIGNED_DEMAND"?
+     ("GRID LOSS WHAT-IF · "+showKW(plan.unassignedKW)+" DEMAND UNASSIGNED · GENERATOR/UPS TRANSFER NOT MODELED"):
+     ("WHAT-IF WITHIN ASSUMED "+showKW(plan.capacityKW)+"/FEED · NOT REAL POWER STATUS");
+   if(feedRowGrid.children.length!==10){
+    for(let i=0;i<10;i++){
+     const button=document.createElement("button");button.type="button";
+     button.dataset.row=String(i+1);button.className="floor100-feed-row";
+     button.addEventListener("click",()=>selectRack("R"+String(i*10+1).padStart(3,"0")));
+     feedRowGrid.appendChild(button);
+    }
+   }
+   for(const item of plan.rows){
+    const b=feedRowGrid.children[item.row-1];
+    b.dataset.status=item.aOver||item.bOver?"over":
+     item.unassignedKW>0?"unassigned":"within";
+    b.textContent="ROW "+item.row+" · A "+showKW(item.aKW)+" / B "+showKW(item.bKW)+
+     (item.unassignedKW?" / UNASSIGNED "+showKW(item.unassignedKW):"");
+    b.title="Select row "+item.row+" · schematic A/B load target, not measured";
+   }
+  }
   const paths=state()?.getFloor100PowerPaths?.()||[];
   traceSelect.value=d.powerPathMode;
   const traceRack=paths[0]?.rackId??null;
@@ -155,6 +194,9 @@
    map.appendChild(b);
   }
  }
+ capSelect.addEventListener("change",()=>{
+  state()?.setFloor100FeedCapacityKW?.(Number(capSelect.value));render();
+ });
  loadSelect.addEventListener("change",()=>{
   state()?.setFloor100LoadPercent?.(Number(loadSelect.value));render();
  });
@@ -165,7 +207,8 @@
   const profile=state()?.getFloor100PowerModel?.();if(!profile)return;
   const data=JSON.stringify({format:"SPARK-FLOOR100-POWER-ESTIMATE-1",
    source:"BROWSER_ONLY_DEMO_ASSUMPTIONS",createdAt:new Date().toISOString(),...profile,
-   selectedSchematicPaths:state()?.getFloor100PowerPaths?.()||[]},null,2);
+   selectedSchematicPaths:state()?.getFloor100PowerPaths?.()||[],
+   hypotheticalFeedPlan:state()?.getFloor100FeedAllocation?.()||null},null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
   link.href=url;link.download="spark-floor100-power-estimate-NOT-TELEMETRY.json";
