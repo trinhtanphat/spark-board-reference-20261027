@@ -3,6 +3,7 @@
  * 10 x 10 visual floor; no electrical engineering, mechanical CAD or live telemetry.
  * All geometry is procedural, with InstancedMesh used for repeated fascias.
  */
+import {buildFloor100Impact} from './floor100-impact.mjs';
 export const FLOOR100_SPEC=Object.freeze({
  rows:10,columns:10,rackCount:100,rackWidth:3.72,rackDepth:2.52,
  pitchX:3.82,pitchZ:5.70,computeRacks:80,fabricRacks:10,storageRacks:10,
@@ -186,6 +187,15 @@ export function createFloor100Concept(THREE){
   records.forEach((r,i)=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,0,0);o.scale.set(r.w,r.h,r.d);o.updateMatrix();mesh.setMatrixAt(i,o.matrix)});
   mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();owner.add(mesh);batched.push(mesh);
  }
+ // Per-rack live SCHEMATIC ROUTE indicator. Operational availability is not measured.
+ const indicatorMat=new THREE.MeshBasicMaterial({color:'#ffffff',toneMapped:false});
+ const routeIndicators=new THREE.InstancedMesh(boxGeom,indicatorMat,racks.length);
+ routeIndicators.name='FLOOR100_SCHEMATIC_FEED_INDICATORS';
+ racks.forEach((r,i)=>{
+  o.position.set(r.x,7.33,r.z+1.48);o.rotation.set(0,0,0);o.scale.set(.45,.145,.048);o.updateMatrix();
+  routeIndicators.setMatrixAt(i,o.matrix);
+ });
+ routeIndicators.instanceMatrix.needsUpdate=true;routeIndicators.computeBoundingSphere();group.add(routeIndicators);
  // Rack frame selection is 12 unwarped cuboid edges.
  const outline=new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(3.78,8.30,2.59)),
@@ -193,9 +203,14 @@ export function createFloor100Concept(THREE){
  outline.renderOrder=70;outline.visible=false;group.add(outline);
  let selected=null,filter="all",serviceSide="front";
  let powerScenario="normal",coolingCircuit="both";
+ let routeImpact=buildFloor100Impact(racks,powerScenario);
+ const indicatorColors={visible:new THREE.Color('#a4e7aa'),dimmed:new THREE.Color('#dc6d52'),unmapped:new THREE.Color('#719cb5')};
  const scenarioOptions=["normal","a-loss","b-loss","grid-loss"];
  const coolingOptions=["both","supply","return"];
  function updateInfrastructureVisuals(){
+  routeImpact=buildFloor100Impact(racks,powerScenario);
+  routeImpact.entries.forEach((entry,i)=>routeIndicators.setColorAt(i,indicatorColors[entry.status]));
+  routeIndicators.instanceColor.needsUpdate=true;
   const unavailableA=powerScenario==="a-loss"||powerScenario==="grid-loss";
   const unavailableB=powerScenario==="b-loss"||powerScenario==="grid-loss";
   materials.powerA.color.set(unavailableA?"#373c42":"#ffd06a");
@@ -237,6 +252,10 @@ export function createFloor100Concept(THREE){
  function diagnostics(){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
    powerScenario,coolingCircuit,
+   routeStatusCounts:{...routeImpact.counts},routeIndicatorCount:routeIndicators.count,
+   routeIndicatorColors:[0,1,8].map(i=>{const color=new THREE.Color();routeIndicators.getColorAt(i,color);return color.getHexString()}),
+   routeRowCounts:routeImpact.rows.map(r=>({...r})),
+   routeDisclaimer:routeImpact.disclaimer,
    powerFeedAVisible:powerScenario==="normal"||powerScenario==="b-loss",
    powerFeedBVisible:powerScenario==="normal"||powerScenario==="a-loss",
    backupGeneratorIllustrated:powerScenario==="grid-loss",
@@ -260,5 +279,6 @@ export function createFloor100Concept(THREE){
  group.visible=false;
  updateInfrastructureVisuals();
  return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,diagnostics,
+  getRouteImpact:()=>routeImpact,
   rackPosition:id=>rackById.get(id)||null,getSelected:()=>selected};
 }

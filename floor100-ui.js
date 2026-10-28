@@ -14,13 +14,50 @@
   const d=state()?.getFloor100Diagnostics?.();
   if(!d)return;
   const focus=d.selected||"";
+  const impact=state()?.getFloor100RouteImpact?.();
+  const routeById=new Map((impact?.entries||[]).map(r=>[r.id,r]));
   rackSelector.value=focus;
-  for(const b of map.children)b.setAttribute("aria-pressed",String(b.dataset.id===focus));
+  for(const b of map.children){
+   const route=routeById.get(b.dataset.id);
+   b.setAttribute("aria-pressed",String(b.dataset.id===focus));
+   if(route){
+    b.dataset.route=route.status;
+    b.title=b.dataset.id+" · "+(route.feed==="unmapped"?"feed not modeled":route.feed+" route "+route.status)+
+     " · SCHEMATIC ONLY / NO ACTUAL RACK TELEMETRY";
+    b.setAttribute("aria-label",b.dataset.id+" "+(route.feed==="unmapped"?"feed path not modeled":route.feed+" feed path "+route.status)+", conceptual only");
+   }
+  }
+  const stats=$("floor100RouteCounts");
+  const rowMap=$("floor100RowSummary");
+  if(impact){
+   const {visible,dimmed,unmapped}=impact.counts;
+   stats.textContent=visible+" SHOWN PATH / "+dimmed+" DIMMED PATH / "+unmapped+
+    " UNMAPPED · no operational state measured";
+   if(!rowMap.children.length){
+    for(let i=0;i<10;i++){
+     const cell=document.createElement("span");
+     cell.className="floor100-row-chip";cell.dataset.row=String(i+1);
+     rowMap.appendChild(cell);
+    }
+   }
+   for(const row of impact.rows){
+    const chip=rowMap.children[row.row-1];
+    chip.dataset.route=row.dimmed?"dimmed":"visible";
+    chip.textContent="ROW "+row.row+" · "+row.visible+"/"+row.dimmed+"/"+row.unmapped;
+    chip.title="Row "+row.row+": "+row.visible+" routes shown, "+row.dimmed+
+     " dimmed, "+row.unmapped+" unmodeled — not measured rack uptime";
+   }
+  }
   if(focus){
    const r=racks.find(r=>r.id===focus);
-   if(r)description.textContent=r.id+" · ROW "+(r.row+1)+" / BAY "+(r.column+1)+" · "+r.kind.toUpperCase()+
-    (r.kind==="compute"?" · 72 GPU / 36 CPU equivalents":" · Conceptual service rack")+
-    " · FRONT + REAR 3D inspectable";
+   if(r){
+    const route=routeById.get(r.id);
+    const feedText=route?.feed==="unmapped"?"FEED NOT MODELED":
+     "INDICATIVE "+route?.feed+" PATH "+(route?.status==="dimmed"?"DIMMED":"SHOWN");
+    description.textContent=r.id+" · ROW "+(r.row+1)+" / BAY "+(r.column+1)+" · "+r.kind.toUpperCase()+
+     (r.kind==="compute"?" · 72 GPU / 36 CPU equivalents":" · Conceptual service rack")+
+     " · "+feedText+" · BROWSER-ONLY ROUTE ART / NOT ACTUAL RACK STATUS";
+   }
   }else description.textContent="100 racks / 10 × 10 · Select a cabinet to focus the 3D camera. Zone groups represent illustration only.";
   rear.textContent=d.serviceSide==="rear"?"REAR SERVICE / ON":"REAR SERVICE / OFF";
   rear.setAttribute("aria-pressed",String(d.serviceSide==="rear"));

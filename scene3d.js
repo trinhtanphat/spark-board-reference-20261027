@@ -621,6 +621,7 @@ function init(){
  getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-tray-cuboid"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
+ getFloor100RouteImpact(){return floor100Scene?.getRouteImpact()||null},
  setFloor100PowerScenario(value){
   if(modelMode!=='floor100')return false;
   const ok=floor100Scene?.setPowerScenario(value)===true;
