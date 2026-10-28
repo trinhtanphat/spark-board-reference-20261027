@@ -8,7 +8,7 @@
 import {RACK_SPEC,validateRackArchitecture} from "./nvidia-rack-spec.mjs";
 
 export function createRackConcept(THREE){
- const group=new THREE.Group(),parts=[],trays=[],coolingParts=[];
+ const group=new THREE.Group(),parts=[],trays=[],coolingParts=[],pickTargets=[];
  group.name="UNOFFICIAL_VERA_RUBIN_NVL72_RACK";
  const mat=(c,metalness=.25,roughness=.43)=>new THREE.MeshStandardMaterial({color:c,metalness,roughness});
  const black=mat("#0c1012",.48,.47),chassis=mat("#1e2526",.72,.3);
@@ -63,6 +63,16 @@ export function createRackConcept(THREE){
   tray.userData.part="NVIDIA / NVL72 "+(kind==="compute"?"COMPUTE TRAY":kind==="nvlink"?"NVLINK SWITCH TRAY":kind==="tor"?"TOR SWITCH":"POWER SHELF")+" "+String(number).padStart(2,"0");
   group.add(tray);parts.push(tray);
   trays.push({kind,number,y,height:trayHeight,part:tray.userData.part});
+  // A dedicated whole-device click volume, including front, side and rear.
+  // Use an isolated layer excluded from the camera: raycastable, never drawn.
+  // This prevents tiny instanced LEDs / cabinet surfaces from stealing clicks.
+  const clickBody=new THREE.Mesh(
+   new THREE.BoxGeometry(3.96,trayHeight-.004,2.39),
+   new THREE.MeshBasicMaterial({visible:false}));
+  clickBody.position.z=.035;clickBody.layers.set(29);
+  clickBody.name="PICK_WHOLE_SERVER_"+tray.name;
+  clickBody.userData.part=tray.userData.part;
+  tray.add(clickBody);pickTargets.push(clickBody);
   // Rack drawer; gold anodized compute front and vent metal contrast with black rails.
   put(tray,3.91,trayHeight-.015,1.90,black,0,0,-.03);
   put(tray,3.85,trayHeight-.024,.18,
@@ -277,24 +287,25 @@ export function createRackConcept(THREE){
    counts:{gpu:0,cpu:0,nvSwitch:0,psu:0,storage:0},maintenanceInstructions:false};
  }
 
- // A shallow 3D cuboid gives the chosen tray a visible rectangular BOX,
- // without encompassing its full chassis depth or the entire cabinet.
+ // A full-chassis 3D cuboid highlights the entire selected server/tray,
+ // not just a shallow faceplate; its dimensions are fixed independently of
+ // nested meshes and cannot balloon into the entire cabinet.
  function createTraySelectionFrame(part){
   const index=trays.findIndex(t=>t.part===part);
   if(index<0)return null;
-  const w=3.78,h=Math.max(.10,trays[index].height-.048),d=.16;
+  const w=3.98,h=Math.max(.16,trays[index].height-.008),d=2.39;
   const box=new THREE.BoxGeometry(w,h,d);
   const geometry=new THREE.EdgesGeometry(box);box.dispose();
   const material=new THREE.LineBasicMaterial({color:0xe1bb79,transparent:true,opacity:.96,depthTest:false,depthWrite:false});
   const frame=new THREE.LineSegments(geometry,material);
-  frame.position.z=1.18; // z from 1.10 to 1.26, close to the faceplate.
-  frame.name="RACK_TRAY_3D_CUBOID_SELECTION";frame.renderOrder=60;
+  frame.position.z=.035; // x/y/z tightly match the full chassis pick volume.
+  frame.name="RACK_WHOLE_SERVER_3D_CUBOID_SELECTION";frame.renderOrder=60;
   frame.userData={selectionType:"rack-tray-cuboid",part,faceWidth:w,faceHeight:h,faceDepth:d,edgeCount:12};
   parts[index].add(frame); // Follow conceptual drawer extension.
   return frame;
  }
 
- return {group,parts,trays,coolingParts,featureInstances,openService,clearService,getServiceState,setRearSystemFocus,createTraySelectionFrame,
+ return {group,parts,trays,pickTargets,coolingParts,featureInstances,openService,clearService,getServiceState,setRearSystemFocus,createTraySelectionFrame,
   diagnostics:()=>({
    scope:"UNOFFICIAL_RACK_ARCHITECTURE_ONLY",visible:group.visible,
    counts:validateRackArchitecture(),renderedTrays:trays.length,
@@ -303,6 +314,7 @@ export function createRackConcept(THREE){
    nvSwitchIndicators:positionsSwitch.length,typeCounts:{...typeIndex},
    facade:"champagne-metallic-with-dense-grilles",
    cabinetFrame:{kind:"3d-cuboid",edgeCount:12,width:4.55,height:9.50,depth:2.53,visible:cabinetOutline.visible},
+   pickVolumes:pickTargets.length,pickVolumeLayer:29,
    rearComponents:coolingParts.length,instancedDetails:featureInstances.length,
    rearCableCartridges:4,rearManifoldPipes:2,rearBusbarRails:2,rearFocus,
    rearVisible:{nvlink:rearNvlink.visible,cooling:rearCooling.visible,power:rearPower.visible},

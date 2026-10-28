@@ -468,8 +468,11 @@ function interactions(){
    if(gesture?.distance&&next>0){distTarget=clamp(distTarget*gesture.distance/next,8.5,36)}
    gesture={distance:next};moved=true;return;
   }
-  if(Math.abs(current.x-previous.x)+Math.abs(current.y-previous.y)>0.75){
-   moved=true;azTarget-=(current.x-previous.x)*.007;
+  // Do not mistake sub-pixel mouse jitter or a small finger tremor for orbit.
+  // A deliberate drag begins only after six CSS pixels from pointerdown.
+  if(!moved&&clickPos&&Math.hypot(current.x-clickPos.x,current.y-clickPos.y)>6)moved=true;
+  if(moved){
+   azTarget-=(current.x-previous.x)*.007;
    elTarget=clamp(elTarget+(current.y-previous.y)*.006,.18,1.57);
   }
  });
@@ -482,7 +485,17 @@ function interactions(){
    const rect=renderer.domElement.getBoundingClientRect();
    const pt=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
    const ray=new THREE.Raycaster();ray.setFromCamera(pt,camera);
-   const intersections=ray.intersectObjects(modelMode==='datacenter'?dataCenterScene.group.children:modelMode==='rack'?rackModel.group.children:modelMode==='nvidia'?nvidiaModel.group.children:board.children,true);
+   // Rack-specific click volumes precisely represent a full physical tray
+   // across its front, sides and rear. Exclude decorative instanced meshes,
+   // cable layers and the cabinet outline from the picking ray.
+   if(modelMode==='rack'){
+    ray.layers.set(29);
+    const hit=ray.intersectObjects(rackModel.pickTargets,false)[0];
+    if(hit?.object?.userData.part)notifyPart(hit.object.userData.part);
+    if(active.size===0){clickPos=null;gesture=null}
+    return;
+   }
+   const intersections=ray.intersectObjects(modelMode==='datacenter'?dataCenterScene.group.children:modelMode==='nvidia'?nvidiaModel.group.children:board.children,true);
    const item=intersections.map(v=>{let o=v.object;while(o&&!o.userData.part)o=o.parent;return o}).find(o=>o&&o.userData.part);
    if(item)notifyPart(item.userData.part);
   }
@@ -603,6 +616,17 @@ function init(){
   return ok;
  },
  getRackTrays(){return rackModel?.trays.map(t=>({kind:t.kind,number:t.number,part:t.part,height:t.height}))||[]},
+ getRackTrayPickPoint(part){
+  const target=rackModel?.pickTargets.find(t=>t.userData.part===part);
+  if(modelMode!=='rack'||!target||!camera)return null;
+  // Browser QA uses this projection to exercise REAL pointer events, rather
+  // than only calling the selection API or changing the dropdown.
+  scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+  const world=target.localToWorld(new THREE.Vector3(.50,0,rackRear?-1.235:1.235));
+  const ndc=world.project(camera),rect=renderer.domElement.getBoundingClientRect();
+  const x=rect.left+(ndc.x+1)*rect.width/2,y=rect.top+(1-ndc.y)*rect.height/2;
+  return {part,x:Number(x.toFixed(2)),y:Number(y.toFixed(2)),inside:Math.abs(ndc.x)<1&&Math.abs(ndc.y)<1,visibleOnScreen:x>0&&y>0&&x<innerWidth&&y<innerHeight};
+ },
  getRackTrayDetails(part){const t=rackModel?.trays.find(t=>t.part===part);return t?{...rackTrayFacts(t.kind),kind:t.kind,number:t.number,part:t.part}:null},
  getRackViewDiagnostics(){return {mode:modelMode,cameraDistance:Number(dist.toFixed(2)),cameraTargetY:Number(center.y.toFixed(2)),cameraElevation:Number(el.toFixed(2)),serviceFocusY:rackServiceFocusY}},
  setNvidiaCooling(on){nvidiaCoolingVisible=Boolean(on);if(nvidiaModel){for(const coldplate of nvidiaModel.coolingGroups)coldplate.visible=modelMode==='nvidia'&&nvidiaCoolingVisible}needsRender=true},
