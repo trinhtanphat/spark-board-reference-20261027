@@ -13,7 +13,11 @@ export function createDataCenterConcept(THREE,model){
   gold:material("#b7a077",.74,.31),dark:material("#2a353c",.45,.39),
   power:material("#828a86",.61,.38),blue:material("#387d94",.51,.37),
   green:material("#a7ce58",.31,.35),empty:material("#091013",.19,.71),
-  led:material("#8dbbcc",.22,.35),floor:material("#1a242a",.2,.8)
+  led:material("#8dbbcc",.22,.35),floor:material("#1a242a",.2,.8),
+  vent:material("#1e2a31",.31,.59),handle:material("#c0b59d",.63,.31),
+  port:material("#325b69",.39,.36),copper:material("#b78d57",.78,.31),
+  pipe:material("#4a9bab",.75,.32),socket:material("#3c6975",.48,.39),
+  aisle:material("#39454b",.11,.74)
  };
  const moduleMaterials={compute:"gold",nvlink:"dark",power:"power",tor:"blue",ib:"green",eth:"blue",mgmt:"power"};
  const cableMaterials=Object.fromEntries(Object.entries(FABRICS).map(([key,value])=>[key,material(value.color,.2,.42)]));
@@ -64,6 +68,24 @@ export function createDataCenterConcept(THREE,model){
   instance(rack.kind==="fabric"?"green":"led",.055,7.3,.04,x+1.84,3.62,z+1.26);
   const face=new THREE.Mesh(new THREE.PlaneGeometry(3.60,.30),labelTexture(rack.label));
   face.position.set(x,7.86,z+1.27);face.name="DC_RACK_LABEL_"+rack.id;group.add(face);
+  const rearLabel=new THREE.Mesh(new THREE.PlaneGeometry(3.60,.30),labelTexture(rack.id+" / REAR SERVICE"));
+  rearLabel.position.set(x,7.86,z-1.33);rearLabel.rotation.y=Math.PI;
+  rearLabel.name="DC_REAR_LABEL_"+rack.id;group.add(rearLabel);
+  // Schematic, non-engineering rear service hardware: passive copper NVLink
+  // cartridges, coolant manifolds and independent 54V power busbars.
+  if(rack.kind==="compute"){
+   for(const bx of [-1.12,-.38,.38,1.12]){
+    instance("copper",.14,7.30,.13,x+bx,3.52,z-1.36);
+    for(let j=0;j<24;j++)instance("socket",.11,.068,.055,x+bx,.08+j*.302,z-1.46);
+   }
+   for(const side of [-1,1]){
+    instance("pipe",.10,8.1,.11,x+side*1.72,3.50,z-1.46);
+    instance("copper",.085,8.1,.09,x+side*1.91,3.50,z-1.54);
+    for(let j=0;j<18;j++)instance("socket",.18,.082,.12,x+side*1.72,.05+j*.41,z-1.53);
+   }
+  }else{
+   for(const side of [-1,1])instance("pipe",.08,7.6,.09,x+side*1.73,3.55,z-1.43);
+  }
   // A separate 3D rack-picking volume for blank cabinet sections.
   const whole=new THREE.Mesh(new THREE.BoxGeometry(3.95,8.58,2.32),new THREE.MeshBasicMaterial({visible:false}));
   whole.layers.set(28);whole.position.set(x,3.63,z);
@@ -88,20 +110,47 @@ export function createDataCenterConcept(THREE,model){
    const click=new THREE.Mesh(new THREE.BoxGeometry(3.52,Math.max(h-.006,.05),.13),pickMaterial);
    click.position.z=1.30;
    click.layers.set(29);click.userData.part=root.userData.part;
-   click.name="DC_SLOT_HIT_"+id;root.add(click);pickTargets.push(click);
+   click.name="DC_SLOT_HIT_"+id;click.userData.side="front";root.add(click);pickTargets.push(click);
+   const rearClick=new THREE.Mesh(new THREE.BoxGeometry(3.52,Math.max(h-.006,.05),.13),pickMaterial);
+   rearClick.position.z=-1.30;rearClick.layers.set(29);
+   rearClick.userData={part:root.userData.part,side:"rear"};
+   rearClick.name="DC_SLOT_REAR_HIT_"+id;root.add(rearClick);pickTargets.push(rearClick);
    instance("empty",3.48,h-.015,.14,x,y,z+1.11);
-   const records=[
+   // Front/back fascia details are batched; they do not control physical ports.
+   const rearFace=z-1.345,frontFace=z+1.405;
+   const movingFace=[];
+   const facade=(kind,w,h,d,px,py,pz)=>movingFace.push(instance(kind,w,h,d,px,py,pz,id));
+   for(let j=0;j<6;j++)facade("vent",.34,Math.max(.012,h*.30),.019,x-.97+j*.38,y,frontFace);
+   for(const hx of [-1.59,1.59])facade("handle",.042,Math.max(.064,h*.68),.08,x+hx,y,frontFace+.015);
+   if(slot.kind==="compute"){
+    for(let k=0;k<3;k++)facade("port",.13,.035,.027,x+.53+k*.20,y,frontFace+.035);
+    facade("green",.045,.044,.03,x+1.43,y,frontFace+.04);
+   }else if(slot.kind==="power"){
+    for(let k=0;k<6;k++)facade("power",.42,Math.max(.06,h*.48),.045,x-1.28+k*.51,y,frontFace+.015);
+    facade("green",.09,.07,.03,x+1.52,y,frontFace+.055);
+   }else{
+    for(let k=0;k<6;k++)facade("port",.12,.035,.024,x-.58+k*.21,y,frontFace+.038);
+   }
+   for(const px of [-.90,-.20,.50])instance("socket",.13,.047,.045,x+px,y,rearFace);
+   for(const hx of [-1.6,1.6])instance("handle",.048,.047,.032,x+hx,y,rearFace-.055);
+   if(slot.kind==="power")for(let k=0;k<6;k++)
+    instance("copper",.38,Math.max(.045,h*.4),.035,x-1.25+k*.5,y,rearFace-.024);
+   const records=[...movingFace,
     instance(moduleMaterials[slot.kind],3.39,Math.max(.05,h-.024),.22,x,y,z+1.25,id),
     instance("dark",.42,Math.max(.04,h-.055),.06,x-1.19,y,z+1.39,id),
     instance(slot.kind==="compute"?"green":"frame",.38,.065,.04,x+.98,y,z+1.39,id)
    ];
-   slotGroups.set(id,{root,slotId:id,drawables:records,pick:click,height:h});
+   slotGroups.set(id,{root,slotId:id,drawables:records,pick:click,rearPick:rearClick,height:h});
    slotPositions.set(id,{x,y,z:z+1.42});
    if(rack.kind!=="fabric")y+=h/2+.015;
   }
  }
- // Close-packed 4x4 floor, edge seam and four low-overhead cable corridors.
+ // Side-by-side racks still nearly touch; front-to-back service aisles open up.
  instance("floor",width+.70,.075,depth+.70,0,-.98,0);
+ for(let row=0;row<countZ-1;row++){
+  const middle=(row-(countZ-2)/2)*zPitch;
+  instance("aisle",width+.12,.018,zPitch-DATA_CENTER_LAYOUT.rackDepth-.20,0,-.92,middle);
+ }
  for(let row=0;row<countZ;row++){
   const z=(row-(countZ-1)/2)*zPitch;
   instance("frame",width+.24,.065,.065,0,8.87,z-1.36);
@@ -150,6 +199,7 @@ export function createDataCenterConcept(THREE,model){
   for(const [id,entry] of slotGroups){
    const slot=slotIndex.get(id);
    entry.pick.position.z=1.30+(slot.drawer?.82:0);
+   entry.rearPick.position.z=-1.30;
    if(selectedSlot===id&&slotFrame)slotFrame.position.z=.035+(slot.drawer?.82:0);
    for(const record of entry.drawables){
     record.batch.setMatrixAt(record.index,matrixFor(record,slot.installed,slot.drawer));
@@ -198,6 +248,11 @@ export function createDataCenterConcept(THREE,model){
    layout:{...DATA_CENTER_LAYOUT,clearanceX:Number((xPitch-DATA_CENTER_LAYOUT.rackWidth).toFixed(3)),
     clearanceZ:Number((zPitch-DATA_CENTER_LAYOUT.rackDepth).toFixed(3))},
    slotObjects:slotGroups.size,pickingVolumes:pickTargets.length,
+   frontPickVolumes:slotGroups.size,rearPickVolumes:slotGroups.size,
+   rearDetailCartridges:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length*4,
+   liquidManifolds:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length*2,
+   rearBusbarRails:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length*2,
+   frontVentGrilles:slotGroups.size*6,serviceAisles:countZ-1,
    selectedRack,selectedSlot,selectedRackOutlined:rackOutline.visible,
    selectedSlotBoxOffset:slotFrame?.position.z??null,selectedSlotBoxDepth:slotFrame?.userData.boxDepth??null,
    instanceBatches:batches.length,instances:batches.reduce((n,b)=>n+b.count,0),

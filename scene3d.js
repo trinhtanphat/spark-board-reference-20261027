@@ -27,7 +27,7 @@ let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=fa
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 let focusedVisualRouteId=null,routeFocusObject=null;
-let nvidiaModel=null,rackModel=null,dataCenterModel=null,dataCenterScene=null,modelMode='nvidia',nvidiaCoolingVisible=false,rackRear=false,rackServiceFocusY=null,dcFocus=null;
+let nvidiaModel=null,rackModel=null,dataCenterModel=null,dataCenterScene=null,modelMode='nvidia',nvidiaCoolingVisible=false,rackRear=false,rackServiceFocusY=null,dcFocus=null,dcSide='front';
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -393,9 +393,9 @@ function applyModelMode(mode){
  rackServiceFocusY=null;
  if(mode!=='rack'&&rackModel)rackModel.clearService();
  exploded=false;
- dcFocus=null;dataCenterScene?.focusRack(null);
+ dcFocus=null;dcSide='front';dataCenterScene?.focusRack(null);
  if(mode==='datacenter'){
-  distTarget=39;elTarget=1.07;azTarget=.50;center.x=0;center.z=0;center.y=3.68;
+  distTarget=49;elTarget=1.07;azTarget=.50;center.x=0;center.z=0;center.y=3.68;
  }else if(mode==='rack'){
   rackRear=false;
   rackModel?.setRearSystemFocus("all");
@@ -605,13 +605,13 @@ function init(){
  getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-tray-cuboid"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getDataCenterDiagnostics(){return dataCenterScene?.diagnostics()||null},
- getDataCenterFocusState(){return {rack:dcFocus?.id??null,x:dcFocus?.x??0,z:dcFocus?.z??0,distance:distTarget,elevation:elTarget,selectedSlot:dataCenterScene?.diagnostics().selectedSlot??null}},
+ getDataCenterFocusState(){return {rack:dcFocus?.id??null,x:dcFocus?.x??0,z:dcFocus?.z??0,distance:distTarget,elevation:elTarget,side:dcSide,selectedSlot:dataCenterScene?.diagnostics().selectedSlot??null}},
  getDataCenterPickPoint(slotId){
   if(modelMode!=='datacenter'||!renderer||!camera)return null;
-  const body=dataCenterScene?.pickTargets.find(t=>t.userData.part==='DC / '+slotId);
+  const body=dataCenterScene?.pickTargets.find(t=>t.userData.part==='DC / '+slotId&&t.userData.side===dcSide);
   if(!body)return null;
   scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
-  const point=body.localToWorld(new THREE.Vector3(0,0,.065)).project(camera);
+  const point=body.localToWorld(new THREE.Vector3(0,0,dcSide==='rear'?-.065:.065)).project(camera);
   const rect=renderer.domElement.getBoundingClientRect();
   return {slotId,x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2,
    inside:Math.abs(point.x)<1&&Math.abs(point.y)<1};
@@ -621,12 +621,18 @@ function init(){
   const point=dataCenterScene?.rackPosition(id);if(!point)return false;
   const scale=root?.scale.x??1;
   dcFocus={id,x:point.x*scale,z:point.z*scale};dataCenterScene.focusRack(id);
-  distTarget=17.5;elTarget=.88;azTarget=.38;needsRender=true;if(camera)updateCamera(true);return true;
+  distTarget=17.5;elTarget=.88;azTarget=dcSide==='rear'?Math.PI+.38:.38;needsRender=true;if(camera)updateCamera(true);return true;
  },
  resetDataCenterOverview(){
   if(modelMode!=='datacenter')return false;
   dcFocus=null;dataCenterScene?.focusRack(null);
-  distTarget=39;elTarget=1.07;azTarget=.50;needsRender=true;if(camera)updateCamera(true);return true;
+  distTarget=49;elTarget=1.07;azTarget=dcSide==='rear'?Math.PI+.50:.50;needsRender=true;if(camera)updateCamera(true);return true;
+ },
+ setDataCenterSide(side){
+  if(modelMode!=='datacenter'||!['front','rear'].includes(side))return false;
+  dcSide=side;azTarget=(side==='rear'?Math.PI:0)+(dcFocus?.38:.50);
+  elTarget=dcFocus?.88:1.07;distTarget=dcFocus?17.5:49;
+  needsRender=true;if(camera)updateCamera(true);return true;
  },
  selectDataCenterSlot(id){selectPart('DC / '+id)},
 
@@ -712,15 +718,15 @@ function init(){
  zoom(dir){distTarget=clamp(distTarget+dir*(modelMode==='datacenter'?1.4:.8),8.5,modelMode==='datacenter'?65:26);needsRender=true},
  setView(mode){
   if(modelMode==='datacenter'&&dcFocus){
-   azTarget=mode==='top'?0:.38;elTarget=mode==='top'?1.57:.88;distTarget=mode==='top'?19:17.5;
+   azTarget=mode==='top'?0:(dcSide==='rear'?Math.PI+.38:.38);elTarget=mode==='top'?1.57:.88;distTarget=mode==='top'?19:17.5;
   }else{
-   azTarget=mode==='top'?0:modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;
+   azTarget=mode==='top'?0:modelMode==='rack'?.33:modelMode==='datacenter'?(dcSide==='rear'?Math.PI+.50:.50):.43;
    elTarget=mode==='top'?1.57:modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;
-   distTarget=modelMode==='datacenter'?39:modelMode==='rack'?(mode==='top'?22:23.3):(mode==='top'?15.2:15.55);
+   distTarget=modelMode==='datacenter'?49:modelMode==='rack'?(mode==='top'?22:23.3):(mode==='top'?15.2:15.55);
   }
   needsRender=true
  },
- reset(){if(modelMode==='datacenter'){dcFocus=null;dataCenterScene?.focusRack(null)}azTarget=modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;elTarget=modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;distTarget=modelMode==='rack'?23.3:modelMode==='datacenter'?39:15.55;needsRender=true},
+ reset(){if(modelMode==='datacenter'){dcFocus=null;dataCenterScene?.focusRack(null)}azTarget=modelMode==='rack'?.33:modelMode==='datacenter'?(dcSide==='rear'?Math.PI+.50:.50):.43;elTarget=modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;distTarget=modelMode==='rack'?23.3:modelMode==='datacenter'?49:15.55;needsRender=true},
  nudge(x,y){azTarget+=x*.14;elTarget=clamp(elTarget+y*.12,.18,1.57);needsRender=true},
  showTraces(show){traceVisible=show;glowGroup.visible=show;coreIndicator.intensity=show?2:0;needsRender=true},
  setMotion(val){motion=val;needsRender=true},

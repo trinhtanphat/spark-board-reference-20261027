@@ -24,6 +24,9 @@
  }
  function render(){
   const state=api();if(!state)return;
+  const side=window.SPARK3D?.getDataCenterFocusState?.()?.side||"front";
+  const sideButton=$("dcSideToggle");
+  if(sideButton){sideButton.setAttribute("aria-pressed",String(side==="rear"));sideButton.textContent=side==="rear"?"FRONT / FACE VIEW":"REAR / SERVICE VIEW"}
   if(!rack.options.length)rack.append(...state.racks.map(r=>option(r.id,r.label)));
   if(!rack.value)rack.value=state.racks[0].id;
   const floor=$("dcFloorMap");
@@ -89,6 +92,15 @@
    setTimeout(()=>URL.revokeObjectURL(url),1200);
    say("Simulation topology JSON exported (not a live config)");
   }catch(e){say(e.message||String(e),true)}
+ });
+ $("dcSideToggle").addEventListener("click",()=>{
+  const button=$("dcSideToggle"),current=window.SPARK3D?.getDataCenterFocusState?.()?.side||"front";
+  const next=current==="front"?"rear":"front";
+  if(window.SPARK3D?.setDataCenterSide?.(next)){
+   button.setAttribute("aria-pressed",String(next==="rear"));
+   button.textContent=next==="rear"?"FRONT / FACE VIEW":"REAR / SERVICE VIEW";
+   say(next==="rear"?"Viewing illustrative REAR: manifold / 54V busbar / NVLink cartridges":"Viewing FRONT: compute, NVLink and power tray faceplates");
+  }
  });
  $("dcOverview").addEventListener("click",()=>{
   window.SPARK3D?.resetDataCenterOverview?.();
