@@ -622,6 +622,12 @@ function init(){
  getDataCenterAPI(){return dataCenterModel},
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
  getFloor100RouteImpact(){return floor100Scene?.getRouteImpact()||null},
+ getFloor100HardwareInfo(){return floor100Scene?.getHardwareInfo()||null},
+ setFloor100HardwarePart(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setHardwarePart(value)===true;
+  if(ok)needsRender=true;return ok;
+ },
  setFloor100PowerScenario(value){
   if(modelMode!=='floor100')return false;
   const ok=floor100Scene?.setPowerScenario(value)===true;
