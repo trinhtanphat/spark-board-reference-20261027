@@ -36,7 +36,7 @@ async function main(){try{
   await send("Emulation.setDeviceMetricsOverride",{width:screen.width,height:screen.height,deviceScaleFactor:1,mobile:screen.mobile});
   await send("Page.navigate",{url:target});await delay(350);for(let waited=0;waited<42;waited++){const state=await js("({ready:!!window.SPARK3D?.ready,failed:document.getElementById('engineLabel')?.textContent==='2D COMPATIBILITY MODE'})");if(state.ready||state.failed)break;await delay(400)}
   if(process.env.TEST_DC_ONLY==="1"){
-   await js("(()=>{document.getElementById('modelDatacenter').click();document.querySelector('#dcFloorMap [data-rack=N]').click();document.querySelector('.hero-stage').scrollIntoView({block:'center'})})()");
+   await js("(()=>{document.getElementById('modelDatacenter').click();document.querySelector('#dcFloorMap [data-rack=N]').click();document.querySelector('.hero-stage').scrollIntoView({behavior:'instant',block:'center'})})()");
    await delay(750);
    const diagnostic=await js("(()=>{const p=window.SPARK3D.getDataCenterPickPoint('N-C02'),el=document.elementFromPoint(p.x,p.y),canvas=document.querySelector('#sceneMount canvas');return {point:p,topTag:el?.tagName,topClass:el?.className,topId:el?.id,canvasHit:el===canvas,inspectorPointer:getComputedStyle(document.getElementById('partInspector')).pointerEvents,focus:window.SPARK3D.getDataCenterFocusState()}})()");
    const {x,y}=diagnostic.point;
@@ -80,7 +80,7 @@ async function main(){try{
   if(!Object.values(rackOutlineQA).every(Boolean))throw Error("Whole-server 3D box regression: "+JSON.stringify(rackOutlineQA));
   // Exercise REAL Chrome mouse/pointer input on visible 3D server bodies,
   // not simulated dropdown changes. The second click includes 1px jitter.
-  await js("(()=>{document.getElementById('closeInspector').click();document.querySelector('.hero-stage').scrollIntoView({block:'center'});return true})()");
+  await js("(()=>{document.getElementById('closeInspector').click();document.querySelector('.hero-stage').scrollIntoView({behavior:'instant',block:'center'});return true})()");
   await delay(160);
   const rackClickPoints=await js("(()=>{const a=window.SPARK3D,canvas=document.querySelector('#sceneMount canvas');return a.getRackTrays().map(t=>({kind:t.kind,...a.getRackTrayPickPoint(t.part)})).filter(p=>p.inside&&p.visibleOnScreen&&document.elementFromPoint(p.x,p.y)===canvas)})()");
   const rackActualClicks={candidates:rackClickPoints.length};
@@ -155,7 +155,7 @@ async function main(){try{
   if(!Object.values(dcFloorQA).every(Boolean))throw Error("Data center floor map regression: "+JSON.stringify(dcFloorQA));
   // Validate real browser pointer events select a DIFFERENT tray on the focused
   // rear-row rack, without using a dropdown or direct selection call.
-  await js("document.querySelector('.hero-stage').scrollIntoView({block:'center'})");
+  await js("document.querySelector('.hero-stage').scrollIntoView({behavior:'instant',block:'center'})");
   await delay(730);
   const dcPickPoint=await js("window.SPARK3D.getDataCenterPickPoint('N-C02')");
   const dcPickQA={projected:!!dcPickPoint?.inside};
@@ -180,7 +180,13 @@ async function main(){try{
   const rearQA=await js("(()=>{const a=window.SPARK3D,button=document.getElementById('dcSideToggle');button.click();document.querySelector('#dcFloorMap [data-rack=A]').click();const f=a.getDataCenterFocusState(),d=a.getDataCenterDiagnostics();return {rear:f.side==='rear'&&f.rack==='A',button:button.getAttribute('aria-pressed')==='true',aisles:d.layout.clearanceZ>2.5&&d.serviceAisles===3,sideGap:d.layout.clearanceX>.04&&d.layout.clearanceX<.1,details:d.rearDetailCartridges===60&&d.liquidManifolds===30&&d.rearBusbarRails===30&&d.frontVentGrilles===2988,rearTargets:d.rearPickVolumes===498}})()");
   console.log("DENSE_16_RACK_FRONT_REAR_DETAIL",JSON.stringify({screen:screen.name,...rearQA}));
   if(!Object.values(rearQA).every(Boolean))throw Error("Rear geometry regression: "+JSON.stringify(rearQA));
-  await js("document.querySelector('.hero-stage').scrollIntoView({block:'center'})");
+  const rearFilterQA=await js("(()=>{const a=window.SPARK3D,s=document.getElementById('dcRearLayer'),result={enabled:!s.disabled};for(const mode of ['nvlink','cooling','power','modules','all']){s.value=mode;s.dispatchEvent(new Event('change'));const d=a.getDataCenterDiagnostics();result[mode]=d.rearLayer===mode&&Object.entries(d.rearLayerVisible).every(([key,visible])=>visible===(mode==='all'||key===mode))}return result})()");
+  console.log("DENSE_16_RACK_REAR_LAYERS",JSON.stringify({screen:screen.name,...rearFilterQA}));
+  if(!Object.values(rearFilterQA).every(Boolean))throw Error("Rear layer visibility regression: "+JSON.stringify(rearFilterQA));
+  const rearTrayQA=await js("(()=>{const a=window.SPARK3D,m=a.getDataCenterAPI(),id='A-C04',first=a.getDataCenterRearModuleState(id);m.toggleDrawer(id);const pulled=a.getDataCenterRearModuleState(id);m.toggleDrawer(id);m.remove(id);const removed=a.getDataCenterRearModuleState(id);m.install(id,'compute');const restored=a.getDataCenterRearModuleState(id);return{parts:first.componentCount>=5&&first.geometryVisible,follow:Math.abs((pulled.sceneZ-first.sceneZ)-.82)<.02&&pulled.extended,hide:!removed.installed&&!removed.geometryVisible,restore:restored.installed&&restored.geometryVisible&&Math.abs(restored.sceneZ-first.sceneZ)<.02}})()");
+  console.log("DENSE_16_RACK_REAR_TRAY_SYNC",JSON.stringify({screen:screen.name,...rearTrayQA}));
+  if(!Object.values(rearTrayQA).every(Boolean))throw Error("Rear tray sync regression: "+JSON.stringify(rearTrayQA));
+  await js("document.querySelector('.hero-stage').scrollIntoView({behavior:'instant',block:'center'})");
   await delay(120);
   const rearPoint=await js("window.SPARK3D.getDataCenterPickPoint('A-C02')");
   const rearPick={visible:!!rearPoint?.inside};
