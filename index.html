@@ -31,6 +31,16 @@
 </aside>
 <main class="main-column">
   <div class="product-view-selector" role="group" aria-label="Choose 3D hardware model"><button type="button" id="modelNvidia" class="active" aria-pressed="true">VERA RUBIN SUPERCHIP</button><button type="button" id="modelRack" aria-pressed="false">NVL72 RACK / 72 GPU</button><button type="button" id="modelReference" aria-pressed="false">SPARK PCB REFERENCE</button><button type="button" id="coolingToggle" class="cooling-toggle" aria-pressed="false" title="Show conceptual liquid cooling plate assembly">COOLING / OFF</button><span>INDEPENDENT STUDY / NOT NVIDIA OFFICIAL</span></div>
+  <section id="rackTrayExplorer" class="rack-tray-explorer" aria-label="NVL72 rack tray navigator" hidden>
+    <div class="rack-tray-controls">
+      <label for="rackTraySelect">NVL72 / SERVICE TRAY EXPLORER</label>
+      <select id="rackTraySelect" aria-label="Choose NVL72 rack tray"></select>
+      <button type="button" id="rackTrayPrev" aria-label="Previous rack tray">← PREV</button>
+      <button type="button" id="rackTrayNext" aria-label="Next rack tray">NEXT →</button>
+    </div>
+    <p id="rackTrayDetails" aria-live="polite">Select a tray to inspect its published component configuration.</p>
+    <span class="rack-tray-caveat">Published tray contents · 3D slot positions and dimensions are illustrative, not NVIDIA CAD.</span>
+  </section>
   <section class="hero-stage" aria-label="Interactive 3D NVIDIA Vera Rubin architecture concept">
     <div class="stage-gradient"></div><div class="stage-grid"></div>
     <div class="stage-top"><div class="stage-title"><span class="stage-overline"><span class="live-square"></span> STUDIO PRODUCT RENDER / WEBGL</span><h2>VERA <span>RUBIN</span><span class="h2-suffix"> / 2026</span></h2><p>2 Rubin GPUs &nbsp;·&nbsp; 1 Vera CPU &nbsp;·&nbsp; HBM4 memory</p></div>
@@ -51,7 +61,7 @@
       <div><span>NVL72 RACK CONFIGURATION</span><strong>72 GPU + 36 CPU</strong></div>
     </div>
     <div class="rack-facts-strip" aria-label="Official NVIDIA NVL72 rack tray counts">
-      <span><strong>18</strong> COMPUTE TRAYS</span><span><strong>9</strong> NVLINK 6 SWITCH TRAYS</span><span><strong>2</strong> TOR SWITCHES</span><span><strong>72 GPU / 36 CPU</strong> PER RACK</span>
+      <span><strong>18</strong> COMPUTE TRAYS</span><span><strong>9</strong> NVLINK 6 SWITCH TRAYS</span><span><strong>2</strong> TOR SWITCHES</span><span><strong>4</strong> POWER SHELVES / 3 RU EACH</span><span><strong>72 GPU / 36 CPU</strong> PER RACK</span>
     </div>
     <p class="nvidia-rack-note">NVL72 3D rack view models NVIDIA's published <strong>component counts</strong>. Front panel placement, rack dimensions, power shelves, manifold and service layout are independent artistic approximations — not installation instructions.</p>
     <p class="nvidia-fact-note">* NVIDIA sparse NVFP4 specification. Liquid-cooling plates in the 3D model are stylized mechanical studies, not NVIDIA production drawings. Figures belong to NVIDIA's published hardware, not live measurements from this browser. Chip placement, interconnect lines, memory arrangement and cooling geometry in the 3D view are illustrative.</p>

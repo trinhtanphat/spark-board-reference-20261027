@@ -149,3 +149,7 @@ Vera Rubin concept mode now includes a **COOLING / OFF–ON** toggle. Three cold
 ## NVIDIA Vera Rubin NVL72 rack study (2026-10-28)
 
 A third model selection provides a full rack-scale conceptual 3D view. It follows NVIDIA published counts (18 compute trays, 9 NVLink 6 switch trays, 2 top-of-rack switches; 72 Rubin GPUs and 36 Vera CPUs) and uses instanced architecture indicators for acceptable WebGL draw-call costs. Camera/inspector/mode switching are covered by the Chrome E2E suite. All tray order, rack size, power and cooling placement are **artistic**, not official NVIDIA CAD or an installation/service specification. See [Rack Architecture and QA](docs/NVIDIA_VERA_RUBIN_RACK.md).
+
+## NVL72 inventory correction and tray explorer (2026-10-28)
+
+Official NVIDIA DGX VR hardware documentation confirms **4 × 3 RU power shelves**, not the 2 generic shelves previously displayed. The rack concept now has 33 illustrated selectable elements: 18 compute trays, 9 NVLink trays, 4 power shelves and 2 top-of-rack management switches. A keyboard-accessible tray selector and Previous/Next buttons highlight each rack element and show NVIDIA-documented subcomponent details (ConnectX-9, BlueField-4, E1.S drives, NVSwitch ports, power shelf 54 V DC and 110 kW rating). These are **static published specifications**, not live telemetry, an installation diagram or NVIDIA production CAD. `node scripts/test-nvidia-rack.mjs` and browser E2E validate the inventory/selection. The fabricated-PCB gate stays closed.

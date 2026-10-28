@@ -11,7 +11,8 @@
 | NVSwitch ASICs | 36 | 9 × 4 |
 | Top-of-rack management switches | 2 | Managed network hardware |
 | Cooling | Liquid cooling | Real implementation uses manifolds and cold plates |
-| Power | Power shelves | Actual number and arrangement not specified by this model |
+| Power | **4 power shelves** | **3 RU each, 110 kW rated per shelf, six 18.3 kW PSUs, 54 V DC busbar output** |
+| Per compute tray | 2 ConnectX-9 I/O cards, 1 BlueField-4 DPU, 4 cache E1.S NVMe and 1 boot E1.S NVMe | Manufacturer-published components; not physically drawn to scale |
 
 **What is real:** The component counts and per-tray architecture above are from NVIDIA documentation.
 
@@ -20,7 +21,7 @@
 ## Three model modes
 
 1. **VERA RUBIN SUPERCHIP:** stylized 2× Rubin GPU + Vera CPU with optional conceptual cold plates.
-2. **NVL72 RACK / 72 GPU:** schematic rack showing the 18 compute trays, 9 NVLink 6 switch trays, and 2 TOR switches, with 72 GPU and 36 CPU indicators. Controls: orbit, zoom, inspect selected rack tray, take PNG.
+2. **NVL72 RACK / 72 GPU:** schematic rack showing the 18 compute trays, 9 NVLink 6 switch trays, 4 power shelves and 2 TOR switches, with 72 GPU and 36 CPU indicators. Controls: orbit, zoom, inspect selected rack tray, take PNG.
 3. **SPARK PCB REFERENCE:** preserved legacy fictional board with Route Explorer; no electrical netlist or production approval.
 
 These modes are separate; showing the rack never certifies PCB connectivity, mechanical dimensions or manufacturing DRC. Browser 3D tests validate responsiveness, counts, switching, camera framing, inspector and export — not physical hardware compliance.
@@ -41,3 +42,6 @@ $env:TEST_WEBGL_RECOVERY='1'; node e2e-check.js
 ```
 
 `node scripts/pcb-routing-audit.js --require-manufacturing-ready` must still exit with code 3 because there is no real board schematic/netlist.
+## Revision: documented power shelves & rack tray explorer
+
+The original demo used two generic power shelves. NVIDIA's hardware guide specifies **four** shelves at 3 RU each, with six air-cooled PSUs per shelf and 54 V DC busbar distribution. This revision corrects the modeled inventory and checks the counts against fixed official specifications. A rack tray navigator now provides 33 selectable elements (18 compute + 9 NVLink + 4 power + 2 TOR). The relative taller power shelf in the scene is an artistic approximation, **not a validated rack-unit drawing**. All data for display labels comes from NVIDIA's public hardware guide. Selecting a tray highlights the corresponding illustrated tray; this does not validate real locations, electrical connections or service procedures.

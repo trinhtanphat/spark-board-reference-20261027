@@ -33,11 +33,11 @@ export function createRackConcept(THREE){
   compute:labelTexture("RUBIN / COMPUTE","4 GPU   +   2 VERA CPU","#a9e65f"),
   nvlink:labelTexture("NVLINK 6 / SWITCH","4 NVSWITCH ASICs","#dfc58c"),
   tor:labelTexture("TOP OF RACK","MANAGEMENT SWITCH","#9ac6d7"),
-  power:labelTexture("POWER SUPPLY","ILLUSTRATIVE SHELF","#bdc6c9")
+  power:labelTexture("POWER SUPPLY","3 RU  /  54 V DC","#bdc6c9")
  };
  // The slot order is NOT a published hardware placement drawing.
  const rows=[
-  ...Array.from({length:2},()=>({kind:"power"})),
+  ...Array.from({length:RACK_SPEC.powerShelves},()=>({kind:"power"})),
   ...Array.from({length:9},()=>({kind:"compute"})),
   ...Array.from({length:9},()=>({kind:"nvlink"})),
   ...Array.from({length:9},()=>({kind:"compute"})),
@@ -47,22 +47,25 @@ export function createRackConcept(THREE){
   tor:material("#263943",.65,.29),power:powerColor};
  const typeIndex={compute:0,nvlink:0,power:0,tor:0};
  const positionsGPU=[],positionsCPU=[],positionsSwitch=[];
+ let rackY=-.82;
  for(let i=0;i<rows.length;i++){
   const {kind}=rows[i],number=++typeIndex[kind];
-  const y=-.84+(i+.5)*.29;
+  const trayHeight=kind==="power"?.57:.20;
+  const y=rackY+trayHeight*.5;
+  rackY+=trayHeight+.02;
   const tray=new THREE.Group();tray.position.y=y;
   tray.userData.part="NVIDIA / NVL72 "+(kind==="compute"?"COMPUTE TRAY":kind==="nvlink"?"NVLINK SWITCH TRAY":kind==="tor"?"TOR SWITCH":"POWER SHELF")+" "+String(number).padStart(2,"0");
   tray.name="RACK_"+kind.toUpperCase()+"_"+String(number).padStart(2,"0");
   group.add(tray);parts.push(tray);
-  trays.push({kind,number,y,part:tray.userData.part});
-  put(tray,3.92,.25,1.92,black,0,0,-.04);
-  put(tray,3.90,.226,.23,colorByType[kind],0,0,1.00);
-  put(tray,3.85,.026,.08,silver,0,.13,1.06);
+  trays.push({kind,number,y,height:trayHeight,part:tray.userData.part});
+  put(tray,3.92,trayHeight-.012,1.92,black,0,0,-.04);
+  put(tray,3.90,trayHeight-.024,.23,colorByType[kind],0,0,1.00);
+  put(tray,3.85,.026,.08,silver,0,trayHeight*.43,1.06);
   // Matching front labels are shared textures, not a separate unique draw per tray.
-  const tag=new THREE.Mesh(new THREE.PlaneGeometry(1.72,.205),rowLabels[kind]);
+  const tag=new THREE.Mesh(new THREE.PlaneGeometry(1.72,Math.min(.17,trayHeight-.03)),rowLabels[kind]);
   tag.position.set(-.92,0,1.133);tray.add(tag);
-  put(tray,.055,.18,.055,silver,-1.84,0,1.136);
-  put(tray,.055,.18,.055,silver,1.84,0,1.136);
+  put(tray,.055,Math.min(.17,trayHeight-.03),.055,silver,-1.84,0,1.136);
+  put(tray,.055,Math.min(.17,trayHeight-.03),.055,silver,1.84,0,1.136);
   if(kind==="compute"){
    for(let k=0;k<4;k++)positionsGPU.push([.47+k*.23,y,1.144]);
    for(let k=0;k<2;k++)positionsCPU.push([1.42+k*.21,y,1.144]);
@@ -104,6 +107,8 @@ export function createRackConcept(THREE){
    visible:group.visible,
    counts:validateRackArchitecture(),
    renderedTrays:trays.length,
+   racksPowerShelves:typeIndex.power,
+   powerShelfVisualHeightRatio:Number((.57/.20).toFixed(2)),
    gpuIndicators:positionsGPU.length,
    cpuIndicators:positionsCPU.length,
    nvSwitchIndicators:positionsSwitch.length,

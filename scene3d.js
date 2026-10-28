@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {createRubinConcept} from './vera-rubin-concept.mjs';
 import {createRackConcept} from './vera-rubin-rack.mjs';
+import {rackTrayFacts} from './nvidia-rack-spec.mjs';
 import {NVIDIA_PRODUCT} from './nvidia-product.mjs';
 import { VISUAL_ROUTES, ILLUSTRATIVE_STITCHING, LAYER_LABELS, ROUTING_REVISION, auditIllustrativeGeometry, isIllustrativeRoutingCorridor } from './routing/visual-routing.mjs';
 
@@ -530,6 +531,8 @@ function init(){
  window.SPARK3D={ready:true,
  getModelMode(){return modelMode},
  getRackDiagnostics(){return rackModel?.diagnostics()||null},
+ getRackTrays(){return rackModel?.trays.map(t=>({kind:t.kind,number:t.number,part:t.part,height:t.height}))||[]},
+ getRackTrayDetails(part){const t=rackModel?.trays.find(t=>t.part===part);return t?{...rackTrayFacts(t.kind),kind:t.kind,number:t.number,part:t.part}:null},
  getRackViewDiagnostics(){return {mode:modelMode,cameraDistance:Number(dist.toFixed(2)),cameraTargetY:Number(center.y.toFixed(2)),cameraElevation:Number(el.toFixed(2))}},
  setNvidiaCooling(on){nvidiaCoolingVisible=Boolean(on);if(nvidiaModel){for(const coldplate of nvidiaModel.coolingGroups)coldplate.visible=modelMode==='nvidia'&&nvidiaCoolingVisible}needsRender=true},
  getNvidiaCooling(){return nvidiaCoolingVisible},

@@ -190,3 +190,16 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .product-view-selector #modelRack.active{background:linear-gradient(105deg,#779e32,#d5da76);color:#172117}
 @media(max-width:800px){.rack-facts-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.product-view-selector #modelRack{flex:1 1 190px}.rack-facts-strip strong{font-size:13px}}
+
+/* Accessible rack tray browser: source-backed contents, conceptual physical placement */
+.rack-tray-explorer{background:linear-gradient(115deg,#1a2b24,#152329);border:1px solid #608465;border-radius:9px;padding:13px 15px;margin:0 0 13px;color:#e5efdf}
+.rack-tray-explorer[hidden]{display:none}
+.rack-tray-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rack-tray-controls label{font:700 10px/1.5 var(--mono);letter-spacing:.5px;color:#bcde93}
+.rack-tray-controls select{min-width:220px;flex:1;background:#293c35;border:1px solid #72967a;border-radius:6px;padding:10px;color:#f3f8ed;font:600 11px var(--mono)}
+.rack-tray-controls button{background:#30473a;border:1px solid #7b987a;color:#e7f3dd;border-radius:6px;padding:10px 13px;cursor:pointer;font:700 10px var(--mono)}
+.rack-tray-controls :is(select,button):focus-visible{outline:2px solid #d7eaa9;outline-offset:2px}
+.rack-tray-controls button:hover{background:#40604a}
+.rack-tray-explorer p{font:500 11px/1.7 var(--mono);margin:11px 0 5px;color:#e4eddb}
+.rack-tray-explorer .rack-tray-caveat{font:600 9px/1.6 var(--mono);color:#ddc99f}
+@media(max-width:650px){.rack-tray-controls label{width:100%}.rack-tray-controls select{flex:1 1 100%;min-width:0}.rack-tray-controls button{flex:1}}
