@@ -27,6 +27,7 @@
   const side=window.SPARK3D?.getDataCenterFocusState?.()?.side||"front";
   const sideButton=$("dcSideToggle");
   if(sideButton){sideButton.setAttribute("aria-pressed",String(side==="rear"));sideButton.textContent=side==="rear"?"FRONT / FACE VIEW":"REAR / SERVICE VIEW"}
+  const filter=$("dcRearLayer");if(filter)filter.disabled=side!=="rear";
   if(!rack.options.length)rack.append(...state.racks.map(r=>option(r.id,r.label)));
   if(!rack.value)rack.value=state.racks[0].id;
   const floor=$("dcFloorMap");
@@ -93,6 +94,12 @@
    say("Simulation topology JSON exported (not a live config)");
   }catch(e){say(e.message||String(e),true)}
  });
+ $("dcRearLayer").addEventListener("change",()=>{
+  const choice=$("dcRearLayer").value;
+  if(window.SPARK3D?.setDataCenterRearLayer?.(choice)){
+   say("Rear subsystem: "+$("dcRearLayer").selectedOptions[0]?.textContent+" · conceptual visualization");
+  }
+ });
  $("dcSideToggle").addEventListener("click",()=>{
   const button=$("dcSideToggle"),current=window.SPARK3D?.getDataCenterFocusState?.()?.side||"front";
   const next=current==="front"?"rear":"front";
@@ -100,6 +107,7 @@
    button.setAttribute("aria-pressed",String(next==="rear"));
    button.textContent=next==="rear"?"FRONT / FACE VIEW":"REAR / SERVICE VIEW";
    say(next==="rear"?"Viewing illustrative REAR: manifold / 54V busbar / NVLink cartridges":"Viewing FRONT: compute, NVLink and power tray faceplates");
+   $("dcRearLayer").disabled=next!=="rear";
   }
  });
  $("dcOverview").addEventListener("click",()=>{

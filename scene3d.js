@@ -390,6 +390,8 @@ function applyModelMode(mode){
  if(!['nvidia','reference','rack','datacenter'].includes(mode))return;
  const previousMode=modelMode;
  modelMode=mode;
+ // Stable picking: only processor/PCB showcases get ambient yaw animation.
+ if(root&&(mode==='rack'||mode==='datacenter'))root.rotation.y=0;
  rackServiceFocusY=null;
  if(mode!=='rack'&&rackModel)rackModel.clearService();
  exploded=false;
@@ -605,6 +607,13 @@ function init(){
  getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-tray-cuboid"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getDataCenterDiagnostics(){return dataCenterScene?.diagnostics()||null},
+ getDataCenterRearModuleState(id){return dataCenterScene?.getRearModuleState(id)||null},
+ setDataCenterRearLayer(value){
+  if(modelMode!=="datacenter"||dcSide!=="rear")return false;
+  const ok=dataCenterScene?.setRearLayer(value)===true;
+  if(ok)needsRender=true;
+  return ok;
+ },
  getDataCenterFocusState(){return {rack:dcFocus?.id??null,x:dcFocus?.x??0,z:dcFocus?.z??0,distance:distTarget,elevation:elTarget,side:dcSide,selectedSlot:dataCenterScene?.diagnostics().selectedSlot??null}},
  getDataCenterPickPoint(slotId){
   if(modelMode!=='datacenter'||!renderer||!camera)return null;
@@ -772,7 +781,7 @@ function init(){
  function animate(t){
  requestAnimationFrame(animate);
  if(!meshReady||contextLost)return;
- const visible=!document.hidden,ambientNow=visible&&running&&motion&&!prefersReducedMotion;
+ const visible=!document.hidden,ambientNow=visible&&running&&motion&&!prefersReducedMotion&&modelMode!=='rack'&&modelMode!=='datacenter';
  // Camera and exploded layers keep easing after the user releases a pointer,
  // but settled scenes no longer submit redundant WebGL frames.
  const targetY=modelMode==='rack'?(rackServiceFocusY??3.65):modelMode==='datacenter'?3.68:exploded?.75:0;

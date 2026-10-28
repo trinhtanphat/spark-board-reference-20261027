@@ -17,6 +17,9 @@ export function createDataCenterConcept(THREE,model){
   vent:material("#1e2a31",.31,.59),handle:material("#c0b59d",.63,.31),
   port:material("#325b69",.39,.36),copper:material("#b78d57",.78,.31),
   pipe:material("#4a9bab",.75,.32),socket:material("#3c6975",.48,.39),
+  rearNvlink:material("#c59b5c",.78,.29),rearLinkPort:material("#4b727d",.45,.34),
+  rearCooling:material("#48a5b4",.70,.31),rearCoolantPort:material("#426c78",.51,.37),
+  rearPower:material("#bd8758",.78,.31),rearModule:material("#879499",.56,.4),
   aisle:material("#39454b",.11,.74)
  };
  const moduleMaterials={compute:"gold",nvlink:"dark",power:"power",tor:"blue",ib:"green",eth:"blue",mgmt:"power"};
@@ -24,7 +27,23 @@ export function createDataCenterConcept(THREE,model){
  const instanceData=new Map(),batches=[];
  const rackCenters=new Map(),slotPositions=new Map(),dynamicRecords=[];
  const rackInfo=new Map(DATA_CENTER_RACKS.map(r=>[r.id,r]));
- let selectedRack=null,selectedSlot=null,slotFrame=null;
+ let selectedRack=null,selectedSlot=null,slotFrame=null,rearLayer="all";
+ const rearLayerKinds={
+  nvlink:["rearNvlink","rearLinkPort"],
+  cooling:["rearCooling","rearCoolantPort"],
+  power:["rearPower"],
+  modules:["rearModule"]
+ };
+ const rearLayerValues=["all",...Object.keys(rearLayerKinds)];
+ function setRearLayer(value){
+  if(!rearLayerValues.includes(value))return false;
+  rearLayer=value;
+  const allowed=new Set(value==="all"?Object.values(rearLayerKinds).flat():rearLayerKinds[value]);
+  for(const batch of batches){
+   if(Object.values(rearLayerKinds).flat().includes(batch.userData.kind))batch.visible=allowed.has(batch.userData.kind);
+  }
+  return true;
+ }
  const rackOutlineGeometry=new THREE.EdgesGeometry(new THREE.BoxGeometry(4.12,8.76,2.51));
  const rackOutline=new THREE.LineSegments(rackOutlineGeometry,new THREE.LineBasicMaterial({color:0xe2ca89,depthTest:false,transparent:true,opacity:.97}));
  rackOutline.name="DENSE_DC_SELECTED_RACK_12_EDGE_FRAME";rackOutline.renderOrder=85;rackOutline.visible=false;group.add(rackOutline);
@@ -75,16 +94,16 @@ export function createDataCenterConcept(THREE,model){
   // cartridges, coolant manifolds and independent 54V power busbars.
   if(rack.kind==="compute"){
    for(const bx of [-1.12,-.38,.38,1.12]){
-    instance("copper",.14,7.30,.13,x+bx,3.52,z-1.36);
-    for(let j=0;j<24;j++)instance("socket",.11,.068,.055,x+bx,.08+j*.302,z-1.46);
+    instance("rearNvlink",.14,7.30,.13,x+bx,3.52,z-1.36);
+    for(let j=0;j<24;j++)instance("rearLinkPort",.11,.068,.055,x+bx,.08+j*.302,z-1.46);
    }
    for(const side of [-1,1]){
-    instance("pipe",.10,8.1,.11,x+side*1.72,3.50,z-1.46);
-    instance("copper",.085,8.1,.09,x+side*1.91,3.50,z-1.54);
-    for(let j=0;j<18;j++)instance("socket",.18,.082,.12,x+side*1.72,.05+j*.41,z-1.53);
+    instance("rearCooling",.10,8.1,.11,x+side*1.72,3.50,z-1.46);
+    instance("rearPower",.085,8.1,.09,x+side*1.91,3.50,z-1.54);
+    for(let j=0;j<18;j++)instance("rearCoolantPort",.18,.082,.12,x+side*1.72,.05+j*.41,z-1.53);
    }
   }else{
-   for(const side of [-1,1])instance("pipe",.08,7.6,.09,x+side*1.73,3.55,z-1.43);
+   for(const side of [-1,1])instance("rearCooling",.08,7.6,.09,x+side*1.73,3.55,z-1.43);
   }
   // A separate 3D rack-picking volume for blank cabinet sections.
   const whole=new THREE.Mesh(new THREE.BoxGeometry(3.95,8.58,2.32),new THREE.MeshBasicMaterial({visible:false}));
@@ -131,10 +150,10 @@ export function createDataCenterConcept(THREE,model){
    }else{
     for(let k=0;k<6;k++)facade("port",.12,.035,.024,x-.58+k*.21,y,frontFace+.038);
    }
-   for(const px of [-.90,-.20,.50])instance("socket",.13,.047,.045,x+px,y,rearFace);
-   for(const hx of [-1.6,1.6])instance("handle",.048,.047,.032,x+hx,y,rearFace-.055);
+   for(const px of [-.90,-.20,.50])facade("rearModule",.13,.047,.045,x+px,y,rearFace);
+   for(const hx of [-1.6,1.6])facade("rearModule",.048,.047,.032,x+hx,y,rearFace-.055);
    if(slot.kind==="power")for(let k=0;k<6;k++)
-    instance("copper",.38,Math.max(.045,h*.4),.035,x-1.25+k*.5,y,rearFace-.024);
+    facade("rearModule",.38,Math.max(.045,h*.4),.035,x-1.25+k*.5,y,rearFace-.024);
    const records=[...movingFace,
     instance(moduleMaterials[slot.kind],3.39,Math.max(.05,h-.024),.22,x,y,z+1.25,id),
     instance("dark",.42,Math.max(.04,h-.055),.06,x-1.19,y,z+1.39,id),
@@ -162,7 +181,7 @@ export function createDataCenterConcept(THREE,model){
  }
  for(const [kind,records] of instanceData){
   const inst=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),materials[kind],records.length);
-  inst.name="DC_BATCH_"+kind;
+  inst.name="DC_BATCH_"+kind;inst.userData.kind=kind;
   inst.castShadow=false;inst.receiveShadow=false;
   inst.frustumCulled=false;
   for(let i=0;i<records.length;i++){
@@ -172,6 +191,7 @@ export function createDataCenterConcept(THREE,model){
   inst.instanceMatrix.needsUpdate=true;
   group.add(inst);batches.push(inst);
  }
+ setRearLayer("all");
  group.add(cableGroup);
  let renderedCables=0;
  function clearCables(){
@@ -238,8 +258,18 @@ export function createDataCenterConcept(THREE,model){
   entry.root.add(slotFrame);selectedSlot=id;return slotFrame;
  }
  function clearSlotSelection(){selectedSlot=null;slotFrame=null}
+ function getRearModuleState(id){
+  const entry=slotGroups.get(id),record=entry?.drawables.find(r=>r.kind==="rearModule");
+  if(!record)return null;
+  const matrix=new THREE.Matrix4();record.batch.getMatrixAt(record.index,matrix);
+  const slot=model.slots.find(s=>s.id===id);
+  return {slotId:id,installed:slot?.installed===true,extended:slot?.drawer===true,
+   geometryVisible:matrix.elements[5]>.001,sceneZ:Number(matrix.elements[14].toFixed(3)),
+   baseZ:Number(record.z.toFixed(3)),
+   componentCount:entry.drawables.filter(r=>r.kind==="rearModule").length};
+ }
  return {
-  group,parts,pickTargets,refresh,slotGroups,focusRack,rackPosition,createSlotSelectionFrame,clearSlotSelection,
+  group,parts,pickTargets,refresh,slotGroups,focusRack,rackPosition,createSlotSelectionFrame,clearSlotSelection,setRearLayer,getRearModuleState,
   diagnostics:()=>({
    scope:"DENSE_16_RACK_BROWSER_SIMULATION",visible:group.visible,
    gpuRacks:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length,
@@ -253,6 +283,11 @@ export function createDataCenterConcept(THREE,model){
    liquidManifolds:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length*2,
    rearBusbarRails:DATA_CENTER_RACKS.filter(r=>r.kind==="compute").length*2,
    frontVentGrilles:slotGroups.size*6,serviceAisles:countZ-1,
+   rearLayer,rearLayerVisible:Object.fromEntries(Object.keys(rearLayerKinds).map(k=>[k,
+    rearLayerKinds[k].every(kind=>batches.find(b=>b.userData.kind===kind)?.visible===true)])),
+   rearModuleRecords:instanceData.get("rearModule")?.length??0,
+   rearModuleInstalled:model.slots.filter(s=>s.installed).length,
+   rearModuleDrawn:model.slots.filter(s=>s.drawer).length,
    selectedRack,selectedSlot,selectedRackOutlined:rackOutline.visible,
    selectedSlotBoxOffset:slotFrame?.position.z??null,selectedSlotBoxDepth:slotFrame?.userData.boxDepth??null,
    instanceBatches:batches.length,instances:batches.reduce((n,b)=>n+b.count,0),
