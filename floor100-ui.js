@@ -4,6 +4,7 @@
  if(!panel||!map)return;
  const state=()=>window.SPARK3D;
  const rackSelector=$("floor100Rack"),filter=$("floor100Layer"),rear=$("floor100Rear"),description=$("floor100Selected");
+ const power=$("floor100PowerScenario"),cooling=$("floor100CoolingCircuit"),scenarioStatus=$("floor100ScenarioStatus");
  let racks=[];
  function selectRack(id){
   if(!state()?.focusFloor100Rack?.(id||null))return;
@@ -24,6 +25,15 @@
   rear.textContent=d.serviceSide==="rear"?"REAR SERVICE / ON":"REAR SERVICE / OFF";
   rear.setAttribute("aria-pressed",String(d.serviceSide==="rear"));
   filter.value=d.filter;
+  power.value=d.powerScenario;cooling.value=d.coolingCircuit;
+  const powerMessage=d.powerScenario==="normal"?"A+B PATHS DISPLAYED":
+   d.powerScenario==="a-loss"?"A PATH DIMMED · B DISPLAYED":
+   d.powerScenario==="b-loss"?"B PATH DIMMED · A DISPLAYED":
+   "GRID PATHS DIMMED · GENERATOR CONCEPT HIGHLIGHTED";
+  scenarioStatus.dataset.scenario=d.powerScenario;
+  scenarioStatus.textContent=powerMessage+" | COOLING "+
+   (d.coolingCircuit==="both"?"SUPPLY + RETURN":d.coolingCircuit==="supply"?"SUPPLY":"RETURN")+
+   " · ILLUSTRATIVE ONLY / NOT REAL ELECTRICAL OR THERMAL FAILOVER";
  }
  function populate(){
   if(racks.length)return;
@@ -41,6 +51,16 @@
    map.appendChild(b);
   }
  }
+ power.addEventListener("change",()=>{
+  state()?.setFloor100PowerScenario?.(power.value);render();
+ });
+ cooling.addEventListener("change",()=>{
+  state()?.setFloor100CoolingCircuit?.(cooling.value);render();
+ });
+ $("floor100ScenarioReset").addEventListener("click",()=>{
+  state()?.setFloor100PowerScenario?.("normal");
+  state()?.setFloor100CoolingCircuit?.("both");render();
+ });
  $("floor100Overview").addEventListener("click",()=>selectRack(null));
  rackSelector.addEventListener("change",()=>selectRack(rackSelector.value));
  filter.addEventListener("change",()=>{state()?.setFloor100Filter?.(filter.value);render()});
@@ -62,5 +82,5 @@
   panel.hidden=e.detail.mode!=="floor100";
   if(!panel.hidden){populate();render()}
  });
- window.SPARK_FLOOR100_UI={render,getState:()=>({visible:!panel.hidden,rackCount:racks.length,selected:rackSelector.value,filter:filter.value,rear:rear.getAttribute("aria-pressed")==="true"})};
+ window.SPARK_FLOOR100_UI={render,getState:()=>({visible:!panel.hidden,rackCount:racks.length,selected:rackSelector.value,filter:filter.value,rear:rear.getAttribute("aria-pressed")==="true",power:power.value,cooling:cooling.value})};
 })();
