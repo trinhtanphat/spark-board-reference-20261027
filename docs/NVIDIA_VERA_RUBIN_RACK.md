@@ -80,6 +80,10 @@ These are **semantic count representations** sourced from the [official NVIDIA D
 
 Visual performance: only the selected tray receives extra interior meshes. Other rack components reuse instance batches. Browser E2E verifies all three viewports, service selection/close, per-kind package counts, previous tray reset, rear-view lockout, PNG and WebGL recovery.
 
+## Correct tray-selection highlight geometry (28 October 2026)
+
+The old `THREE.BoxHelper` highlighted every selected rack tray's entire volume, including its deep chassis, producing an oversized gold perspective rectangle at steep camera angles. The NVL72 rack now creates a single, narrow outline exactly on the **illustrative front faceplate plane** of the chosen tray. The outline follows drawer extension, disappears during rear inspection, and is disposed on selection change. Other modes retain their previous BoxHelper behavior. This is a selection UI correction only; it does not imply exact NVIDIA mechanical dimensions.
+
 ## Rear infrastructure layered inspection (28 October 2026)
 
 The REAR / ON camera now enables a **REAR LAYERS** selector: ALL SYSTEMS, NVLINK 6 / COPPER CARTRIDGES, LIQUID / MANIFOLDS, and POWER / 54 VDC BUSBAR. The rendered backplane contains **four illustrative cartridge columns**, two manifold pipes and two conceptual busbar rails. Single-system focus hides other rear systems but keeps the rack frame. Returning to the front restores all rear layers. Rack and service-drawer modes remain separate.

@@ -360,13 +360,19 @@ function selectPart(name){
  if(modelMode!==targetMode)applyModelMode(targetMode);
  const target=dcTarget||rackTarget||nvidiaTarget||componentGroups.find(g=>g.userData.part===name);
  if(!target)return;
- if(selectionHelper){scene.remove(selectionHelper);selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
- selectionHelper=new THREE.BoxHelper(target,0xd4b37d);
- selectionHelper.material.depthTest=false;selectionHelper.material.transparent=true;selectionHelper.material.opacity=.9;
- scene.add(selectionHelper);window.sparkInspectPart?.(name);
+ if(selectionHelper){selectionHelper.removeFromParent();selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
+ if(rackTarget){
+  selectionHelper=rackModel.createTraySelectionFrame(name);
+  if(selectionHelper)selectionHelper.visible=!rackRear;
+ }else{
+  selectionHelper=new THREE.BoxHelper(target,0xd4b37d);
+  selectionHelper.material.depthTest=false;selectionHelper.material.transparent=true;selectionHelper.material.opacity=.9;
+  scene.add(selectionHelper);
+ }
+ window.sparkInspectPart?.(name);
 }
 function clearSelection(){
- if(selectionHelper){scene.remove(selectionHelper);selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
+ if(selectionHelper){selectionHelper.removeFromParent();selectionHelper.geometry.dispose();selectionHelper.material.dispose();selectionHelper=null}
 }
 
 function nvidiaExplodedHeight(assembly){
@@ -561,6 +567,7 @@ function init(){
  window.SPARK3D={ready:true,
  getModelMode(){return modelMode},
  getRackDiagnostics(){return rackModel?.diagnostics()||null},
+ getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-front-outline"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getDataCenterDiagnostics(){return dataCenterScene?.diagnostics()||null},
  selectDataCenterSlot(id){selectPart('DC / '+id)},
@@ -578,6 +585,7 @@ function init(){
  },
  setRackRear(show){
   rackRear=Boolean(show);
+  if(selectionHelper?.userData?.selectionType==="rack-front-outline")selectionHelper.visible=!rackRear;
   if(!rackRear)rackModel?.setRearSystemFocus("all");
   if(rackRear&&rackModel?.getServiceState().open){rackModel.clearService();clearSelection();clearRackServiceFocus()}
   if(modelMode==='rack'){
@@ -650,7 +658,7 @@ function init(){
     for(const group of componentGroups)group.position.y=exploded?2.50:0;
     layerStack.visible=exploded;
    }
-   if(selectionHelper)selectionHelper.update();
+   if(selectionHelper?.update)selectionHelper.update();
   }
   needsRender=true;
  },
@@ -712,11 +720,11 @@ function init(){
    }
   }
  }
- if(selectionHelper&&layersMoving)selectionHelper.update();
+ if(selectionHelper?.update&&layersMoving)selectionHelper.update();
  if(cameraMoving||needsRender)updateCamera();
  const draw=visible&&(ambientNow||cameraMoving||layersMoving||needsRender);
  if(draw&&t-lastDraw>=qualityInterval()){
-  if(selectionHelper)selectionHelper.update();
+  if(selectionHelper?.update)selectionHelper.update();
   renderer.render(scene,camera);
   lastDraw=t;renderSamples++;totalRenders++;needsRender=false;
  }
