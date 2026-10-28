@@ -5,6 +5,7 @@
  */
 import {buildFloor100Impact} from './floor100-impact.mjs';
 import {buildFloor100PowerModel} from './floor100-power.mjs';
+import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
 export const FLOOR100_SPEC=Object.freeze({
@@ -242,6 +243,15 @@ export function createFloor100Concept(THREE){
   o.updateMatrix();heatIndicators.setMatrixAt(i,o.matrix)});
  heatIndicators.instanceMatrix.needsUpdate=true;heatIndicators.visible=false;
  group.add(heatIndicators);
+ // One efficient 20-instance row-end visual load meter (A/B per row).
+ // Its lengths and colors are only hypothetical demand/capacity ratios.
+ const rowLoadMaterial=new THREE.MeshBasicMaterial({color:"#ffffff",toneMapped:false});
+ const rowFeedMeters=new THREE.InstancedMesh(boxGeom,rowLoadMaterial,20);
+ rowFeedMeters.name="FLOOR100_DEMO_ROW_AB_LOAD_GAUGES";
+ rowFeedMeters.frustumCulled=false;zones.power.add(rowFeedMeters);
+ const meterColors={safe:new THREE.Color("#8fe2bb"),
+  warning:new THREE.Color("#f1bf72"),over:new THREE.Color("#ef786a"),
+  none:new THREE.Color("#52636b")};
  // Rack frame selection is 12 unwarped cuboid edges.
  const outline=new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(3.78,8.30,2.59)),
@@ -249,9 +259,29 @@ export function createFloor100Concept(THREE){
  outline.renderOrder=70;outline.visible=false;group.add(outline);
  let selected=null,filter="all",serviceSide="front";
  let loadPercent=100,powerHeatmap=false,powerModel=buildFloor100PowerModel(racks,loadPercent);
+ let feedCapacityKW=6000,feedAllocation=buildFloor100FeedAllocation(powerModel,"normal",feedCapacityKW);
+ function refreshFeedAllocation(){
+  feedAllocation=buildFloor100FeedAllocation(powerModel,powerScenario,feedCapacityKW);
+  for(let i=0;i<10;i++)for(let j=0;j<2;j++){
+   const row=feedAllocation.rows[i],pct=j?row.bPct:row.aPct;
+   const length=Math.max(.09,Math.min(2.5,pct/100*1.8));
+   o.position.set(xR(9)+2.0+j*.40,7.7,zR(i));
+   o.rotation.set(0,0,0);o.scale.set(.16,.14,length);
+   o.updateMatrix();rowFeedMeters.setMatrixAt(i*2+j,o.matrix);
+   rowFeedMeters.setColorAt(i*2+j,pct>100?meterColors.over:
+    pct>=85?meterColors.warning:pct>0?meterColors.safe:meterColors.none);
+  }
+  rowFeedMeters.instanceMatrix.needsUpdate=true;
+  rowFeedMeters.instanceColor.needsUpdate=true;
+ }
+ function setFeedCapacityKW(next){
+  if(!FLOOR100_DEMO_FEED_CAPACITIES.includes(next))return false;
+  feedCapacityKW=next;refreshFeedAllocation();return true;
+ }
  const powerHeatColors={high:new THREE.Color("#ed8359"),medium:new THREE.Color("#e6c66f"),low:new THREE.Color("#73c5c8")};
  function refreshPowerEstimate(){
   powerModel=buildFloor100PowerModel(racks,loadPercent);
+  refreshFeedAllocation();
   powerModel.entries.forEach((r,i)=>heatIndicators.setColorAt(i,powerHeatColors[r.heatBand]));
   heatIndicators.instanceColor.needsUpdate=true;heatIndicators.visible=powerHeatmap;
  }
@@ -341,6 +371,7 @@ export function createFloor100Concept(THREE){
   const generator=powerScenario==="grid-loss";
   materials.generatorLive.color.set(generator?"#a6ff7a":"#5b6a5b");
   materials.generatorLive.emissiveIntensity=generator?.85:.06;
+  refreshFeedAllocation();
   rebuildPowerPaths();
   for(const batch of batched){
    const activeZone=batch.parent;
@@ -374,6 +405,10 @@ export function createFloor100Concept(THREE){
  function diagnostics(){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
    powerScenario,coolingCircuit,
+   feedCapacityKW,feedAllocationStatus:feedAllocation.status,
+   feedAPlanningKW:feedAllocation.aKW,feedBPlanningKW:feedAllocation.bKW,
+   feedUnassignedPlanningKW:feedAllocation.unassignedKW,
+   feedRowMeterInstances:rowFeedMeters.count,
    powerPathMode,powerPathSegments:powerPathGroup.children.length,
    powerPathFeeds:activePowerPaths.map(p=>p.feed),
    powerPathStatuses:activePowerPaths.map(p=>p.visualState),
@@ -416,7 +451,8 @@ export function createFloor100Concept(THREE){
  updateInfrastructureVisuals();
  refreshPowerEstimate();
  return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,
-  setPowerLoadPercent,setPowerHeatmap,setPowerPathMode,getPowerPaths:()=>activePowerPaths,
+  setPowerLoadPercent,setPowerHeatmap,setPowerPathMode,setFeedCapacityKW,
+  getFeedAllocation:()=>feedAllocation,getPowerPaths:()=>activePowerPaths,
   getPowerModel:()=>powerModel,diagnostics,
   getRouteImpact:()=>routeImpact,getHardwareInfo:()=>NVL72_INSPECTION_PARTS[hardwarePart],
   rackPosition:id=>rackById.get(id)||null,getSelected:()=>selected};

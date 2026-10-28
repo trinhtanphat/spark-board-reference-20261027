@@ -623,6 +623,13 @@ function init(){
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
  getFloor100RouteImpact(){return floor100Scene?.getRouteImpact()||null},
  getFloor100PowerModel(){return floor100Scene?.getPowerModel()||null},
+ getFloor100FeedAllocation(){return floor100Scene?.getFeedAllocation()||null},
+ setFloor100FeedCapacityKW(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setFeedCapacityKW(value)===true;
+  if(ok)needsRender=true;
+  return ok;
+ },
  getFloor100PowerPaths(){return floor100Scene?.getPowerPaths()||[]},
  setFloor100PowerPathMode(value){
   if(modelMode!=='floor100')return false;
