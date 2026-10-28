@@ -567,7 +567,7 @@ function init(){
  window.SPARK3D={ready:true,
  getModelMode(){return modelMode},
  getRackDiagnostics(){return rackModel?.diagnostics()||null},
- getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-front-outline"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
+ getRackSelectionDiagnostics(){const s=selectionHelper;return s?.userData?.selectionType==="rack-tray-cuboid"?{...s.userData,attachedToTray:s.parent?.userData?.part===s.userData.part,visible:s.visible}: {selectionType:s?"other":"none"}},
  getDataCenterAPI(){return dataCenterModel},
  getDataCenterDiagnostics(){return dataCenterScene?.diagnostics()||null},
  selectDataCenterSlot(id){selectPart('DC / '+id)},
@@ -585,7 +585,7 @@ function init(){
  },
  setRackRear(show){
   rackRear=Boolean(show);
-  if(selectionHelper?.userData?.selectionType==="rack-front-outline")selectionHelper.visible=!rackRear;
+  if(selectionHelper?.userData?.selectionType==="rack-tray-cuboid")selectionHelper.visible=!rackRear;
   if(!rackRear)rackModel?.setRearSystemFocus("all");
   if(rackRear&&rackModel?.getServiceState().open){rackModel.clearService();clearSelection();clearRackServiceFocus()}
   if(modelMode==='rack'){

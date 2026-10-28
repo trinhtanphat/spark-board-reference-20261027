@@ -80,9 +80,13 @@ These are **semantic count representations** sourced from the [official NVIDIA D
 
 Visual performance: only the selected tray receives extra interior meshes. Other rack components reuse instance batches. Browser E2E verifies all three viewports, service selection/close, per-kind package counts, previous tray reset, rear-view lockout, PNG and WebGL recovery.
 
+## Restored 3D rectangular rack frame and cuboid selection (28 October 2026)
+
+Following feedback that the rectangular *box* disappeared after converting its outline to a flat face, the rack now has a **permanent 12-edge gold 3D cabinet wireframe** following only the approximate enclosure envelope (4.55 × 9.50 × 2.53 scene units). Selecting a tray now adds a **shallow 12-edge gold cuboid** (0.16 scene units deep) fixed to that tray's front, not a deep bounding box calculated from all chassis contents. This preserves 3D depth in the top/isometric view without the previous oversized/skewed box. Rear inspection hides only the selected front-tray cuboid; the enclosing frame stays visible. Both are illustrative scene geometry, not physical NVIDIA dimensions.
+
 ## Correct tray-selection highlight geometry (28 October 2026)
 
-The old `THREE.BoxHelper` highlighted every selected rack tray's entire volume, including its deep chassis, producing an oversized gold perspective rectangle at steep camera angles. The NVL72 rack now creates a single, narrow outline exactly on the **illustrative front faceplate plane** of the chosen tray. The outline follows drawer extension, disappears during rear inspection, and is disposed on selection change. Other modes retain their previous BoxHelper behavior. This is a selection UI correction only; it does not imply exact NVIDIA mechanical dimensions.
+The old `THREE.BoxHelper` highlighted the entire depth of a selected rack tray and produced an oversized perspective rectangle at steep angles. The tray selector now uses a **shallow 3D cuboid close to the illustrated faceplate**, alongside a permanent 3D cabinet frame. The outline follows drawer extension, disappears during rear inspection, and is disposed on selection change. Other modes retain their previous BoxHelper behavior. This is a selection UI correction only; it does not imply exact NVIDIA mechanical dimensions.
 
 ## Rear infrastructure layered inspection (28 October 2026)
 
