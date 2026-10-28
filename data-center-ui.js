@@ -14,6 +14,48 @@
 
  const kinds=[["compute","Vera Rubin compute tray"],["nvlink","NVLink 6 switch tray"],["power","Power shelf"],["tor","TOR management switch"],["ib","InfiniBand fabric switch"],["eth","Ethernet storage switch"],["mgmt","Management Ethernet switch"]];
  const api=()=>window.SPARK3D?.getDataCenterAPI?.();
+ const SESSION_KEY="spark-datacenter-sim-session-v1";
+ const MAX_LOCAL_SESSION_BYTES=1500000;
+ let autoSave=false;
+ const sessionLine=$("dcSessionStatus");
+ function sessionInfo(message,error=false){
+  sessionLine.textContent=message;
+  sessionLine.dataset.error=String(error);
+ }
+ function savedPayload(){
+  const value=localStorage.getItem(SESSION_KEY);
+  if(!value)return null;
+  if(value.length>MAX_LOCAL_SESSION_BYTES)throw new Error("Saved browser session is too large");
+  const document=JSON.parse(value);
+  if(!document||document.format!=="SPARK-DATACENTER-SIM-1"||
+   document.kind!=="BROWSER_ONLY_SIMULATION"||!Array.isArray(document.slots))
+   throw new Error("Saved browser session is not a valid SPARK simulation");
+  return document;
+ }
+ function refreshSessionControls(){
+  let saved=false;
+  try{saved=!!savedPayload()}catch(err){
+   sessionInfo("Stored session cannot be read: "+(err.message||String(err))+
+    ". Clear the saved copy to start again.",true);
+   saved=true;
+  }
+  $("dcSessionRestore").disabled=!saved;
+  $("dcSessionClear").disabled=!saved;
+  const auto=$("dcSessionAuto");
+  auto.setAttribute("aria-pressed",String(autoSave));
+  auto.textContent=autoSave?"AUTO SAVE: ON":"AUTO SAVE: OFF";
+ }
+ function saveLocalSession(showMessage=true){
+  const state=api();if(!state)throw new Error("Simulation is not ready");
+  const file={format:"SPARK-DATACENTER-SIM-1",kind:"BROWSER_ONLY_SIMULATION",
+   savedAt:new Date().toISOString(),...state.getSnapshot()};
+  const value=JSON.stringify(file);
+  if(value.length>MAX_LOCAL_SESSION_BYTES)throw new Error("Browser session exceeds the local save limit");
+  localStorage.setItem(SESSION_KEY,value);
+  refreshSessionControls();
+  if(showMessage)sessionInfo("Saved in this browser only. Restore manually after reloading; nothing was uploaded.");
+  return true;
+ }
  const option=(value,label)=>{const o=document.createElement("option");o.value=value;o.textContent=label;return o};
  const optfill=(el,items,value)=>{const before=value??el.value;el.replaceChildren(...items.map(x=>option(x[0],x[1])));if([...el.options].some(o=>o.value===before))el.value=before};
 
@@ -78,6 +120,7 @@
   optfill(cable,state.cables.map(x=>[x.id,x.id+" "+x.source+" → "+x.target]));
   $("dcDisconnect").disabled=!state.cables.length;
   $("dcUndo").disabled=!state.canUndo();
+  refreshSessionControls();
   $("dcHighlightCable").disabled=!state.cables.length;
   const fabric=$("dcCableFabric").value,scope=$("dcCableScope").value;
   window.SPARK3D?.setDataCenterCableView?.(fabric,scope,rack.value);
@@ -175,6 +218,40 @@
   window.SPARK3D?.resetDataCenterOverview?.();
   say("Viewing all 16 close-packed racks");render();
  });
+ $("dcSessionSave").addEventListener("click",()=>{
+  try{saveLocalSession();say("Simulation saved locally in this browser")}
+  catch(err){sessionInfo("Browser session save failed: "+(err.message||String(err)),true);refreshSessionControls()}
+ });
+ $("dcSessionRestore").addEventListener("click",()=>{
+  try{
+   const file=savedPayload();
+   if(!file)throw new Error("No saved browser session");
+   api().importSnapshot(file);
+   sessionInfo("Validated browser session restored. Undo is available; no hardware affected.");
+   say("Browser session restored from local storage");render();
+  }catch(err){sessionInfo("Restore rejected: "+(err.message||String(err)),true);render()}
+ });
+ $("dcSessionClear").addEventListener("click",()=>{
+  try{
+   localStorage.removeItem(SESSION_KEY);
+   autoSave=false;
+   sessionInfo("Saved browser copy cleared. Active simulator state is unchanged.");
+   refreshSessionControls();
+  }catch(err){sessionInfo("Cannot clear browser storage: "+(err.message||String(err)),true)}
+ });
+ $("dcSessionAuto").addEventListener("click",()=>{
+  if(autoSave){
+   autoSave=false;
+   sessionInfo("Automatic local saving paused. Existing saved copy remains available.");
+   refreshSessionControls();return;
+  }
+  try{
+   saveLocalSession(false);
+   autoSave=true;
+   sessionInfo("Auto save enabled for this tab. On reload, restore manually to avoid overwriting your saved work.");
+   refreshSessionControls();
+  }catch(err){autoSave=false;sessionInfo("Cannot enable auto save: "+(err.message||String(err)),true);refreshSessionControls()}
+ });
  $("dcUndo").addEventListener("click",()=>run(()=>api().undoLastChange(),"Previous simulated configuration restored"));
  $("dcImportFile").addEventListener("change",async e=>{
   const file=e.target.files?.[0];if(!file)return;
@@ -188,7 +265,13 @@
   finally{e.target.value=""}
  });
  $("dcReset").addEventListener("click",()=>run(()=>api().reset(),"Lab reset; no physical system affected"));
- document.addEventListener("spark:datacenter-update",render);
+ document.addEventListener("spark:datacenter-update",()=>{
+  render();
+  if(autoSave){
+   try{saveLocalSession(false);sessionInfo("Auto saved in this browser · Restore explicitly after reload.")}
+   catch(err){autoSave=false;sessionInfo("Auto save stopped: "+(err.message||String(err)),true);refreshSessionControls()}
+  }
+ });
  document.addEventListener("spark:model-mode-change",e=>{
   panel.hidden=e.detail.mode!=="datacenter";
   if(e.detail.mode==="datacenter")render();
