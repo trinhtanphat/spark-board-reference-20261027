@@ -41,16 +41,21 @@ async function main(){try{
   // browser pixels. On remote GitHub Pages, late font loading can shift the
   // hero viewport between projection and the physical pointer event.
   await js("document.fonts.ready.then(()=>true)");
-  let pointerSurface=null;
-  for(let attempt=0;attempt<6;attempt++){
+  let pointerSurface=null,point100=null;
+  const sample=()=>js("(()=>{const p=window.SPARK3D.getFloor100PickPoint('R100'),hit=document.elementFromPoint(p.x,p.y),stage=document.querySelector('.hero-stage').getBoundingClientRect();return {onCanvas:hit===document.querySelector('#sceneMount canvas')&&p.hitRack==='R100',point:p,hitTag:hit?.tagName,hitId:hit?.id,heroTop:stage.top,heroBottom:stage.bottom}})()");
+  for(let attempt=0;attempt<8;attempt++){
    await js("document.querySelector('.hero-stage').scrollIntoView({behavior:'instant',block:'center'})");
-   await delay(160);
-   pointerSurface=await js("(()=>{const p=window.SPARK3D.getFloor100PickPoint('R100'),hit=document.elementFromPoint(p.x,p.y),stage=document.querySelector('.hero-stage').getBoundingClientRect();return {onCanvas:hit===document.querySelector('#sceneMount canvas')&&p.hitRack==='R100',point:p,hitTag:hit?.tagName,hitId:hit?.id,heroTop:stage.top,heroBottom:stage.bottom}})()");
-   if(pointerSurface.onCanvas)break;
+   await delay(190);
+   const first=await sample();
+   await delay(190);
+   const last=await sample();
+   const drift=first.point&&last.point?Math.hypot(first.point.x-last.point.x,first.point.y-last.point.y):Infinity;
+   pointerSurface={...last,drift,attempt};
+   if(first.onCanvas&&last.onCanvas&&drift<1.5){point100=last.point;break}
   }
-  if(!pointerSurface?.onCanvas)throw Error("Floor100 pointer blocked/unstable after scroll settling: "+JSON.stringify(pointerSurface));
-  const point100=await js("window.SPARK3D.getFloor100PickPoint('R100')");
-  await send("Input.dispatchMouseEvent",{type:"mouseMoved",x:point100.x,y:point100.y,button:"none"});
+  if(!point100)throw Error("Floor100 pointer ray/frame not stable after reprojecting: "+JSON.stringify(pointerSurface));
+  // CDP press/release without a preceding hover move minimizes intermediate
+  // camera frames; this still exercises the actual browser pointer handlers.
   await send("Input.dispatchMouseEvent",{type:"mousePressed",x:point100.x,y:point100.y,button:"left",clickCount:1});
   await send("Input.dispatchMouseEvent",{type:"mouseReleased",x:point100.x,y:point100.y,button:"left",clickCount:1});
   const floorPointerQA=await js("(()=>{const a=window.SPARK3D,p=a.getFloor100PickPoint('R100'),elem=document.elementFromPoint(p.x,p.y);return {selected:a.getFloor100Diagnostics().selected==='R100',selectedRack:a.getFloor100Diagnostics().selected,cameraTarget:a.getCameraState().distance<26,viewer:document.getElementById('floor100Selected').textContent.includes('R100'),legacy16:document.getElementById('dataCenterLab').hidden,hit:{point:p,tag:elem?.tagName,id:elem?.id,className:typeof elem?.className==='string'?elem.className:'',onCanvas:elem===document.querySelector('#sceneMount canvas')}}})()");
