@@ -145,9 +145,32 @@ function updateRackTraySummary(){
  const detail=window.SPARK3D?.getRackTrayDetails?.(trayDropdown.value);
  if(detail)$("rackTrayDetails").textContent=detail.label+" "+String(detail.number).padStart(2,"0")+" · "+detail.facts;
 }
+
+const trayPullBtn=$("rackServiceDrawer");
+function syncTrayPullButton(){
+ const service=window.SPARK3D?.getRackServiceState?.()||{open:false};
+ const selected=service.open&&service.part===trayDropdown.value;
+ trayPullBtn.setAttribute("aria-pressed",String(selected));
+ trayPullBtn.textContent=selected?"CLOSE TRAY":"PULL TRAY / OFF";
+ trayPullBtn.disabled=window.SPARK3D?.getModelMode?.()!=="rack"||Boolean(window.SPARK3D?.getRackRear?.());
+}
+trayPullBtn.addEventListener("click",()=>{
+ if(window.SPARK3D?.getModelMode?.()!=="rack")return;
+ const state=window.SPARK3D.getRackServiceState();
+ if(state.open&&state.part===trayDropdown.value){
+  window.SPARK3D.closeRackService();
+  notify("Illustrative tray returned to rack");
+ }else{
+  window.SPARK3D.openRackService(trayDropdown.value);
+  notify("Conceptual internals exposed · NOT physical service instructions");
+ }
+ syncTrayPullButton();
+});
+
 trayDropdown.addEventListener("change",()=>{
  updateRackTraySummary();
  if(window.SPARK3D?.getModelMode?.()==="rack")window.SPARK3D.selectPart(trayDropdown.value);
+ syncTrayPullButton();
 });
 for(const [step,id] of [[-1,"rackTrayPrev"],[1,"rackTrayNext"]]){
  $(id).addEventListener("click",()=>{
@@ -163,6 +186,7 @@ rearBtn.addEventListener("click",()=>{
  if(window.SPARK3D?.getModelMode?.()!=="rack")return;
  const rear=!window.SPARK3D.getRackRear();
  window.SPARK3D.setRackRear(rear);
+ syncTrayPullButton();
  rearBtn.setAttribute("aria-pressed",String(rear));
  rearBtn.textContent=rear?"REAR / ON":"REAR / OFF";
  notify(rear?"Rack back: conceptual NVLink cable cartridges and coolant manifolds":"Rack front: illustrated service trays");
@@ -193,6 +217,7 @@ function updateModelView(mode){
  rackPanel.hidden=mode!=="rack";
  rearBtn.textContent="REAR / OFF";rearBtn.setAttribute("aria-pressed","false");
  if(mode==="rack")populateRackTrays();
+ syncTrayPullButton();
  $("coolingToggle").setAttribute("aria-pressed",String(Boolean(window.SPARK3D?.getNvidiaCooling?.())));
  $("inspectCore").setAttribute("aria-label",mode==="rack"?"Inspect NVIDIA NVL72 compute tray":mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
  $("productFactsTitle").textContent=mode==="rack"?

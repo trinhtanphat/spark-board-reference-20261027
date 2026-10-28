@@ -172,7 +172,70 @@ export function createRackConcept(THREE){
  // NVIDIA's exact logos or official product label.
  const header=new THREE.Mesh(new THREE.PlaneGeometry(3.83,.28),labelTop);
  header.position.set(0,8.06,1.25);group.add(header);
- return {group,parts,trays,coolingParts,featureInstances,
+
+ // Single shared service inspection assembly: only the currently selected
+ // tray is drawn with internal silhouettes, keeping GPU cost bounded.
+ const serviceAssembly=new THREE.Group();
+ serviceAssembly.name="ILLUSTRATIVE_SERVICE_INTERIOR_NOT_NVIDIA_CAD";
+ let serviced=null,serviceConfig=null;
+ function clearService(){
+  if(serviced)serviced.position.z=0;
+  serviceAssembly.removeFromParent();
+  for(const child of [...serviceAssembly.children]){
+   serviceAssembly.remove(child);
+   if(child.geometry)child.geometry.dispose();
+  }
+  serviced=null;serviceConfig=null;
+ }
+ function openService(part){
+  const index=trays.findIndex(item=>item.part===part);
+  if(index<0)return false;
+  clearService();
+  const tray=trays[index],target=parts[index];
+  target.position.z=1.72;
+  target.add(serviceAssembly);
+  const h=tray.height,top=h*.50+.11;
+  const counts={gpu:0,cpu:0,nvSwitch:0,psu:0,storage:0};
+  const body=put(serviceAssembly,3.42,.034,1.32,iron,0,top-.055,-.10,"CONCEPTUAL_INTERIOR_CARRIER");
+  body.castShadow=false;
+  function chip(x,z,w,d,material,name){
+   return put(serviceAssembly,w,.095,d,material,x,top+.033,z,name);
+  }
+  if(tray.kind==="compute"){
+   // Two schematic superchips per tray: 2 GPU + 1 Vera CPU each.
+   for(const cx of [-.83,.83]){
+    chip(cx,-.09,1.43,.92,chassis,"TWO_SUPERCHIPS_PER_COMPUTE_TRAY");
+    for(const delta of [-.36,.36]){
+     chip(cx+delta,.06,.38,.42,gold,"RUBIN_GPU_CONCEPT");counts.gpu++;
+    }
+    chip(cx,-.43,.52,.28,ledB,"VERA_CPU_CONCEPT");counts.cpu++;
+   }
+   for(let i=0;i<5;i++){
+    chip(-1.36+i*.68,.64,.37,.17,darkPort,"NVME_BAYS_CONCEPT");counts.storage++;
+   }
+  }else if(tray.kind==="nvlink"){
+   for(const x of [-1.16,-.39,.39,1.16]){
+    chip(x,-.12,.55,.82,switchMat,"NVSWITCH6_ASIC_CONCEPT");counts.nvSwitch++;
+   }
+  }else if(tray.kind==="power"){
+   for(let i=0;i<6;i++){
+    chip(-1.38+i*.55,-.09,.47,.93,powerMat,"PSU_CONCEPT");counts.psu++;
+   }
+  }else{
+   for(let i=0;i<4;i++)chip(-1.13+i*.77,0,.53,.89,torMat,"TOR_NETWORK_MODULE_CONCEPT");
+  }
+  serviced=target;
+  serviceConfig={part,kind:tray.kind,counts,projectionOffsetZ:1.72,
+   source:"PUBLIC_PRODUCT_ARCHITECTURE_WITH_UNOFFICIAL_MECHANICAL_RENDER",
+   maintenanceInstructions:false};
+  return true;
+ }
+ function getServiceState(){
+  return serviceConfig?{open:true,...serviceConfig}:{open:false,part:null,kind:null,
+   counts:{gpu:0,cpu:0,nvSwitch:0,psu:0,storage:0},maintenanceInstructions:false};
+ }
+
+ return {group,parts,trays,coolingParts,featureInstances,openService,clearService,getServiceState,
   diagnostics:()=>({
    scope:"UNOFFICIAL_RACK_ARCHITECTURE_ONLY",visible:group.visible,
    counts:validateRackArchitecture(),renderedTrays:trays.length,
@@ -181,6 +244,7 @@ export function createRackConcept(THREE){
    nvSwitchIndicators:positionsSwitch.length,typeCounts:{...typeIndex},
    facade:"champagne-metallic-with-dense-grilles",
    rearComponents:coolingParts.length,instancedDetails:featureInstances.length,
+   serviceDrawerOpen:!!serviced,serviceElementsDrawn:serviceAssembly.children.length,
    notActualRackGeometry:true,manufacturingApproved:false
   })};
 }

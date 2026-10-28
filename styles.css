@@ -203,3 +203,8 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .rack-tray-explorer p{font:500 11px/1.7 var(--mono);margin:11px 0 5px;color:#e4eddb}
 .rack-tray-explorer .rack-tray-caveat{font:600 9px/1.6 var(--mono);color:#ddc99f}
 @media(max-width:650px){.rack-tray-controls label{width:100%}.rack-tray-controls select{flex:1 1 100%;min-width:0}.rack-tray-controls button{flex:1}}
+
+/* Tray pull-out is a conceptual inspection, never a repair procedure. */
+.rack-tray-controls #rackServiceDrawer{border-color:#b7a57c;color:#eee0bb;background:#3b392e}
+.rack-tray-controls #rackServiceDrawer[aria-pressed="true"]{background:#6c5737;color:#fff2d2;border-color:#eac893}
+.rack-tray-controls #rackServiceDrawer:disabled{opacity:.38;cursor:not-allowed}

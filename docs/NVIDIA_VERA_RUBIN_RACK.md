@@ -64,3 +64,18 @@ Grounding: NVIDIA's public images and official hardware user guide show a vertic
 **Image reference:** https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/ and https://developer.nvidia.com/blog/nvidia-vera-rubin-pod-seven-chips-five-rack-scale-systems-one-ai-supercomputer/
 
 **E2E scope:** verify front↔rear mode switching, GPU-synchronized rear PNG export, batching, rack tray inventory (18 compute + 9 NVLink + 4 power + 2 management), Superchip/PCB modes, and GPU context loss/recovery. The tests verify app behaviour and published inventory—not physical similarity to a proprietary CAD model.
+
+
+## Conceptual service-tray inspection (28 October 2026)
+
+An extra **PULL TRAY / OFF** button is now available beside Rack Tray Explorer. It temporarily slides a selected *illustrated* rack drawer forward and reveals a deliberately schematic package arrangement. This is a browser visualization, **not a maintenance manual or a physically validated tray sliding mechanism**.
+
+The open-tray content is generated only for one selected drawer and is returned to storage when the selection changes, another model is selected, or the rear view is enabled. Its inspector shows:
+- Compute tray: two concept Superchip carriers, each with 2 Rubin GPU indicators and 1 Vera CPU indicator, plus five schematic NVMe slots (four cache + one boot per the DGX hardware guide).
+- NVLink 6 switch tray: four concept NVSwitch ASIC packages.
+- Power shelf: six concept PSU modules.
+- TOR switch: a simplified set of network module blocks with no exact published port layout.
+
+These are **semantic count representations** sourced from the [official NVIDIA DGX VR hardware guide](https://docs.nvidia.com/dgx/dgxvr-user-guide/hardware.html). They do not claim accurate board/rack dimensions, wiring, cooling, connector locations, tray extraction clearance, electrical/net topology, torque sequence, power isolation, safety, service procedure, or right to use NVIDIA original CAD. No data is exported as actual PCB or manufacturing geometry.
+
+Visual performance: only the selected tray receives extra interior meshes. Other rack components reuse instance batches. Browser E2E verifies all three viewports, service selection/close, per-kind package counts, previous tray reset, rear-view lockout, PNG and WebGL recovery.

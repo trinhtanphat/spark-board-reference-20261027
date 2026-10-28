@@ -25,7 +25,7 @@ let hoverHighlight=null,componentGroups=[],layerMeshes=[],layerStack,exploded=fa
 let qualityMode='auto',actualFPS=0,renderSamples=0,lastSampleTime=0,contextLost=false,autoEco=false,slowWindows=0;
 let keyLight,cyanLight,violetLight,needsRender=true,totalRenders=0;
 let focusedVisualRouteId=null,routeFocusObject=null;
-let nvidiaModel=null,rackModel=null,modelMode='nvidia',nvidiaCoolingVisible=false,rackRear=false;
+let nvidiaModel=null,rackModel=null,modelMode='nvidia',nvidiaCoolingVisible=false,rackRear=false,rackServiceFocusY=null;
 const center=new THREE.Vector3(0,0,0);
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
 const r=seeded(20261027);
@@ -332,7 +332,25 @@ function buildLayerStack(){
  }
 }
 
+function clearRackServiceFocus(){
+ rackServiceFocusY=null;
+ if(modelMode==='rack'){
+  distTarget=23.3;elTarget=.24;azTarget=.33;center.y=3.68;
+  if(camera)updateCamera(true);
+  needsRender=true;
+ }
+}
+function setRackServiceFocus(part){
+ const tray=rackModel?.trays.find(item=>item.part===part);
+ if(!tray||modelMode!=='rack')return;
+ rackServiceFocusY=tray.y;
+ distTarget=12.7;elTarget=.27;azTarget=.38;center.y=tray.y;
+ if(camera)updateCamera(true);
+ needsRender=true;
+}
+
 function selectPart(name){
+ if(rackModel?.getServiceState().open&&rackModel.getServiceState().part!==name){rackModel.clearService();clearRackServiceFocus();}
  const rackTarget=rackModel?.parts.find(g=>g.userData.part===name);
  const nvidiaTarget=nvidiaModel?.parts.find(g=>g.userData.part===name);
  const targetMode=rackTarget?'rack':nvidiaTarget?'nvidia':'reference';
@@ -359,6 +377,8 @@ function applyModelMode(mode){
  if(!['nvidia','reference','rack'].includes(mode))return;
  const previousMode=modelMode;
  modelMode=mode;
+ rackServiceFocusY=null;
+ if(mode!=='rack'&&rackModel)rackModel.clearService();
  exploded=false;
  if(mode==='rack'){
   rackRear=false;
@@ -405,7 +425,7 @@ function createSky(){
 }
 function updateCamera(hard=false){
  if(hard){az=azTarget;el=elTarget;dist=distTarget}else{az+=(azTarget-az)*.13;el+=(elTarget-el)*.13;dist+=(distTarget-dist)*.13}
- const c=Math.cos(el);camera.position.set(dist*c*Math.sin(az),dist*Math.sin(el),dist*c*Math.cos(az));center.y+=((modelMode==='rack'?3.68:exploded?.75:0)-center.y)*.09;camera.lookAt(center);
+ const c=Math.cos(el);camera.position.set(dist*c*Math.sin(az),dist*Math.sin(el),dist*c*Math.cos(az));center.y+=((modelMode==='rack'?(rackServiceFocusY??3.68):exploded?.75:0)-center.y)*.09;camera.lookAt(center);
 }
 function resize(){
  if(!renderer||!camera)return;
@@ -534,8 +554,20 @@ function init(){
  window.SPARK3D={ready:true,
  getModelMode(){return modelMode},
  getRackDiagnostics(){return rackModel?.diagnostics()||null},
+ getRackServiceState(){return rackModel?.getServiceState()||{open:false}},
+ openRackService(part){
+  if(modelMode!=='rack'||rackRear)return false;
+  const ok=rackModel.openService(part);
+  if(ok){selectPart(part);setRackServiceFocus(part);needsRender=true;}
+  return ok;
+ },
+ closeRackService(){
+  if(!rackModel)return;
+  rackModel.clearService();clearSelection();clearRackServiceFocus();needsRender=true;
+ },
  setRackRear(show){
   rackRear=Boolean(show);
+  if(rackRear&&rackModel?.getServiceState().open){rackModel.clearService();clearSelection();clearRackServiceFocus()}
   if(modelMode==='rack'){
    azTarget=rackRear?Math.PI+.33:.33;
    elTarget=.24;
@@ -546,7 +578,7 @@ function init(){
  getRackRear(){return rackRear},
  getRackTrays(){return rackModel?.trays.map(t=>({kind:t.kind,number:t.number,part:t.part,height:t.height}))||[]},
  getRackTrayDetails(part){const t=rackModel?.trays.find(t=>t.part===part);return t?{...rackTrayFacts(t.kind),kind:t.kind,number:t.number,part:t.part}:null},
- getRackViewDiagnostics(){return {mode:modelMode,cameraDistance:Number(dist.toFixed(2)),cameraTargetY:Number(center.y.toFixed(2)),cameraElevation:Number(el.toFixed(2))}},
+ getRackViewDiagnostics(){return {mode:modelMode,cameraDistance:Number(dist.toFixed(2)),cameraTargetY:Number(center.y.toFixed(2)),cameraElevation:Number(el.toFixed(2)),serviceFocusY:rackServiceFocusY}},
  setNvidiaCooling(on){nvidiaCoolingVisible=Boolean(on);if(nvidiaModel){for(const coldplate of nvidiaModel.coolingGroups)coldplate.visible=modelMode==='nvidia'&&nvidiaCoolingVisible}needsRender=true},
  getNvidiaCooling(){return nvidiaCoolingVisible},
  setModelMode(mode){applyModelMode(mode)},
@@ -633,7 +665,7 @@ function init(){
  const visible=!document.hidden,ambientNow=visible&&running&&motion&&!prefersReducedMotion;
  // Camera and exploded layers keep easing after the user releases a pointer,
  // but settled scenes no longer submit redundant WebGL frames.
- const cameraMoving=Math.abs(az-azTarget)+Math.abs(el-elTarget)+Math.abs(dist-distTarget)+Math.abs(center.y-(modelMode==='rack'?3.68:exploded?.75:0))>.002;
+ const cameraMoving=Math.abs(az-azTarget)+Math.abs(el-elTarget)+Math.abs(dist-distTarget)+Math.abs(center.y-(modelMode==='rack'?(rackServiceFocusY??3.68):exploded?.75:0))>.002;
  let layersMoving=false;
  if(ambientNow){
   root.rotation.y=Math.sin(t*.00014)*.085;
