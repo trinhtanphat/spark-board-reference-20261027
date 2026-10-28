@@ -45,7 +45,24 @@
    });
    floor.append(b);
   }
-  if(floor)for(const b of floor.children)b.setAttribute("aria-pressed",String(b.dataset.rack===rack.value));
+  const summaries=state.rackSummaries();
+  const byRack=new Map(summaries.map(info=>[info.id,info]));
+  if(floor)for(const b of floor.children){
+   const info=byRack.get(b.dataset.rack);
+   b.setAttribute("aria-pressed",String(b.dataset.rack===rack.value));
+   b.dataset.status=info.status;
+   b.title=info.label+" | "+info.installed+"/"+info.slots+" installed | "+info.gpus+" simulated GPUs | "+info.cables+" virtual cables";
+   b.setAttribute("aria-label",info.label+", "+info.status+", "+info.installed+" of "+info.slots+" modules installed");
+  }
+  const selectedRack=byRack.get(rack.value);
+  const summary=$("dcRackSummary");
+  if(summary&&selectedRack){
+   summary.dataset.status=selectedRack.status;
+   summary.textContent="RACK "+selectedRack.id+" / "+selectedRack.status.toUpperCase()+
+    " · "+selectedRack.installed+"/"+selectedRack.slots+" modules"+
+    (selectedRack.kind==="compute"?" · "+selectedRack.gpus+" GPU / "+selectedRack.cpus+" CPU":" · FABRIC")+
+    " · "+selectedRack.extended+" drawers · "+selectedRack.cables+" cables";
+  }
   const v=state.getSnapshot(),s=v.stats;
   $("dcStats").textContent=s.racks+" RACKS · "+s.gpuOnlineEquivalent+" GPU / "+s.cpuOnlineEquivalent+" CPU simulated · "+s.cablesConnected+" cables";
   optfill(slot,state.slots.filter(x=>x.rack===rack.value).map(x=>[x.id,(x.installed?"● ":"○ ")+x.id+" · "+x.kind+(x.drawer?" / EXTENDED":"")]));
@@ -68,6 +85,29 @@
  function run(fn,ok){
   try{fn();say(ok);render()}catch(e){say(e.message||String(e),true);render()}
  }
+ // Arrow keys navigate the 4x4 floor exactly as the visual grid does.
+ const grid=$("dcFloorMap");
+ const jumpTo=index=>{
+  const buttons=[...grid.children];
+  if(!buttons.length)return;
+  const target=buttons[((index%buttons.length)+buttons.length)%buttons.length];
+  target.click();target.focus();
+ };
+ $("dcRackPrev").addEventListener("click",()=>{
+  const active=[...grid.children].findIndex(b=>b.dataset.rack===rack.value);
+  jumpTo(active-1);
+ });
+ $("dcRackNext").addEventListener("click",()=>{
+  const active=[...grid.children].findIndex(b=>b.dataset.rack===rack.value);
+  jumpTo(active+1);
+ });
+ grid.addEventListener("keydown",e=>{
+  const steps={ArrowLeft:-1,ArrowRight:1,ArrowUp:-4,ArrowDown:4};
+  const change=steps[e.key];if(change===undefined)return;
+  const i=[...grid.children].indexOf(document.activeElement);
+  if(i<0)return;
+  e.preventDefault();jumpTo(i+change);
+ });
  rack.addEventListener("change",()=>{
   window.SPARK3D?.focusDataCenterRack?.(rack.value);
   slot.value="";render();

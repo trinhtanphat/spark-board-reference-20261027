@@ -78,6 +78,28 @@ export function createDataCenterState(){
   onChange(fn){listener=typeof fn==="function"?fn:()=>{}},
   slots,ports,cables,racks:DATA_CENTER_RACKS,
   getSnapshot(){return clone({slots,ports,cables,events,stats:this.stats(),disclaimer:DATA_CENTER_DISCLAIMER})},
+  rackSummaries(){
+   // Computed from current simulation slots and virtual cables, never from
+   // independently maintained/stale UI counters.
+   return DATA_CENTER_RACKS.map(rack=>{
+    const own=slots.filter(s=>s.rack===rack.id);
+    const installed=own.filter(s=>s.installed);
+    const connected=cables.filter(c=>
+     bySlot(byPort(c.source).slotId)?.rack===rack.id||
+     bySlot(byPort(c.target).slotId)?.rack===rack.id).length;
+    const compute=installed.filter(s=>s.kind==="compute").length;
+    const drawn=installed.filter(s=>s.drawer).length;
+    return {id:rack.id,label:rack.label,kind:rack.kind,row:rack.row,column:rack.column,
+     slots:own.length,installed:installed.length,removed:own.length-installed.length,
+     extended:drawn,gpus:compute*4,cpus:compute*2,cables:connected,
+     status:own.length!==installed.length?"missing":drawn?"service":"ready"};
+   });
+  },
+  rackSummary(id){
+   const summary=this.rackSummaries().find(r=>r.id===id);
+   if(!summary)throw new RangeError("Unknown rack");
+   return summary;
+  },
   stats(){
    const computeInstalled=slots.filter(s=>s.kind==="compute"&&s.installed).length;
    return {racks:DATA_CENTER_RACKS.length,computeRacks:DATA_CENTER_GPU_RACKS.length,computeTraysInstalled:computeInstalled,
