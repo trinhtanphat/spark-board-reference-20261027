@@ -132,23 +132,35 @@ export function createRackConcept(THREE){
  for(const y of [7.99,.16]){
   put(group,3.78,.28,.27,black,0,y,1.14,"BLACK_FAN_GRILLE");
  }
+ // Independently selectable rear infrastructure layers. Geometries are
+ // conceptual, not verified routing, voltage clearances or OEM service CAD.
+ const rearCooling=new THREE.Group(),rearNvlink=new THREE.Group(),rearPower=new THREE.Group();
+ rearCooling.name="CONCEPT_REAR_COOLANT";rearNvlink.name="CONCEPT_REAR_NVLINK";rearPower.name="CONCEPT_REAR_54V_BUSBAR";
+ group.add(rearCooling,rearNvlink,rearPower);
+ let rearFocus="all";
+ function setRearSystemFocus(next){
+  if(!["all","nvlink","cooling","power"].includes(next))return false;
+  rearFocus=next;
+  for(const [kind,obj] of [["nvlink",rearNvlink],["cooling",rearCooling],["power",rearPower]])obj.visible=next==="all"||next===kind;
+  return true;
+ }
  // Rear manifolds, NVLink spine and cable cartridge silhouette – artistic.
  const hose=mat("#252e2e",.22,.57),connector=mat("#989c8e",.85,.25);
  for(const x of [-2.29,2.29]){
   const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.069,.069,8.88,12),coolantMat);
-  pipe.position.set(x,3.63,-.77);group.add(pipe);coolingParts.push(pipe);
+  pipe.position.set(x,3.63,-.77);rearCooling.add(pipe);coolingParts.push(pipe);
   for(const y of [-.57,2.12,4.76,7.96]){
    const fitting=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.22,12),connector);
-   fitting.position.set(x,y,-.77);group.add(fitting);coolingParts.push(fitting);
+   fitting.position.set(x,y,-.77);rearCooling.add(fitting);coolingParts.push(fitting);
   }
  }
  // Functional-looking cable cartridges: four broad vertical rails and bundled
  // radial link cords. These are not NVIDIA's real copper connection map.
  for(const x of [-1.37,-.46,.46,1.37]){
-  put(group,.24,8.68,.22,bronze,x,3.65,-1.28,"BACKPLANE_CARTRIDGE");
+  put(rearNvlink,.24,8.68,.22,bronze,x,3.65,-1.28,"BACKPLANE_CARTRIDGE");
   for(let j=0;j<16;j++){
    const y=-.18+j*.48;
-   put(group,.14,.050,.04,connector,x,y,-1.43);
+   put(rearNvlink,.14,.050,.04,connector,x,y,-1.43);
   }
  }
  const cableCurves=[];
@@ -166,7 +178,26 @@ export function createRackConcept(THREE){
  const cableMat=mat("#222b2c",.35,.48);
  for(const curve of cableCurves){
   const cord=new THREE.Mesh(new THREE.TubeGeometry(curve,12,.023,5,false),cableMat);
-  group.add(cord);coolingParts.push(cord);
+  rearNvlink.add(cord);coolingParts.push(cord);
+ }
+ // Schematic dual 54 VDC busbar rails; exact OEM geometry and creepage are unknown.
+ // These shapes DO NOT represent electrical wiring or installation details.
+ const busbar=mat("#9d754c",.85,.25),busbarInsulator=mat("#191e23",.35,.47);
+ for(const x of [-1.90,1.90]){
+  put(rearPower,.085,8.65,.085,busbar,x,3.65,-1.40,"CONCEPT_DC_BUSBAR_RAIL");
+  for(const y of [-.51,.08,.67,1.26]){
+   put(rearPower,.23,.11,.11,busbarInsulator,x,y,-1.47,"BUS_BAR_INSULATOR_CONCEPT");
+   put(rearPower,.13,.035,.075,busbar,x,y,-1.54,"POWER_SHELF_TAP_CONCEPT");
+  }
+ }
+ // Represent paired quick-disconnect positions at intervals, NOT pipe routing.
+ for(let j=0;j<9;j++){
+  const y=.46+j*.78;
+  for(const x of [-2.29,2.29]){
+   const port=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.13,12).rotateZ(Math.PI/2),connector);
+   port.position.set(x+(x>0?-.13:.13),y,-.77);
+   rearCooling.add(port);coolingParts.push(port);
+  }
  }
  // Studio branding: deliberately say UNOFFICIAL, rather than impersonating
  // NVIDIA's exact logos or official product label.
@@ -235,7 +266,7 @@ export function createRackConcept(THREE){
    counts:{gpu:0,cpu:0,nvSwitch:0,psu:0,storage:0},maintenanceInstructions:false};
  }
 
- return {group,parts,trays,coolingParts,featureInstances,openService,clearService,getServiceState,
+ return {group,parts,trays,coolingParts,featureInstances,openService,clearService,getServiceState,setRearSystemFocus,
   diagnostics:()=>({
    scope:"UNOFFICIAL_RACK_ARCHITECTURE_ONLY",visible:group.visible,
    counts:validateRackArchitecture(),renderedTrays:trays.length,
@@ -244,6 +275,8 @@ export function createRackConcept(THREE){
    nvSwitchIndicators:positionsSwitch.length,typeCounts:{...typeIndex},
    facade:"champagne-metallic-with-dense-grilles",
    rearComponents:coolingParts.length,instancedDetails:featureInstances.length,
+   rearCableCartridges:4,rearManifoldPipes:2,rearBusbarRails:2,rearFocus,
+   rearVisible:{nvlink:rearNvlink.visible,cooling:rearCooling.visible,power:rearPower.visible},
    serviceDrawerOpen:!!serviced,serviceElementsDrawn:serviceAssembly.children.length,
    notActualRackGeometry:true,manufacturingApproved:false
   })};

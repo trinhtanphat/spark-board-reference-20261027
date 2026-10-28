@@ -80,6 +80,9 @@ async function main(){try{
   console.log("NVL72_PHYSICAL_VISUAL_DETAIL",JSON.stringify({screen:screen.name,...rackDetailQA}));
   await js("document.getElementById('rackRearView').click()");
   await delay(420);
+  const rearLayerQA=await js("(()=>{const s=document.getElementById(\u0027rackRearSystem\u0027),d=()=>window.SPARK3D.getRackDiagnostics();const diag=d();const counts=diag.rearCableCartridges===4&&diag.rearManifoldPipes===2&&diag.rearBusbarRails===2;const result={counts,pickerEnabled:!s.disabled};for(const key of [\u0027nvlink\u0027,\u0027cooling\u0027,\u0027power\u0027]){s.value=key;s.dispatchEvent(new Event(\u0027change\u0027));const x=d();result[key]=x.rearFocus===key&&Object.entries(x.rearVisible).every(([k,v])=>v===(k===key))}s.value=\u0027all\u0027;s.dispatchEvent(new Event(\u0027change\u0027));result.restored=d().rearFocus===\u0027all\u0027&&Object.values(d().rearVisible).every(Boolean);return result})()");
+  console.log("NVL72_REAR_SUBSYSTEM_LAYERS",JSON.stringify({screen:screen.name,...rearLayerQA}));
+  if(!Object.values(rearLayerQA).every(Boolean))throw Error("Rear subsystem visibility regression: "+JSON.stringify(rearLayerQA));
   const rackRearFrame=await js("window.SPARK3D.exportSnapshotInfo()");
   if(screen.name==='desktop'){
    const rearSnap=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});
