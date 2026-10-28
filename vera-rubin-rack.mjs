@@ -266,7 +266,25 @@ export function createRackConcept(THREE){
    counts:{gpu:0,cpu:0,nvSwitch:0,psu:0,storage:0},maintenanceInstructions:false};
  }
 
- return {group,parts,trays,coolingParts,featureInstances,openService,clearService,getServiceState,setRearSystemFocus,
+ // Highlight the visible front face, not the deep 3D bounding box of a drawer.
+ // A whole-group BoxHelper draws misleading giant skewed edges at oblique angles.
+ function createTraySelectionFrame(part){
+  const index=trays.findIndex(t=>t.part===part);
+  if(index<0)return null;
+  const w=3.78,h=Math.max(.08,trays[index].height-.048),z=1.222;
+  const x=w/2,y=h/2;
+  const vertices=[-x,-y,z,x,-y,z, x,-y,z,x,y,z, x,y,z,-x,y,z, -x,y,z,-x,-y,z];
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));
+  const material=new THREE.LineBasicMaterial({color:0xe1bb79,transparent:true,opacity:.96,depthTest:false,depthWrite:false});
+  const frame=new THREE.LineSegments(geometry,material);
+  frame.name="RACK_TRAY_FRONT_FACE_SELECTION";frame.renderOrder=60;
+  frame.userData={selectionType:"rack-front-outline",part,faceWidth:w,faceHeight:h,faceDepth:0};
+  parts[index].add(frame); // Parent movement keeps the outline aligned when pulled out.
+  return frame;
+ }
+
+ return {group,parts,trays,coolingParts,featureInstances,openService,clearService,getServiceState,setRearSystemFocus,createTraySelectionFrame,
   diagnostics:()=>({
    scope:"UNOFFICIAL_RACK_ARCHITECTURE_ONLY",visible:group.visible,
    counts:validateRackArchitecture(),renderedTrays:trays.length,
