@@ -5,6 +5,7 @@
  */
 import {buildFloor100Impact} from './floor100-impact.mjs';
 import {buildFloor100PowerModel} from './floor100-power.mjs';
+import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
 export const FLOOR100_SPEC=Object.freeze({
  rows:10,columns:10,rackCount:100,rackWidth:3.72,rackDepth:2.52,
@@ -283,6 +284,46 @@ export function createFloor100Concept(THREE){
   hardwarePart=next;refreshHardwareHighlight();return true;
  }
  let powerScenario="normal",coolingCircuit="both";
+ // Both routes remain off until the user requests an individual rack trace.
+ const powerPathGroup=new THREE.Group();powerPathGroup.name="FLOOR100_SELECTED_RACK_POWER_PATH";
+ zones.power.add(powerPathGroup);
+ const powerPathMats={
+  A:new THREE.MeshBasicMaterial({color:"#ffe16c",transparent:true,opacity:.98,depthTest:false,depthWrite:false,toneMapped:false}),
+  B:new THREE.MeshBasicMaterial({color:"#74e8ff",transparent:true,opacity:.98,depthTest:false,depthWrite:false,toneMapped:false})
+ };
+ let powerPathMode="off",activePowerPaths=[];
+ function rebuildPowerPaths(){
+  for(const child of [...powerPathGroup.children]){
+   powerPathGroup.remove(child);
+   child.geometry.dispose();
+  }
+  const rack=rackById.get(selected);
+  activePowerPaths=rack?buildFloor100FeedRoutes(rack,powerPathMode,powerScenario):[];
+  const axis=new THREE.Vector3(0,1,0);
+  for(const route of activePowerPaths){
+   const mat=powerPathMats[route.feed];
+   for(const step of route.segments){
+    const start=new THREE.Vector3(...step.from),end=new THREE.Vector3(...step.to);
+    const delta=end.clone().sub(start);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(.19,delta.length(),.19),mat);
+    mesh.name="FLOOR100_TRACE_"+route.feed+"_"+step.name.replace(/[^A-Z0-9]+/g,"_");
+    mesh.userData={feed:route.feed,segment:step.name,rackId:route.rackId};
+    mesh.position.copy(start).add(end).multiplyScalar(.5);
+    mesh.quaternion.setFromUnitVectors(axis,delta.normalize());mesh.renderOrder=78;
+    powerPathGroup.add(mesh);
+   }
+  }
+  for(const route of activePowerPaths){
+   powerPathMats[route.feed].opacity=route.visualState==="dimmed"?.28:.98;
+  }
+  // Hide unselected material stale state while user switches racks.
+  if(!activePowerPaths.some(r=>r.feed==="A"))powerPathMats.A.opacity=.98;
+  if(!activePowerPaths.some(r=>r.feed==="B"))powerPathMats.B.opacity=.98;
+ }
+ function setPowerPathMode(next){
+  if(!FLOOR100_TRACE_MODES.includes(next))return false;
+  powerPathMode=next;rebuildPowerPaths();return true;
+ }
  let routeImpact=buildFloor100Impact(racks,powerScenario);
  const indicatorColors={visible:new THREE.Color('#a4e7aa'),dimmed:new THREE.Color('#dc6d52'),unmapped:new THREE.Color('#719cb5')};
  const scenarioOptions=["normal","a-loss","b-loss","grid-loss"];
@@ -300,6 +341,7 @@ export function createFloor100Concept(THREE){
   const generator=powerScenario==="grid-loss";
   materials.generatorLive.color.set(generator?"#a6ff7a":"#5b6a5b");
   materials.generatorLive.emissiveIntensity=generator?.85:.06;
+  rebuildPowerPaths();
   for(const batch of batched){
    const activeZone=batch.parent;
    if(activeZone!==zones.cooling)continue;
@@ -321,7 +363,7 @@ export function createFloor100Concept(THREE){
   if(id!==null&&!rackById.has(id))return false;
   selected=id;outline.visible=Boolean(id);
   if(id){const r=rackById.get(id);outline.position.set(r.x,3.35,r.z)}
-  refreshHardwareHighlight();return true;
+  refreshHardwareHighlight();rebuildPowerPaths();return true;
  }
  function setFilter(next){
   if(!["all","cooling","power","network","airflow"].includes(next))return false;
@@ -332,6 +374,11 @@ export function createFloor100Concept(THREE){
  function diagnostics(){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
    powerScenario,coolingCircuit,
+   powerPathMode,powerPathSegments:powerPathGroup.children.length,
+   powerPathFeeds:activePowerPaths.map(p=>p.feed),
+   powerPathStatuses:activePowerPaths.map(p=>p.visualState),
+   powerPathRack:activePowerPaths[0]?.rackId??null,
+   powerPathVisible:powerPathGroup.visible&&zones.power.visible,
    powerLoadPercent:loadPercent,powerHeatmap,
    powerTotalW:powerModel.totalW,powerFacilityW:powerModel.facilityW,
    powerDualDrops:200,powerHeatIndicators:heatIndicators.count,
@@ -369,7 +416,8 @@ export function createFloor100Concept(THREE){
  updateInfrastructureVisuals();
  refreshPowerEstimate();
  return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,
-  setPowerLoadPercent,setPowerHeatmap,getPowerModel:()=>powerModel,diagnostics,
+  setPowerLoadPercent,setPowerHeatmap,setPowerPathMode,getPowerPaths:()=>activePowerPaths,
+  getPowerModel:()=>powerModel,diagnostics,
   getRouteImpact:()=>routeImpact,getHardwareInfo:()=>NVL72_INSPECTION_PARTS[hardwarePart],
   rackPosition:id=>rackById.get(id)||null,getSelected:()=>selected};
 }

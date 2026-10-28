@@ -7,6 +7,7 @@
  const power=$("floor100PowerScenario"),cooling=$("floor100CoolingCircuit"),scenarioStatus=$("floor100ScenarioStatus");
  const hardwareSelect=$("floor100HardwarePart"),hardwareResult=$("floor100HardwareResult");
  const loadSelect=$("floor100LoadPercent"),heatButton=$("floor100Heatmap");
+ const traceSelect=$("floor100TraceFeed"),traceStatus=$("floor100TraceStatus"),traceSteps=$("floor100TraceSteps");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -20,6 +21,28 @@
   if(!d)return;
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
+  const paths=state()?.getFloor100PowerPaths?.()||[];
+  traceSelect.value=d.powerPathMode;
+  const traceRack=paths[0]?.rackId??null;
+  traceStatus.dataset.active=String(paths.length>0);
+  traceStatus.textContent=paths.length?
+   ("TRACE "+traceRack+" · "+paths.map(p=>"FEED "+p.feed+" "+p.visualState.toUpperCase()+
+     " · "+p.segments.length+" LINE SEGMENTS / UPS BANK "+p.bankReference).join(" | ")+
+    " · SCHEMATIC ONLY; NO ELECTRICAL AVAILABILITY MEASURED"):
+   "Choose a rack, then trace its simulated A/B power route.";
+  for(const feed of ["A","B"]){
+   const path=paths.find(p=>p.feed===feed),el=$("floor100Trace"+feed);
+   el.dataset.visual=path?.visualState||"off";
+   el.textContent=path?("FEED "+feed+" · "+path.visualState.toUpperCase()+
+    " · UPS GALLERY BANK "+path.bankReference):("FEED "+feed+" · NOT SELECTED");
+  }
+  traceSteps.replaceChildren();
+  if(paths.length){
+   for(const step of paths[0].segments){
+    const li=document.createElement("li");li.textContent=step.name;
+    traceSteps.appendChild(li);
+   }
+  }
   const powerByRack=new Map((modeledPower?.entries||[]).map(r=>[r.id,r]));
   if(modeledPower){
    $("floor100TotalKW").textContent=showKW(modeledPower.totalKW);
@@ -141,12 +164,26 @@
  $("floor100ExportPower").addEventListener("click",()=>{
   const profile=state()?.getFloor100PowerModel?.();if(!profile)return;
   const data=JSON.stringify({format:"SPARK-FLOOR100-POWER-ESTIMATE-1",
-   source:"BROWSER_ONLY_DEMO_ASSUMPTIONS",createdAt:new Date().toISOString(),...profile},null,2);
+   source:"BROWSER_ONLY_DEMO_ASSUMPTIONS",createdAt:new Date().toISOString(),...profile,
+   selectedSchematicPaths:state()?.getFloor100PowerPaths?.()||[]},null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
   link.href=url;link.download="spark-floor100-power-estimate-NOT-TELEMETRY.json";
   document.body.appendChild(link);link.click();link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+ });
+ traceSelect.addEventListener("change",()=>{
+  const mode=traceSelect.value;
+  if(mode!=="off"){
+   if(!state()?.getFloor100Diagnostics?.()?.selected)selectRack("R001");
+   state()?.setFloor100Filter?.("power");
+   state()?.setFloor100Side?.("rear");
+  }
+  state()?.setFloor100PowerPathMode?.(mode);
+  render();
+ });
+ $("floor100TraceReset").addEventListener("click",()=>{
+  state()?.setFloor100PowerPathMode?.("off");render();
  });
  power.addEventListener("change",()=>{
   state()?.setFloor100PowerScenario?.(power.value);render();
