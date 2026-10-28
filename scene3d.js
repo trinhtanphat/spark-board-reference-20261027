@@ -390,7 +390,7 @@ function applyModelMode(mode){
  if(mode!=='rack'&&rackModel)rackModel.clearService();
  exploded=false;
  if(mode==='datacenter'){
-  distTarget=28.3;elTarget=.34;azTarget=.22;center.y=3.68;
+  distTarget=39;elTarget=1.07;azTarget=.50;center.y=3.68;
  }else if(mode==='rack'){
   rackRear=false;
   rackModel?.setRearSystemFocus("all");
@@ -495,7 +495,14 @@ function interactions(){
     if(active.size===0){clickPos=null;gesture=null}
     return;
    }
-   const intersections=ray.intersectObjects(modelMode==='datacenter'?dataCenterScene.group.children:modelMode==='nvidia'?nvidiaModel.group.children:board.children,true);
+   if(modelMode==='datacenter'){
+    ray.layers.set(29);
+    const hit=ray.intersectObjects(dataCenterScene.pickTargets,false)[0];
+    if(hit?.object?.userData.part)notifyPart(hit.object.userData.part);
+    if(active.size===0){clickPos=null;gesture=null}
+    return;
+   }
+   const intersections=ray.intersectObjects(modelMode==='nvidia'?nvidiaModel.group.children:board.children,true);
    const item=intersections.map(v=>{let o=v.object;while(o&&!o.userData.part)o=o.parent;return o}).find(o=>o&&o.userData.part);
    if(item)notifyPart(item.userData.part);
   }
@@ -505,7 +512,7 @@ function interactions(){
  mount.addEventListener('pointercancel',e=>{active.delete(e.pointerId);gesture=null;clickPos=null;moved=true});
  mount.addEventListener('lostpointercapture',e=>{active.delete(e.pointerId);if(!active.size)gesture=null});
  mount.addEventListener('wheel',e=>{
-  e.preventDefault();distTarget=clamp(distTarget+Math.sign(e.deltaY)*.5,8.5,26);
+  e.preventDefault();distTarget=clamp(distTarget+Math.sign(e.deltaY)*(modelMode==="datacenter"?1.1:.5),8.5,modelMode==="datacenter"?65:26);
  },{passive:false});
 }
 
@@ -664,9 +671,9 @@ function init(){
  },
  getRenderStats(){return {drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,dpr:renderer.getPixelRatio(),textureCount:renderer.info.memory.textures,geometryCount:renderer.info.memory.geometries}},
  getCameraState(){return {azimuth:azTarget,elevation:elTarget,distance:distTarget}},
- zoom(dir){distTarget=clamp(distTarget+dir*.8,8.5,26);needsRender=true},
- setView(mode){azTarget=mode==='top'?0:modelMode==='rack'?.33:modelMode==='datacenter'?.22:.43;elTarget=mode==='top'?1.57:modelMode==='rack'?.24:modelMode==='datacenter'?.34:.69;distTarget=modelMode==='datacenter'?(mode==='top'?26:28.3):modelMode==='rack'?(mode==='top'?22:23.3):(mode==='top'?15.2:15.55);needsRender=true},
- reset(){azTarget=modelMode==='rack'?.33:modelMode==='datacenter'?.22:.43;elTarget=modelMode==='rack'?.24:modelMode==='datacenter'?.34:.69;distTarget=modelMode==='rack'?23.3:modelMode==='datacenter'?28.3:15.55;needsRender=true},
+ zoom(dir){distTarget=clamp(distTarget+dir*(modelMode==='datacenter'?1.4:.8),8.5,modelMode==='datacenter'?65:26);needsRender=true},
+ setView(mode){azTarget=mode==='top'?0:modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;elTarget=mode==='top'?1.57:modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;distTarget=modelMode==='datacenter'?(mode==='top'?39:39):modelMode==='rack'?(mode==='top'?22:23.3):(mode==='top'?15.2:15.55);needsRender=true},
+ reset(){azTarget=modelMode==='rack'?.33:modelMode==='datacenter'?.50:.43;elTarget=modelMode==='rack'?.24:modelMode==='datacenter'?1.07:.69;distTarget=modelMode==='rack'?23.3:modelMode==='datacenter'?39:15.55;needsRender=true},
  nudge(x,y){azTarget+=x*.14;elTarget=clamp(elTarget+y*.12,.18,1.57);needsRender=true},
  showTraces(show){traceVisible=show;glowGroup.visible=show;coreIndicator.intensity=show?2:0;needsRender=true},
  setMotion(val){motion=val;needsRender=true},

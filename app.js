@@ -94,6 +94,7 @@ const parts={
 window.sparkInspectPart=name=>{
  const dcId=name.startsWith("DC / ")?name.slice(5):"";
  const dcSlot=window.SPARK3D?.getDataCenterAPI?.()?.slots.find(s=>s.id===dcId);
+ if(dcSlot)window.SPARK_DATA_CENTER_UI?.focusSlot?.(dcId);
  const dcDescription=dcSlot?["DATA CENTER / "+dcSlot.kind.toUpperCase(),dcSlot.label+" · "+(dcSlot.installed?"SIMULATED INSTALLED":"SIMULATED EMPTY")+" · rack "+dcSlot.rack+" · Not real network or hardware maintenance."]:null;
  const rackDescription=name.startsWith("NVIDIA / NVL72 COMPUTE TRAY")?
  ["NVIDIA NVL72 / COMPUTE TRAY","One of 18 documented compute trays; each has 4 Rubin GPUs and 2 Vera CPUs. Placement and exterior design are illustrative, not factory CAD."]:
@@ -210,13 +211,13 @@ function updateModelView(mode){
   button.setAttribute("aria-pressed",String(key===mode));
  }
  document.querySelector(".stage-title h2").innerHTML=mode==="datacenter"?
-  'GPU <span>DATA CENTER</span><span class="h2-suffix"> / 3 RACKS</span>':
+  'GPU <span>DATA CENTER</span><span class="h2-suffix"> / 16 RACKS</span>':
   mode==="rack"?
   'VERA RUBIN <span>NVL72</span><span class="h2-suffix"> / RACK</span>':
   mode==="nvidia"?'VERA <span>RUBIN</span><span class="h2-suffix"> / 2026</span>':
   'THE BARE <span>BOARD</span><span class="h2-suffix"> / 05</span>';
  document.querySelector(".stage-title p").textContent=mode==="datacenter"?
-  "2 NVL72 GPU racks · 1 network fabric rack · virtual cabling":mode==="rack"?
+  "15 NVL72 GPU racks · 1 fabric rack · dense 4×4 layout · virtual cabling":mode==="rack"?
   "18 compute trays · 9 NVLink 6 switch trays · 72 Rubin GPUs":
   mode==="nvidia"?"2 Rubin GPUs · 1 Vera CPU · HBM4 memory":
   "Matte FR-4 · plated copper · assembly concept";
@@ -233,7 +234,7 @@ function updateModelView(mode){
  syncTrayPullButton();
  $("coolingToggle").setAttribute("aria-pressed",String(Boolean(window.SPARK3D?.getNvidiaCooling?.())));
  $("inspectCore").setAttribute("aria-label",mode==="datacenter"?"Inspect simulated data-center rack":mode==="rack"?"Inspect NVIDIA NVL72 compute tray":mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
- $("productFactsTitle").textContent=mode==="datacenter"?"Two NVL72 racks. One network fabric. Browser-only." : mode==="rack"?
+ $("productFactsTitle").textContent=mode==="datacenter"?"15 NVL72 GPU racks. One fabric rack. Dense 4×4 lab." : mode==="rack"?
   "18 compute trays. 9 NVLink switch trays. One NVL72 rack.":
   mode==="nvidia"?"Two GPUs. One Vera CPU. One Superchip.":
   "NVIDIA architecture facts · independent study";
@@ -250,7 +251,7 @@ function updateModelView(mode){
 for(const [mode,button] of Object.entries(viewButtons))button.addEventListener("click",()=>{
  window.SPARK3D?.setModelMode?.(mode);
  updateModelView(mode);
- notify(mode==="datacenter"?"Three-rack NVIDIA data center simulator active":mode==="rack"?"NVL72 rack study active · 4 power shelves, conceptual slot placement":mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
+ notify(mode==="datacenter"?"Dense 16-rack data center simulator active":mode==="rack"?"NVL72 rack study active · 4 power shelves, conceptual slot placement":mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
 });
 document.addEventListener("spark:model-mode-change",ev=>updateModelView(ev.detail.mode));
 $("coolingToggle").addEventListener("click",()=>{

@@ -11,12 +11,12 @@
   toggle.setAttribute("aria-expanded",String(!controls.hidden));
   toggle.textContent=controls.hidden?"CONFIGURE DEVICES & NETWORK":"HIDE CONTROLS / SHOW RACKS";
  });
- const RACKS=[["A","NVL72 GPU RACK A"],["B","NVL72 GPU RACK B"],["F","NETWORK / FABRIC RACK"]];
+
  const kinds=[["compute","Vera Rubin compute tray"],["nvlink","NVLink 6 switch tray"],["power","Power shelf"],["tor","TOR management switch"],["ib","InfiniBand fabric switch"],["eth","Ethernet storage switch"],["mgmt","Management Ethernet switch"]];
  const api=()=>window.SPARK3D?.getDataCenterAPI?.();
  const option=(value,label)=>{const o=document.createElement("option");o.value=value;o.textContent=label;return o};
  const optfill=(el,items,value)=>{const before=value??el.value;el.replaceChildren(...items.map(x=>option(x[0],x[1])));if([...el.options].some(o=>o.value===before))el.value=before};
- for(const [id,label] of RACKS)rack.append(option(id,label));
+
  for(const [id,label] of kinds)replacement.append(option(id,label));
  function say(message,error=false){
   const line=$("dcStatus");line.textContent=message;line.dataset.error=String(error);
@@ -24,8 +24,25 @@
  }
  function render(){
   const state=api();if(!state)return;
+  if(!rack.options.length)rack.append(...state.racks.map(r=>option(r.id,r.label)));
+  if(!rack.value)rack.value=state.racks[0].id;
+  const floor=$("dcFloorMap");
+  if(floor&&!floor.children.length)for(const info of state.racks){
+   const b=document.createElement("button");
+   b.type="button";b.dataset.rack=info.id;b.className="dc-floor-rack";
+   b.title=info.label+" · visual-only rack selection";
+   b.textContent=info.id+(info.kind==="fabric"?" / NET":" / GPU");
+   b.addEventListener("click",()=>{
+    rack.value=info.id;slot.value="";render();
+    const s=state.slots.find(s=>s.rack===info.id);
+    if(s)window.SPARK3D?.selectDataCenterSlot?.(s.id);
+    render();
+   });
+   floor.append(b);
+  }
+  if(floor)for(const b of floor.children)b.setAttribute("aria-pressed",String(b.dataset.rack===rack.value));
   const v=state.getSnapshot(),s=v.stats;
-  $("dcStats").textContent=s.gpuOnlineEquivalent+" GPU / "+s.cpuOnlineEquivalent+" CPU simulated · "+s.cablesConnected+" cables";
+  $("dcStats").textContent=s.racks+" RACKS · "+s.gpuOnlineEquivalent+" GPU / "+s.cpuOnlineEquivalent+" CPU simulated · "+s.cablesConnected+" cables";
   optfill(slot,state.slots.filter(x=>x.rack===rack.value).map(x=>[x.id,(x.installed?"● ":"○ ")+x.id+" · "+x.kind+(x.drawer?" / EXTENDED":"")]));
   const selected=state.slots.find(x=>x.id===slot.value);
   if(selected)replacement.value=selected.kind;
@@ -78,7 +95,11 @@
  rack.value="A";
  render();
  // Test-only read view; all changes still pass the same validated simulator API.
- window.SPARK_DATA_CENTER_UI={refresh:render,getState:()=>({
+ window.SPARK_DATA_CENTER_UI={refresh:render,focusSlot(id){
+  const state=api(),s=state?.slots.find(x=>x.id===id);
+  if(!s)return false;
+  rack.value=s.rack;render();slot.value=id;render();return true;
+ },getState:()=>({
   visible:!panel.hidden,controlsExpanded:!controls.hidden,rack:rack.value,selectedSlot:slot.value,
   source:source.value,target:target.value,sourceOptions:source.options.length,
   targetOptions:target.options.length,events:$("dcEventLog").children.length
