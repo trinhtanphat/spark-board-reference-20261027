@@ -1,15 +1,15 @@
 import {strict as assert} from "node:assert";
 import {createDataCenterState,DATA_CENTER_RACKS,FABRICS,DATA_CENTER_DISCLAIMER} from "../data-center-model.mjs";
 const dc=createDataCenterState(),stats=dc.stats();
-assert.equal(stats.racks,3);assert.equal(stats.computeRacks,2);
-assert.equal(stats.computeTraysInstalled,36);assert.equal(stats.gpuOnlineEquivalent,144);
-assert.equal(stats.cpuOnlineEquivalent,72);
-assert.equal(dc.slots.length,69);
-assert.equal(dc.ports.filter(p=>p.role==="source").length,108);
-assert.equal(dc.ports.filter(p=>p.role==="target").length,108);
+assert.equal(stats.racks,16);assert.equal(stats.computeRacks,15);
+assert.equal(stats.computeTraysInstalled,270);assert.equal(stats.gpuOnlineEquivalent,1080);
+assert.equal(stats.cpuOnlineEquivalent,540);
+assert.equal(dc.slots.length,498);
+assert.equal(dc.ports.filter(p=>p.role==="source").length,810);
+assert.equal(dc.ports.filter(p=>p.role==="target").length,810);
 assert.ok(DATA_CENTER_DISCLAIMER.includes("BROWSER-ONLY"));
 for(const fabric of Object.keys(FABRICS)){
- assert.equal(dc.availableTargets(fabric).length,36);
+ assert.equal(dc.availableTargets(fabric).length,270);
 }
 const id=dc.connect("A-C01:CX9","F:I01");
 assert.equal(id,"C001");assert.equal(dc.cables.length,1);
@@ -30,16 +30,16 @@ dc.toggleDrawer("A-C01");assert.equal(dc.slots.find(s=>s.id==="A-C01").drawer,tr
 dc.toggleDrawer("A-C02");
 assert.equal(dc.slots.find(s=>s.id==="A-C01").drawer,false);
 dc.remove("A-C01");
-assert.equal(dc.stats().gpuOnlineEquivalent,140);
-assert.equal(dc.stats().cpuOnlineEquivalent,70);
+assert.equal(dc.stats().gpuOnlineEquivalent,1076);
+assert.equal(dc.stats().cpuOnlineEquivalent,538);
 assert.throws(()=>dc.toggleDrawer("A-C01"),/Install/);
 assert.throws(()=>dc.connect("A-C01:CX9","F:I04"),/unavailable/);
 assert.throws(()=>dc.install("A-C01","power"),/Incompatible module/);
-dc.install("A-C01","compute");assert.equal(dc.stats().gpuOnlineEquivalent,144);
+dc.install("A-C01","compute");assert.equal(dc.stats().gpuOnlineEquivalent,1080);
 dc.remove("F-I01");assert.throws(()=>dc.connect("A-C01:CX9","F:I02"),/unavailable/);
 dc.install("F-I01","ib");
 assert.throws(()=>dc.remove("unknown"),RangeError);
 assert.throws(()=>dc.install("A-C01","compute"),/occupied/);
 dc.connect("A-C01:CX9","F:I01");
-dc.reset();assert.equal(dc.cables.length,0);assert.equal(dc.stats().gpuOnlineEquivalent,144);assert.ok(dc.slots.every(s=>s.installed&&!s.drawer));
+dc.reset();assert.equal(dc.cables.length,0);assert.equal(dc.stats().gpuOnlineEquivalent,1080);assert.ok(dc.slots.every(s=>s.installed&&!s.drawer));
 console.log(JSON.stringify({status:"PASS",racks:DATA_CENTER_RACKS.length,slots:dc.slots.length,ports:dc.ports.length,protocols:Object.keys(FABRICS),negativeScenarios:"duplicate ports, mismatched networks, invalid replacement, cable-guarded removal",physicalActions:false},null,2));

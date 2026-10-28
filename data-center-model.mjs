@@ -4,11 +4,15 @@
  * Logical ports describe training/topology classes, not a certified cable plan.
  */
 export const DATA_CENTER_DISCLAIMER="BROWSER-ONLY SIMULATION - NOT NVIDIA CAD, LIVE CABLING OR HOT-SWAP PROCEDURES";
-export const DATA_CENTER_RACKS=Object.freeze([
- {id:"A",label:"NVL72 GPU RACK A",kind:"compute"},
- {id:"B",label:"NVL72 GPU RACK B",kind:"compute"},
- {id:"F",label:"NETWORK / FABRIC RACK",kind:"fabric"}
-]);
+// Conceptual dense lab spacing, not an installation/service clearance plan.
+export const DATA_CENTER_LAYOUT=Object.freeze({rows:4,columns:4,pitchX:4.16,pitchZ:3.15,rackWidth:4.10,rackDepth:2.50});
+const gridIds=["A","B","C","D","E","G","H","I","J","K","L","M","N","O","P","F"];
+export const DATA_CENTER_RACKS=Object.freeze(gridIds.map((id,i)=>Object.freeze({
+ id,label:id==="F"?"NETWORK / FABRIC RACK":"NVL72 GPU RACK "+id,
+ kind:id==="F"?"fabric":"compute",row:Math.floor(i/DATA_CENTER_LAYOUT.columns),
+ column:i%DATA_CENTER_LAYOUT.columns
+})));
+export const DATA_CENTER_GPU_RACKS=Object.freeze(DATA_CENTER_RACKS.filter(r=>r.kind==="compute").map(r=>r.id));
 export const FABRICS=Object.freeze({
  compute:{label:"InfiniBand / computenet",media:"OSFP",color:"#a0e478"},
  storage:{label:"Ethernet / storagenet",media:"QSFP",color:"#6ec7d9"},
@@ -26,7 +30,7 @@ const DEVICE_TYPES=Object.freeze({
 export const DEVICE_TYPE_LABELS=DEVICE_TYPES;
 function buildSlots(){
  const all=[];
- for(const rack of ["A","B"]){
+ for(const rack of DATA_CENTER_GPU_RACKS){
   for(const [kind,short,count] of [["compute","C",18],["nvlink","N",9],["power","P",4],["tor","T",2]]){
    for(let i=1;i<=count;i++){
     const id=rack+"-"+short+String(i).padStart(2,"0");
@@ -49,8 +53,11 @@ function buildPorts(slots){
  }
  for(const [kind,prefix,fabric] of [["ib","I","compute"],["eth","E","storage"],["mgmt","M","management"]]){
   const slot=slots.find(s=>s.rack==="F"&&s.kind===kind);
-  for(let i=1;i<=36;i++){
-   ports.push({id:"F:"+prefix+String(i).padStart(2,"0"),slotId:slot.id,role:"target",fabric,media:FABRICS[fabric].media,label:"FABRIC "+prefix+String(i).padStart(2,"0")+" ("+fabric+")"});
+  // Conceptual fabric capacity is matched to all 15 x 18 compute trays,
+  // not an assertion that the real switch has 270 physical front-panel ports.
+  for(let i=1;i<=DATA_CENTER_GPU_RACKS.length*18;i++){
+   const portNo=i<=36?String(i).padStart(2,"0"):String(i).padStart(3,"0");
+   ports.push({id:"F:"+prefix+portNo,slotId:slot.id,role:"target",fabric,media:FABRICS[fabric].media,label:"FABRIC "+prefix+portNo+" ("+fabric+")"});
   }
  }
  return ports;
@@ -69,11 +76,11 @@ export function createDataCenterState(){
  const ensurePort=p=>{const port=byPort(p);if(!port)throw new RangeError("Unknown port");const s=requireSlot(port.slotId);if(!s.installed)throw new Error("Port unavailable: module removed");return port};
  return {
   onChange(fn){listener=typeof fn==="function"?fn:()=>{}},
-  slots,ports,cables,
+  slots,ports,cables,racks:DATA_CENTER_RACKS,
   getSnapshot(){return clone({slots,ports,cables,events,stats:this.stats(),disclaimer:DATA_CENTER_DISCLAIMER})},
   stats(){
    const computeInstalled=slots.filter(s=>s.kind==="compute"&&s.installed).length;
-   return {racks:3,computeRacks:2,computeTraysInstalled:computeInstalled,
+   return {racks:DATA_CENTER_RACKS.length,computeRacks:DATA_CENTER_GPU_RACKS.length,computeTraysInstalled:computeInstalled,
     gpuOnlineEquivalent:computeInstalled*4,cpuOnlineEquivalent:computeInstalled*2,
     modulesInstalled:slots.filter(s=>s.installed).length,
     modulesRemoved:slots.filter(s=>!s.installed).length,
