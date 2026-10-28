@@ -82,11 +82,17 @@ Visual performance: only the selected tray receives extra interior meshes. Other
 
 ## Restored 3D rectangular rack frame and cuboid selection (28 October 2026)
 
-Following feedback that the rectangular *box* disappeared after converting its outline to a flat face, the rack now has a **permanent 12-edge gold 3D cabinet wireframe** following only the approximate enclosure envelope (4.55 × 9.50 × 2.53 scene units). Selecting a tray now adds a **shallow 12-edge gold cuboid** (0.16 scene units deep) fixed to that tray's front, not a deep bounding box calculated from all chassis contents. This preserves 3D depth in the top/isometric view without the previous oversized/skewed box. Rear inspection hides only the selected front-tray cuboid; the enclosing frame stays visible. Both are illustrative scene geometry, not physical NVIDIA dimensions.
+Following feedback that the rectangular *box* disappeared after converting its outline to a flat face, the rack now has a **permanent 12-edge gold 3D cabinet wireframe** following only the approximate enclosure envelope (4.55 × 9.50 × 2.53 scene units). Selecting a tray now adds a **full-server 12-edge gold cuboid** (2.39 illustrative scene units deep) attached to that tray. The 3D box encompasses the entire modeled server chassis rather than only its front face or the entire rack. This preserves 3D depth in the top/isometric view without the previous oversized/skewed box. Rear inspection hides only the selected front-tray cuboid; the enclosing frame stays visible. Both are illustrative scene geometry, not physical NVIDIA dimensions.
+
+## Precise whole-server click / 3D highlight (28 October 2026)
+
+Each of the 33 illustrated rack slots now has an individual **full-chassis invisible picking volume** (3.96 x slot height x 2.39 scene units). It uses dedicated raycast layer 29, excluded from the rendering camera. Front, side and rear hits resolve to the correct tray without relying on global instanced front indicators or cabinet decorations. A selection draws a 12-edge **full-server** 3D gold cuboid at that tray's own transform; tray extraction moves this frame with the drawer. This is not the huge group BoxHelper that produced the earlier incorrect frame.
+
+Mouse drag detection now ignores movements of up to 6px before treating a pointer as a rotate gesture. Browser E2E checks **actual Chrome mouse input** on compute and NVLink trays on desktop, mobile and tablet, including a one-pixel-movement click. Tests verify matching tray IDs in the inspector/dropdown and depth greater than 2 scene units, in addition to previous tray service, rear viewing, camera and data-center tests. These are approximate interaction volumes, not engineering collision geometry.
 
 ## Correct tray-selection highlight geometry (28 October 2026)
 
-The old `THREE.BoxHelper` highlighted the entire depth of a selected rack tray and produced an oversized perspective rectangle at steep angles. The tray selector now uses a **shallow 3D cuboid close to the illustrated faceplate**, alongside a permanent 3D cabinet frame. The outline follows drawer extension, disappears during rear inspection, and is disposed on selection change. Other modes retain their previous BoxHelper behavior. This is a selection UI correction only; it does not imply exact NVIDIA mechanical dimensions.
+The old `THREE.BoxHelper` highlighted the entire depth of a selected rack tray and produced an oversized perspective rectangle at steep angles. The tray selector now uses a **fixed-size full-chassis 3D cuboid**, alongside the separate permanent 3D cabinet frame. The outline follows drawer extension, disappears during rear inspection, and is disposed on selection change. Other modes retain their previous BoxHelper behavior. This is a selection UI correction only; it does not imply exact NVIDIA mechanical dimensions.
 
 ## Rear infrastructure layered inspection (28 October 2026)
 
