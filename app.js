@@ -92,6 +92,9 @@ const parts={
 "U6 / POWER MANAGEMENT":["U6 / REGULATOR","Power-management shield can, modeled for the studio assembly."]
 };
 window.sparkInspectPart=name=>{
+ const dcId=name.startsWith("DC / ")?name.slice(5):"";
+ const dcSlot=window.SPARK3D?.getDataCenterAPI?.()?.slots.find(s=>s.id===dcId);
+ const dcDescription=dcSlot?["DATA CENTER / "+dcSlot.kind.toUpperCase(),dcSlot.label+" · "+(dcSlot.installed?"SIMULATED INSTALLED":"SIMULATED EMPTY")+" · rack "+dcSlot.rack+" · Not real network or hardware maintenance."]:null;
  const rackDescription=name.startsWith("NVIDIA / NVL72 COMPUTE TRAY")?
  ["NVIDIA NVL72 / COMPUTE TRAY","One of 18 documented compute trays; each has 4 Rubin GPUs and 2 Vera CPUs. Placement and exterior design are illustrative, not factory CAD."]:
  name.startsWith("NVIDIA / NVL72 NVLINK SWITCH TRAY")?
@@ -100,7 +103,7 @@ window.sparkInspectPart=name=>{
  ["TOP OF RACK / MANAGEMENT","One of 2 published top-of-rack management switches. The rendered front panel is artistic."]:
  name.startsWith("NVIDIA / NVL72 POWER SHELF")?
  ["POWER SHELF / CONCEPT","One of 4 published 3 RU power shelves. Each is rated 110 kW and supplies 54 V DC. Placement and dimensions in this model are illustrative."]:null;
- const [type,desc]=rackDescription||modelDescriptions[name]||parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];
+ const [type,desc]=dcDescription||rackDescription||modelDescriptions[name]||parts[name]||["PCB / COMPONENT","Illustrative printed-circuit-board component."];
  $("partInspector").hidden=false;$("partType").textContent=type;$("partName").textContent=name;$("partDescription").textContent=desc;
  if(window.SPARK3D?.getModelMode?.()==="rack"&&name.startsWith("NVIDIA / NVL72")){
   const tray=$("rackTraySelect");
@@ -192,7 +195,7 @@ rearBtn.addEventListener("click",()=>{
  notify(rear?"Rack back: conceptual NVLink cable cartridges and coolant manifolds":"Rack front: illustrated service trays");
 });
 
-const viewButtons={nvidia:$("modelNvidia"),rack:$("modelRack"),reference:$("modelReference")};
+const viewButtons={nvidia:$("modelNvidia"),rack:$("modelRack"),datacenter:$("modelDatacenter"),reference:$("modelReference")};
 function updateModelView(mode){
  lines=mode==="reference"?referenceLines:nvidiaLines;
  renderTerminal();
@@ -200,18 +203,21 @@ function updateModelView(mode){
   button.classList.toggle("active",key===mode);
   button.setAttribute("aria-pressed",String(key===mode));
  }
- document.querySelector(".stage-title h2").innerHTML=mode==="rack"?
+ document.querySelector(".stage-title h2").innerHTML=mode==="datacenter"?
+  'GPU <span>DATA CENTER</span><span class="h2-suffix"> / 3 RACKS</span>':
+  mode==="rack"?
   'VERA RUBIN <span>NVL72</span><span class="h2-suffix"> / RACK</span>':
   mode==="nvidia"?'VERA <span>RUBIN</span><span class="h2-suffix"> / 2026</span>':
   'THE BARE <span>BOARD</span><span class="h2-suffix"> / 05</span>';
- document.querySelector(".stage-title p").textContent=mode==="rack"?
+ document.querySelector(".stage-title p").textContent=mode==="datacenter"?
+  "2 NVL72 GPU racks · 1 network fabric rack · virtual cabling":mode==="rack"?
   "18 compute trays · 9 NVLink 6 switch trays · 72 Rubin GPUs":
   mode==="nvidia"?"2 Rubin GPUs · 1 Vera CPU · HBM4 memory":
   "Matte FR-4 · plated copper · assembly concept";
- document.querySelector(".label-a").textContent=mode==="rack"?"MODEL / NVL72 RACK":mode==="nvidia"?"MODEL / VERA RUBIN":"MODEL / SPARK S3";
+ document.querySelector(".label-a").textContent=mode==="datacenter"?"MODEL / NVIDIA AI FACTORY":mode==="rack"?"MODEL / NVL72 RACK":mode==="nvidia"?"MODEL / VERA RUBIN":"MODEL / SPARK S3";
  if(exploded){exploded=false;$("explodeToggle").classList.remove("active");$("explodeToggle").setAttribute("aria-pressed","false")}
- $("explodeToggle").textContent=mode==="rack"?"RACK / FIXED VIEW":mode==="nvidia"?"⫶ EXPLODE MODULE":"⫶ EXPLODE 8L";
- $("explodeToggle").disabled=mode==="rack";
+ $("explodeToggle").textContent=mode==="datacenter"?"DC / FIXED VIEW":mode==="rack"?"RACK / FIXED VIEW":mode==="nvidia"?"⫶ EXPLODE MODULE":"⫶ EXPLODE 8L";
+ $("explodeToggle").disabled=mode==="rack"||mode==="datacenter";
  $("layersToggle").disabled=mode!=="reference";
  $("coolingToggle").disabled=mode!=="nvidia";
  rackPanel.hidden=mode!=="rack";
@@ -219,16 +225,17 @@ function updateModelView(mode){
  if(mode==="rack")populateRackTrays();
  syncTrayPullButton();
  $("coolingToggle").setAttribute("aria-pressed",String(Boolean(window.SPARK3D?.getNvidiaCooling?.())));
- $("inspectCore").setAttribute("aria-label",mode==="rack"?"Inspect NVIDIA NVL72 compute tray":mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
- $("productFactsTitle").textContent=mode==="rack"?
+ $("inspectCore").setAttribute("aria-label",mode==="datacenter"?"Inspect simulated data-center rack":mode==="rack"?"Inspect NVIDIA NVL72 compute tray":mode==="nvidia"?"Inspect NVIDIA Rubin GPU":"Inspect SPARK core");
+ $("productFactsTitle").textContent=mode==="datacenter"?"Two NVL72 racks. One network fabric. Browser-only." : mode==="rack"?
   "18 compute trays. 9 NVLink switch trays. One NVL72 rack.":
   mode==="nvidia"?"Two GPUs. One Vera CPU. One Superchip.":
   "NVIDIA architecture facts · independent study";
- $("productFactsSummary").textContent=mode==="rack"?
+ $("productFactsSummary").textContent=mode==="datacenter"?"Network classes are based on NVIDIA docs; three-dimensional cabling and all installation mechanics are illustrative.":mode==="rack"?
   "Published hardware counts; rack layout, cooling paths and placement are illustrative, not NVIDIA CAD.":
   mode==="nvidia"?"Independent architectural visualization — not an official NVIDIA product render or manufacturing model.":
   "The SPARK PCB reference is a separate fictional board; NVIDIA figures do not describe its components.";
- document.querySelector(".label-b").innerHTML=mode==="rack"?
+ document.querySelector(".label-b").innerHTML=mode==="datacenter"?
+  '001 <span class="label-hair"></span> UNOFFICIAL GPU DATA CENTER / SIMULATION':mode==="rack"?
   '001 <span class="label-hair"></span> UNOFFICIAL NVL72 RACK / 2026':
   mode==="nvidia"?'001 <span class="label-hair"></span> UNOFFICIAL SUPERCHIP CONCEPT / 2026':
   '001 <span class="label-hair"></span> SPARK REFERENCE PCB / VISUAL ONLY';
@@ -236,7 +243,7 @@ function updateModelView(mode){
 for(const [mode,button] of Object.entries(viewButtons))button.addEventListener("click",()=>{
  window.SPARK3D?.setModelMode?.(mode);
  updateModelView(mode);
- notify(mode==="rack"?"NVL72 rack study active · 4 power shelves, conceptual slot placement":mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
+ notify(mode==="datacenter"?"Three-rack NVIDIA data center simulator active":mode==="rack"?"NVL72 rack study active · 4 power shelves, conceptual slot placement":mode==="nvidia"?"Vera Rubin concept active":"SPARK PCB reference active");
 });
 document.addEventListener("spark:model-mode-change",ev=>updateModelView(ev.detail.mode));
 $("coolingToggle").addEventListener("click",()=>{

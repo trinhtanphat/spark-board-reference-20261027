@@ -1,0 +1,86 @@
+"use strict";
+(() => {
+ const $=id=>document.getElementById(id);
+ const rack=$("dcRackSelect"),slot=$("dcSlotSelect"),replacement=$("dcReplacementType");
+ const source=$("dcSourcePort"),target=$("dcTargetPort"),cable=$("dcCableSelect");
+ const panel=$("dataCenterLab");
+ if(!panel)return;
+ const controls=$("dcControls"),toggle=$("dcControlsToggle");
+ toggle.addEventListener("click",()=>{
+  controls.hidden=!controls.hidden;
+  toggle.setAttribute("aria-expanded",String(!controls.hidden));
+  toggle.textContent=controls.hidden?"CONFIGURE DEVICES & NETWORK":"HIDE CONTROLS / SHOW RACKS";
+ });
+ const RACKS=[["A","NVL72 GPU RACK A"],["B","NVL72 GPU RACK B"],["F","NETWORK / FABRIC RACK"]];
+ const kinds=[["compute","Vera Rubin compute tray"],["nvlink","NVLink 6 switch tray"],["power","Power shelf"],["tor","TOR management switch"],["ib","InfiniBand fabric switch"],["eth","Ethernet storage switch"],["mgmt","Management Ethernet switch"]];
+ const api=()=>window.SPARK3D?.getDataCenterAPI?.();
+ const option=(value,label)=>{const o=document.createElement("option");o.value=value;o.textContent=label;return o};
+ const optfill=(el,items,value)=>{const before=value??el.value;el.replaceChildren(...items.map(x=>option(x[0],x[1])));if([...el.options].some(o=>o.value===before))el.value=before};
+ for(const [id,label] of RACKS)rack.append(option(id,label));
+ for(const [id,label] of kinds)replacement.append(option(id,label));
+ function say(message,error=false){
+  const line=$("dcStatus");line.textContent=message;line.dataset.error=String(error);
+  if(error)window.sparkNotify?.(message);
+ }
+ function render(){
+  const state=api();if(!state)return;
+  const v=state.getSnapshot(),s=v.stats;
+  $("dcStats").textContent=s.gpuOnlineEquivalent+" GPU / "+s.cpuOnlineEquivalent+" CPU simulated · "+s.cablesConnected+" cables";
+  optfill(slot,state.slots.filter(x=>x.rack===rack.value).map(x=>[x.id,(x.installed?"● ":"○ ")+x.id+" · "+x.kind+(x.drawer?" / EXTENDED":"")]));
+  const selected=state.slots.find(x=>x.id===slot.value);
+  if(selected)replacement.value=selected.kind;
+  $("dcDrawerToggle").disabled=!selected?.installed;
+  $("dcDrawerToggle").textContent=selected?.drawer?"PUSH DEVICE IN":"PULL DEVICE";
+  $("dcRemove").disabled=!selected?.installed;
+  $("dcInstall").disabled=!!selected?.installed;
+  optfill(source,state.availableSources().map(x=>[x.id,x.label]));
+  const sourcePort=state.ports.find(x=>x.id===source.value);
+  optfill(target,state.availableTargets(sourcePort?.fabric).map(x=>[x.id,x.label]));
+  optfill(cable,state.cables.map(x=>[x.id,x.id+" "+x.source+" → "+x.target]));
+  $("dcDisconnect").disabled=!state.cables.length;
+  const log=$("dcEventLog");
+  log.replaceChildren(...v.events.slice(0,5).map(e=>{
+   const p=document.createElement("p");p.textContent=e.action.toUpperCase()+" · "+e.detail;return p;
+  }));
+ }
+ function run(fn,ok){
+  try{fn();say(ok);render()}catch(e){say(e.message||String(e),true);render()}
+ }
+ rack.addEventListener("change",()=>{slot.value="";render()});
+ slot.addEventListener("change",()=>{
+  const s=api()?.slots.find(v=>v.id===slot.value);
+  if(s){replacement.value=s.kind;window.SPARK3D?.selectDataCenterSlot?.(s.id);}
+  render();
+ });
+ source.addEventListener("change",()=>{target.value="";render()});
+ $("dcDrawerToggle").addEventListener("click",()=>run(()=>api().toggleDrawer(slot.value),"Device moved in virtual rack"));
+ $("dcRemove").addEventListener("click",()=>run(()=>api().remove(slot.value),"Module removed from simulation; hardware untouched"));
+ $("dcInstall").addEventListener("click",()=>run(()=>api().install(slot.value,replacement.value),"Compatible module installed in simulation"));
+ $("dcConnect").addEventListener("click",()=>run(()=>api().connect(source.value,target.value),"Simulated compatible network cable connected"));
+ $("dcDisconnect").addEventListener("click",()=>run(()=>api().disconnect(cable.value),"Simulated network cable unplugged"));
+ $("dcExport").addEventListener("click",()=>{
+  try{
+   const payload={format:"SPARK-DATACENTER-SIM-1",kind:"BROWSER_ONLY_SIMULATION",disclaimer:"NOT REAL NVIDIA WIRING OR INSTALLATION DATA",...api().getSnapshot()};
+   const blob=new Blob([JSON.stringify(payload,null,2)+"\n"],{type:"application/json"});
+   const url=URL.createObjectURL(blob),a=document.createElement("a");
+   a.href=url;a.download="spark-NVIDIA-DC-SIMULATED-TOPOLOGY.json";
+   document.body.append(a);a.click();a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1200);
+   say("Simulation topology JSON exported (not a live config)");
+  }catch(e){say(e.message||String(e),true)}
+ });
+ $("dcReset").addEventListener("click",()=>run(()=>api().reset(),"Lab reset; no physical system affected"));
+ document.addEventListener("spark:datacenter-update",render);
+ document.addEventListener("spark:model-mode-change",e=>{
+  panel.hidden=e.detail.mode!=="datacenter";
+  if(e.detail.mode==="datacenter")render();
+ });
+ rack.value="A";
+ render();
+ // Test-only read view; all changes still pass the same validated simulator API.
+ window.SPARK_DATA_CENTER_UI={refresh:render,getState:()=>({
+  visible:!panel.hidden,controlsExpanded:!controls.hidden,rack:rack.value,selectedSlot:slot.value,
+  source:source.value,target:target.value,sourceOptions:source.options.length,
+  targetOptions:target.options.length,events:$("dcEventLog").children.length
+ })};
+})();

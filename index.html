@@ -30,7 +30,42 @@
   <div class="sidebar-signature"><span>✳ ENGINEERED WITH PRECISION</span><span>2026 / SPARK LABS</span></div>
 </aside>
 <main class="main-column">
-  <div class="product-view-selector" role="group" aria-label="Choose 3D hardware model"><button type="button" id="modelNvidia" class="active" aria-pressed="true">VERA RUBIN SUPERCHIP</button><button type="button" id="modelRack" aria-pressed="false">NVL72 RACK / 72 GPU</button><button type="button" id="modelReference" aria-pressed="false">SPARK PCB REFERENCE</button><button type="button" id="coolingToggle" class="cooling-toggle" aria-pressed="false" title="Show conceptual liquid cooling plate assembly">COOLING / OFF</button><span>INDEPENDENT STUDY / NOT NVIDIA OFFICIAL</span></div>
+  <div class="product-view-selector" role="group" aria-label="Choose 3D hardware model"><button type="button" id="modelNvidia" class="active" aria-pressed="true">VERA RUBIN SUPERCHIP</button><button type="button" id="modelRack" aria-pressed="false">NVL72 RACK / 72 GPU</button><button type="button" id="modelDatacenter" aria-pressed="false">GPU DATA CENTER / 3 RACKS</button><button type="button" id="modelReference" aria-pressed="false">SPARK PCB REFERENCE</button><button type="button" id="coolingToggle" class="cooling-toggle" aria-pressed="false" title="Show conceptual liquid cooling plate assembly">COOLING / OFF</button><span>INDEPENDENT STUDY / NOT NVIDIA OFFICIAL</span></div>
+  <section id="dataCenterLab" class="dc-lab" aria-label="Three-rack NVIDIA GPU data center interactive simulator" hidden>
+    <div class="dc-head">
+      <div><span class="dc-kicker">NVIDIA GPU DATA CENTER / INTERACTIVE LAB</span><h3>Build, swap, cable. Simulated only.</h3><p>Two NVL72 GPU racks plus one conceptual fabric rack. No connection to real hardware.</p></div>
+      <strong id="dcStats" aria-live="polite">144 GPU capacity · 3 racks</strong>
+    </div>
+    <button type="button" id="dcControlsToggle" class="dc-controls-toggle" aria-expanded="false" aria-controls="dcControls">CONFIGURE DEVICES &amp; NETWORK</button>
+    <div id="dcControls" hidden>
+    <div class="dc-columns">
+      <div class="dc-pane">
+        <h4>01 / RACK AND EQUIPMENT</h4>
+        <label for="dcRackSelect">Choose rack</label><select id="dcRackSelect"></select>
+        <label for="dcSlotSelect">Choose device / rack slot</label><select id="dcSlotSelect"></select>
+        <div class="dc-actions">
+          <button type="button" id="dcDrawerToggle">PULL DEVICE</button>
+          <button type="button" id="dcRemove">REMOVE MODULE</button>
+        </div>
+        <label for="dcReplacementType">Replacement part (slot compatible only)</label><select id="dcReplacementType"></select>
+        <button type="button" id="dcInstall">INSTALL MODULE</button>
+        <p class="dc-note">Tray removal, installation and cable changes are virtual. They are NOT live switch configuration, real hot-swap instructions or a safe power procedure.</p>
+      </div>
+      <div class="dc-pane">
+        <h4>02 / PLUG NETWORK CABLES</h4>
+        <label for="dcSourcePort">Compute rack source port</label><select id="dcSourcePort"></select>
+        <label for="dcTargetPort">Compatible fabric rack port</label><select id="dcTargetPort"></select>
+        <button type="button" id="dcConnect">PLUG CABLE</button>
+        <label for="dcCableSelect">Connected cables</label><select id="dcCableSelect"></select>
+        <button type="button" id="dcDisconnect">UNPLUG SELECTED CABLE</button>
+        <p class="dc-note">ConnectX-9 → InfiniBand · BlueField-4 → Ethernet storage · BMC → management RJ45. NVLink is internal to each NVL72 rack, not a pluggable external Ethernet link.</p>
+      </div>
+    </div>
+    <div class="dc-bottom"><p id="dcStatus" aria-live="polite">Select a device or plug compatible network ports.</p><div class="dc-actions"><button type="button" id="dcExport">EXPORT SIM JSON</button><button type="button" id="dcReset">RESET LAB</button></div></div>
+    <div id="dcEventLog" class="dc-event-log" aria-label="Recent simulated changes"></div>
+    <span class="dc-disclaimer">UNOFFICIAL ARCHITECTURE STUDY · NO PHYSICAL HARDWARE CONTROL · NO VALIDATED INSTALLATION PLAN</span>
+    </div>
+  </section>
   <section id="rackTrayExplorer" class="rack-tray-explorer" aria-label="NVL72 rack tray navigator" hidden>
     <div class="rack-tray-controls">
       <label for="rackTraySelect">NVL72 / SERVICE TRAY EXPLORER</label>
@@ -114,6 +149,7 @@
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script defer src="app.js"></script>
+<script defer src="data-center-ui.js"></script>
 <script type="module" src="scene3d.js"></script>
 <script type="module" src="route-explorer.js"></script>
 </body>
