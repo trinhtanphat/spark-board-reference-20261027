@@ -1,0 +1,67 @@
+import assert from 'node:assert/strict';
+import {buildFloor100PowerModel} from '../floor100-power.mjs';
+import {buildFloor100WaterBalance} from '../floor100-liquid-loop.mjs';
+import {buildFloor100HydraulicPlan} from '../floor100-hydraulic.mjs';
+import {buildFloor100CoolantFault} from '../floor100-coolant-topology.mjs';
+import {buildFloor100HydronicNetwork} from '../floor100-hydronic-network.mjs';
+const racks=Array.from({length:100},(_,i)=>({id:'R'+String(i+1).padStart(3,'0'),row:Math.floor(i/10),column:i%10,kind:i%10<8?'compute':i%10===8?'fabric':'storage'}));
+const make=(power=buildFloor100PowerModel(racks),faultOpts={},opts={},hydraulicOpts={})=>{
+ const water=buildFloor100WaterBalance(power),hydraulic=buildFloor100HydraulicPlan(water,hydraulicOpts);
+ return buildFloor100HydronicNetwork(water,hydraulic,buildFloor100CoolantFault(water,faultOpts),opts);
+};
+const baseline=make();
+assert.equal(baseline.rows.length,10);
+assert.equal(baseline.assumptions.notRealCDUPumps,true);
+assert.ok(baseline.modeledFlowLpm>0);
+assert.ok(baseline.branchHeadKPa>0&&baseline.mainHeadKPa>0&&baseline.pumpHeadKPa>0);
+assert.ok(Math.abs(baseline.branchHeadKPa+baseline.mainHeadKPa-baseline.pumpHeadKPa)<.05);
+assert.ok(Math.abs(baseline.rows.reduce((a,r)=>a+r.modeledLpm,0)-baseline.modeledFlowLpm)<.08);
+assert.ok(baseline.rows.every(r=>r.modeledLpm>0&&!r.blocked&&Math.abs(r.branchDropKPa-baseline.branchHeadKPa)<.06));
+const slow=make(undefined,{}, {pumpSpeedPercent:60});
+const medium=make(undefined,{}, {pumpSpeedPercent:80});
+assert.ok(slow.modeledFlowLpm<medium.modeledFlowLpm&&medium.modeledFlowLpm<baseline.modeledFlowLpm);
+const lowHead=make(undefined,{}, {shutoffHeadKPa:45});
+const highHead=make(undefined,{}, {shutoffHeadKPa:70});
+assert.ok(lowHead.modeledFlowLpm<baseline.modeledFlowLpm&&highHead.modeledFlowLpm>baseline.modeledFlowLpm);
+const lowValve=make(undefined,{}, {valveDropAtDesignKPa:5});
+const highValve=make(undefined,{}, {valveDropAtDesignKPa:20});
+assert.ok(lowValve.modeledFlowLpm>highValve.modeledFlowLpm);
+const lowHX=make(undefined,{}, {heatExchangerDropAtDesignKPa:10});
+const highHX=make(undefined,{}, {heatExchangerDropAtDesignKPa:25});
+assert.ok(lowHX.modeledFlowLpm>highHX.modeledFlowLpm);
+const big=make(undefined,{}, {headerDiameterMM:500});
+const small=make(undefined,{}, {headerDiameterMM:300});
+assert.ok(big.modeledFlowLpm>small.modeledFlowLpm);
+const narrow=make(undefined,{}, {}, {diameterMM:125});
+const wide=make(undefined,{}, {}, {diameterMM:200});
+assert.ok(narrow.modeledFlowLpm<wide.modeledFlowLpm);
+const isolated=make(undefined,{isolatedRow:1});
+assert.equal(isolated.rows[0].modeledLpm,0);assert.ok(isolated.rows.slice(1).every(r=>r.modeledLpm>0));
+assert.ok(isolated.modeledFlowLpm<baseline.modeledFlowLpm);
+assert.ok(isolated.rows[1].modeledLpm>=baseline.rows[1].modeledLpm);
+assert.ok(isolated.isolatedDemandLpm>1200);
+const cdu=make(undefined,{failedCdu:2});
+assert.deepEqual(cdu.rows.filter(r=>r.blocked).map(r=>r.row),[2,3]);
+assert.equal(cdu.rows[1].modeledLpm,0);assert.equal(cdu.rows[2].modeledLpm,0);
+const overlapping=make(undefined,{failedCdu:2,isolatedRow:2});
+assert.equal(overlapping.isolatedDemandLpm,cdu.isolatedDemandLpm);
+const zeroPower=buildFloor100PowerModel(racks,100,1.2,Object.fromEntries(racks.map(r=>[r.id,0])));
+const zero=make(zeroPower);
+assert.equal(zero.modeledFlowLpm,0);assert.equal(zero.pumpHeadKPa,zero.pumpShutoffHeadKPa);
+assert.equal(zero.branchHeadKPa,zero.pumpShutoffHeadKPa);
+assert.equal(zero.balanceResidualKPa,0);
+assert.ok(zero.rows.every(r=>r.modeledLpm===0));
+const lowerDemand=make(buildFloor100PowerModel(racks,60));
+assert.ok(lowerDemand.demandLpm<baseline.demandLpm);
+assert.ok(lowerDemand.modeledFlowLpm>=0&&Number.isFinite(lowerDemand.modeledFlowLpm));
+for(const opts of [{pumpSpeedPercent:75},{shutoffHeadKPa:100},{valveDropAtDesignKPa:-1},{headerDiameterMM:420},{heatExchangerDropAtDesignKPa:0}])
+ assert.throws(()=>make(undefined,{},opts),RangeError);
+const water=buildFloor100WaterBalance(buildFloor100PowerModel(racks)),hyd=buildFloor100HydraulicPlan(water),fault=buildFloor100CoolantFault(water);
+assert.throws(()=>buildFloor100HydronicNetwork(null,hyd,fault),RangeError);
+assert.throws(()=>buildFloor100HydronicNetwork(water,null,fault),RangeError);
+assert.throws(()=>buildFloor100HydronicNetwork(water,hyd,null),RangeError);
+assert.match(baseline.disclaimer,/NOT the physical eight-CDU/);
+console.log(JSON.stringify({status:'PASS',branches:baseline.rows.length,
+ designLpm:baseline.demandLpm,solvedLpm:baseline.modeledFlowLpm,
+ headKPa:baseline.pumpHeadKPa,mainKPa:baseline.mainHeadKPa,
+ residual:baseline.balanceResidualKPa,notOEM:true}));
