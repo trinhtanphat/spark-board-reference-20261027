@@ -624,3 +624,22 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-cdu-banks-panel>small{color:#b6d2cd;font:500 9px/1.6 var(--mono)}
 @media(max-width:800px){.floor100-cdu-banks-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.floor100-cdu-banks-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.floor100-cdu-banks-metrics{grid-template-columns:1fr}.floor100-cdu-banks-grid{grid-template-columns:1fr}}
+
+/* Deliberately schematic thermal-transient curves; never telemetry or safety limits. */
+.floor100-transient-panel{display:flex;flex-direction:column;gap:12px;margin:15px 0;padding:15px;border:1px solid #7da0b2;border-radius:10px;background:linear-gradient(125deg,#193945,#34414d);color:#e2f9ef}
+.floor100-transient-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:7px;font:700 10px/1.5 var(--mono)}
+.floor100-transient-head strong{color:#d3f4fa}.floor100-transient-head span{font-size:9px;color:#bcd3d7}
+.floor100-transient-controls{display:grid;grid-template-columns:minmax(155px,1fr) minmax(155px,1fr);gap:8px;align-items:center}
+.floor100-transient-controls label{font:700 9px/1.5 var(--mono);color:#cee5e4}
+.floor100-transient-controls select{min-width:0;padding:8px;min-height:34px;border:1px solid #80a5ac;background:#204855;color:#eefff8;border-radius:6px;font:700 10px/1.4 var(--mono)}
+.floor100-transient-controls select:focus-visible{outline:2px solid #fce9a4;outline-offset:2px}
+.floor100-transient-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.floor100-transient-metrics>div{background:#193c49;border:1px solid #5d8089;border-radius:7px;min-width:0;padding:10px;display:flex;flex-direction:column;gap:6px}
+.floor100-transient-metrics small{font:700 9px/1.4 var(--mono);color:#c9d7df}
+.floor100-transient-metrics strong{font:800 clamp(12px,1.4vw,17px)/1.4 var(--mono);color:#e6fdfa;overflow-wrap:anywhere}
+#floor100TransientStatus,#floor100TransientSelected{display:block;padding:8px;border-radius:6px;background:#1c4b55;border:1px solid #658a93;color:#e7fcf5;font:700 10px/1.5 var(--mono)}
+.floor100-transient-graph{width:100%;overflow:hidden;background:#142d3b;border:1px solid #5b8396;border-radius:6px;padding:8px}
+.floor100-transient-graph svg{display:block;width:100%;height:auto;min-height:130px}
+.floor100-transient-panel>small{color:#bed6da;font:500 9px/1.6 var(--mono)}
+@media(max-width:780px){.floor100-transient-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.floor100-transient-controls,.floor100-transient-metrics{grid-template-columns:1fr}}

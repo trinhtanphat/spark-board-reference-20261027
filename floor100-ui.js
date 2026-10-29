@@ -38,6 +38,8 @@
  const networkValve=$("floor100NetworkValve"),networkHX=$("floor100NetworkHX");
  const networkHeader=$("floor100NetworkHeader");
  const cduCards=$("floor100CduBanks");
+ const transientIncident=$("floor100TransientIncident"),transientRecovery=$("floor100TransientRecovery");
+ const transientMass=$("floor100TransientMass");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -55,6 +57,62 @@
   const thermal=state()?.getFloor100ThermalPlan?.();
   const water=state()?.getFloor100WaterBalance?.();
   const hydraulic=state()?.getFloor100HydraulicPlan?.();
+  const transient=state()?.getFloor100ThermalTransient?.();
+  if(transient){
+   const t=transient,a=t.assumptions;
+   transientIncident.value=String(a.incidentMinutes);
+   transientRecovery.value=String(a.recoveryMinutes);
+   transientMass.value=String(a.equivalentCapacityKJPerK);
+   $("floor100TransientPeak").textContent=kw.format(t.maxProxyC)+" °C PROXY";
+   $("floor100TransientRise").textContent="+"+kw.format(t.peakRiseC)+" K";
+   $("floor100TransientEnd").textContent=kw.format(t.recoveryEndMaxProxyC)+" °C PROXY";
+   $("floor100TransientAffected").textContent=t.affectedRows.length?
+    ("ROWS "+t.affectedRows.join(", ")):("NONE / BASELINE");
+   $("floor100TransientStatus").textContent=t.noInputChange?
+    "NO CHANGED PUMP OR VALVE SCENARIO · FLAT 30°C PROXY THROUGH THE TIMELINE":
+    ("DEMO EVENT "+t.incidentStartMinute+"–"+t.incidentEndMinute+" MIN · RECOVER UNTIL "+
+     t.totalMinutes+" MIN · NO MEASURED TEMPERATURE");
+   const svg=$("floor100TransientChart");
+   const ns="http://www.w3.org/2000/svg";
+   svg.replaceChildren();
+   const make=(tag,attr={},text=null)=>{
+    const el=document.createElementNS(ns,tag);
+    for(const [k,v] of Object.entries(attr))el.setAttribute(k,String(v));
+    if(text!==null)el.textContent=text;
+    svg.appendChild(el);return el;
+   };
+   const all=t.timeline.flatMap(p=>p.rowProxyC),minC=Math.floor(Math.min(29.5,...all)-.6),
+    maxC=Math.ceil(Math.max(30.5,...all)+.6);
+   const xp=m=>56+(m/t.totalMinutes)*860;
+   const yp=c=>186-((c-minC)/(maxC-minC))*151;
+   for(let j=0;j<=4;j++){
+    const c=minC+(maxC-minC)*j/4,y=yp(c);
+    make("line",{x1:54,y1:y,x2:920,y2:y,stroke:"#547b82","stroke-width":.6});
+    make("text",{x:9,y:y+4,fill:"#c8e5df","font-size":12},kw.format(c)+"°");
+   }
+   const from=xp(t.incidentStartMinute),to=xp(t.incidentEndMinute);
+   make("rect",{x:from,y:16,width:to-from,height:171,fill:"#794b50","fill-opacity":.24});
+   for(const [min,label] of [[0,"0"],[t.incidentStartMinute,"INCIDENT"],[t.incidentEndMinute,"RECOVERY"],[t.totalMinutes,t.totalMinutes+" min"]]){
+    make("line",{x1:xp(min),y1:15,x2:xp(min),y2:189,stroke:"#b9e2ce","stroke-width":.8,"stroke-dasharray":"4 5"});
+    make("text",{x:xp(min),y:207,fill:"#cae6dc","font-size":10,"text-anchor":min===0?"start":min===t.totalMinutes?"end":"middle"},label);
+   }
+   const lines=(data)=>data.map((p)=>xp(p.minute).toFixed(2)+","+yp(p.value).toFixed(2)).join(" ");
+   for(let row=0;row<10;row++){
+    const pts=lines(t.timeline.map(p=>({minute:p.minute,value:p.rowProxyC[row]})));
+    make("polyline",{points:pts,fill:"none",stroke:"#8dcbca","stroke-opacity":.38,
+     "stroke-width":1.1,class:"floor100-transient-curve","data-row":row+1});
+   }
+   const selectedEntry=modeledPower?.entries.find(p=>p.id===focus);
+   const selectedRow=selectedEntry?.row??(t.affectedRows.length?t.affectedRows[0]-1:0);
+   make("polyline",{points:lines(t.timeline.map(p=>({minute:p.minute,value:p.rowProxyC[selectedRow]}))),
+    fill:"none",stroke:"#f5e398","stroke-width":2.5,class:"floor100-transient-selected"});
+   make("polyline",{points:lines(t.timeline.map(p=>({minute:p.minute,value:p.maxProxyC}))),
+    fill:"none",stroke:"#ff998b","stroke-width":2.6,class:"floor100-transient-peak"});
+   $("floor100TransientSelected").textContent="ROW "+(selectedRow+1)+" · CDU "+
+    t.rows[selectedRow].cdu+" · END "+kw.format(t.timeline.at(-1).rowProxyC[selectedRow])+
+    "°C PROXY · PEAK "+kw.format(Math.max(...t.timeline.map(p=>p.rowProxyC[selectedRow])))+
+    "°C PROXY · YELLOW SELECTED / RED MAX / GREY OTHER ROWS";
+  }
   const cduPlan=state()?.getFloor100CduBankPlan?.();
   if(cduPlan){
    $("floor100CduSumFlow").textContent=kw.format(cduPlan.modeledFlowLpm)+" L/min";
@@ -506,6 +564,13 @@
  waterDeltaSelect.addEventListener("change",()=>{
   state()?.setFloor100WaterDeltaTK?.(Number(waterDeltaSelect.value));render();
  });
+ for(const el of [transientIncident,transientRecovery,transientMass])el.addEventListener("change",()=>{
+  state()?.setFloor100ThermalTransientOptions?.({
+   incidentMinutes:Number(transientIncident.value),
+   recoveryMinutes:Number(transientRecovery.value),
+   equivalentCapacityKJPerK:Number(transientMass.value)
+  });render();
+ });
  for(const el of [pumpSpeed,pumpHead,networkValve,networkHX,networkHeader]){
   el.addEventListener("change",()=>{
    state()?.setFloor100HydronicAssumptions?.({
@@ -542,6 +607,7 @@
    hypotheticalRowHydraulicSensitivity:state()?.getFloor100HydraulicPlan?.()||null,
    hypotheticalParallelPumpOperatingPoint:state()?.getFloor100HydronicNetwork?.()||null,
    hypotheticalEightIndependentCduBanks:state()?.getFloor100CduBankPlan?.()||null,
+   hypotheticalThermalTransient:state()?.getFloor100ThermalTransient?.()||null,
    hypotheticalCoolantIsolation:state()?.getFloor100CoolantFault?.()||null,
    visualCoolantPipeAudit:state()?.getFloor100CoolantTopology?.()?.audit||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
