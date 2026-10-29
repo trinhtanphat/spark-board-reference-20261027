@@ -6,6 +6,7 @@
 import {buildFloor100Impact} from './floor100-impact.mjs';
 import {buildFloor100PowerModel,validateFloor100RackWatts,FLOOR100_RACK_BASELINE_MAX_W} from './floor100-power.mjs';
 import {buildFloor100ThermalPlan} from './floor100-thermal.mjs';
+import {buildFloor100WaterBalance,FLOOR100_WATER_DELTA_T_PRESETS_K} from './floor100-liquid-loop.mjs';
 import {buildFloor100CoolingRoutes,FLOOR100_COOLING_TRACE_MODES} from './floor100-cooling-path.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES,FLOOR100_VISUAL_POWER_GEOMETRY} from './floor100-power-path.mjs';
@@ -313,11 +314,13 @@ export function createFloor100Concept(THREE){
  let feedCapacityKW=6000,feedAllocation=buildFloor100FeedAllocation(powerModel,"normal",feedCapacityKW);
  let thermalCapturePercent=90,thermalCduCapacityKW=1200,thermalAvailableCDUs=8;
  let thermalPlan=buildFloor100ThermalPlan(powerModel);
+ let waterDeltaTK=10,waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
  function refreshThermalPlan(){
   thermalPlan=buildFloor100ThermalPlan(powerModel,{
    liquidCapturePercent:thermalCapturePercent,cduCapacityKW:thermalCduCapacityKW,
    availableCDUs:thermalAvailableCDUs
   });
+  waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
   for(let i=0;i<10;i++){
    const row=thermalPlan.rows[i],util=row.nominalUtilizationPercent;
    const length=Math.max(.08,Math.min(2.4,(util??200)/100*1.35));
@@ -339,6 +342,12 @@ export function createFloor100Concept(THREE){
    thermalAvailableCDUs=availableCDUs;
    refreshThermalPlan();return true;
   }catch{return false}
+ }
+ function setWaterDeltaTK(value){
+  if(!FLOOR100_WATER_DELTA_T_PRESETS_K.includes(value))return false;
+  waterDeltaTK=value;
+  waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
+  return true;
  }
  function refreshFeedAllocation(){
   feedAllocation=buildFloor100FeedAllocation(powerModel,powerScenario,feedCapacityKW);
@@ -537,6 +546,8 @@ export function createFloor100Concept(THREE){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
    powerScenario,coolingCircuit,
    coolingAvailableCDUs:thermalAvailableCDUs,coolingCapturePercent:thermalCapturePercent,
+   waterDeltaTK,waterFlowTargetLpm:waterBalance.designFlowLpm,
+   waterComputeHeatKW:waterBalance.computeLiquidKW,waterUnmappedHeatKW:waterBalance.excludedLiquidKW,
    coolingRowMeterInstances:coolingRowMeters.count,
    coolingTraceMode,coolingTraceSegments:coolingTraceGroup.children.length,
    coolingTraceRack:activeCoolingPaths[0]?.rackId??null,
@@ -593,6 +604,7 @@ export function createFloor100Concept(THREE){
  return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,
   setPowerLoadPercent,setPowerHeatmap,setPowerPathMode,setFeedCapacityKW,
   setThermalAssumptions,getThermalPlan:()=>thermalPlan,
+  setWaterDeltaTK,getWaterBalance:()=>waterBalance,
   setCoolingTraceMode,getCoolingPaths:()=>activeCoolingPaths,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),
