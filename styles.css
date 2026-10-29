@@ -460,3 +460,19 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-feed-planner>small{color:#adcbc5;font:500 9px/1.6 var(--mono)}
 @media(max-width:820px){.floor100-feed-row-allocation{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.floor100-feed-meters{grid-template-columns:1fr}.floor100-feed-head{align-items:stretch;flex-direction:column}}
+
+/* Per-rack baseline watt editor: entirely user-defined browser-only demand model. */
+.floor100-rack-watt-editor{display:flex;flex-direction:column;gap:8px;margin:8px 0;padding:12px;border:1px solid #8fa99f;border-radius:7px;background:#20383b}
+.floor100-rack-watt-editor>label,.floor100-rack-watt-import>label{font:800 10px/1.4 var(--mono);color:#eaddab}
+.floor100-rack-watt-controls{display:grid;grid-template-columns:minmax(130px,2fr) repeat(3,minmax(82px,1fr));gap:6px}
+.floor100-rack-watt-controls input,.floor100-rack-watt-controls button{min-width:0;min-height:36px;border:1px solid #6f9a8f;background:#1d4145;color:#eaf7e6;border-radius:5px;padding:8px;font:700 10px/1.45 var(--mono)}
+.floor100-rack-watt-controls button{cursor:pointer;background:#3d594c}
+.floor100-rack-watt-controls button:disabled,.floor100-rack-watt-controls input:disabled{opacity:.5;cursor:not-allowed}
+.floor100-rack-watt-controls :focus-visible,.floor100-rack-watt-import input:focus-visible{outline:2px solid #f9dba1;outline-offset:2px}
+#floor100RackWattStatus{display:block;padding:6px 8px;border:1px solid #628d83;border-radius:5px;color:#cfe8d9;font:600 10px/1.5 var(--mono)}
+#floor100RackWattStatus[data-status="error"]{border-color:#d78879;color:#ffd1c4}
+.floor100-rack-watt-import{display:flex;flex-direction:column;gap:5px}
+.floor100-rack-watt-import input{max-width:100%;color:#daebe1;font:600 10px/1.5 var(--mono)}
+.floor100-rack-watt-editor small{color:#b2cfc5;font:500 9px/1.5 var(--mono)}
+@media(max-width:750px){.floor100-rack-watt-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.floor100-rack-watt-controls{grid-template-columns:1fr}}

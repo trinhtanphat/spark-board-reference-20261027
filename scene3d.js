@@ -623,6 +623,22 @@ function init(){
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
  getFloor100RouteImpact(){return floor100Scene?.getRouteImpact()||null},
  getFloor100PowerModel(){return floor100Scene?.getPowerModel()||null},
+ getFloor100RackBaselineOverrides(){return floor100Scene?.getRackBaselineOverrides()||{}},
+ setFloor100RackBaselineWatts(id,watts){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setRackBaselineWatts(id,watts)===true;
+  if(ok)needsRender=true;return ok;
+ },
+ resetFloor100RackBaselineWatts(id=null){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.resetRackBaselineWatts(id)===true;
+  if(ok)needsRender=true;return ok;
+ },
+ replaceFloor100RackBaselineOverrides(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.replaceRackBaselineOverrides(value)===true;
+  if(ok)needsRender=true;return ok;
+ },
  getFloor100FeedAllocation(){return floor100Scene?.getFeedAllocation()||null},
  setFloor100FeedCapacityKW(value){
   if(modelMode!=='floor100')return false;

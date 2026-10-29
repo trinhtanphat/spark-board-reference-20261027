@@ -8,6 +8,24 @@
  const hardwareSelect=$("floor100HardwarePart"),hardwareResult=$("floor100HardwareResult");
  const loadSelect=$("floor100LoadPercent"),heatButton=$("floor100Heatmap");
  const traceSelect=$("floor100TraceFeed"),traceStatus=$("floor100TraceStatus"),traceSteps=$("floor100TraceSteps");
+ const wattInput=$("floor100RackBaselineW"),wattStatus=$("floor100RackWattStatus");
+ const wattFile=$("floor100WattPresetFile");
+ const wattStoreKey="SPARK_FLOOR100_DEMO_RACK_WATTS_V1";
+ let wattStoreRestored=false,wattMessage="";
+ function saveWattPresets(){
+  try{localStorage.setItem(wattStoreKey,JSON.stringify(state()?.getFloor100RackBaselineOverrides?.()||{}));return true}
+  catch{return false}
+ }
+ function restoreWattPresetsOnce(){
+  if(wattStoreRestored)return;
+  wattStoreRestored=true;
+  try{
+   const stored=localStorage.getItem(wattStoreKey);
+   if(stored!==null&&!state()?.replaceFloor100RackBaselineOverrides?.(JSON.parse(stored))){
+    localStorage.removeItem(wattStoreKey);wattMessage="Invalid saved preset ignored.";
+   }
+  }catch{wattMessage="Browser storage unavailable or stored preset invalid."}
+ }
  const capSelect=$("floor100FeedCapacity"),feedRowGrid=$("floor100FeedRowAllocation");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
@@ -20,6 +38,7 @@
  function render(){
   const d=state()?.getFloor100Diagnostics?.();
   if(!d)return;
+  restoreWattPresetsOnce();
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
   const plan=state()?.getFloor100FeedAllocation?.();
@@ -146,6 +165,13 @@
    }
   }
   const currentPower=powerByRack.get(focus);
+  wattInput.disabled=!currentPower;
+  $("floor100ApplyRackWatts").disabled=!currentPower;
+  $("floor100ResetRackWatts").disabled=!currentPower;
+  $("floor100ResetAllRackWatts").disabled=!modeledPower?.customizedRacks;
+  wattInput.value=currentPower?String(currentPower.baselineW):"";
+  wattStatus.textContent=(modeledPower?.customizedRacks||0)+" CUSTOM RACK LOADS / BROWSER-ONLY"+(wattMessage?" · "+wattMessage:"");
+  wattStatus.dataset.status=wattMessage.startsWith("REJECTED")?"error":"normal";
   $("floor100RackPower").textContent=currentPower?
    (focus+" · "+showKW(currentPower.estimatedKW)+" / "+showW(currentPower.estimatedW)+
     " EST. IT · PEAK "+showKW(currentPower.peakKW)+" · A+B PATHS DRAWN, NOT VALIDATED"):
@@ -194,6 +220,42 @@
    map.appendChild(b);
   }
  }
+ $("floor100ApplyRackWatts").addEventListener("click",()=>{
+  const rackId=state()?.getFloor100Diagnostics?.()?.selected;
+  const raw=wattInput.value.trim(),w=Number(raw);
+  if(!rackId||raw===""||!/^[0-9]+$/.test(raw)||!state()?.setFloor100RackBaselineWatts?.(rackId,w)){
+   wattMessage="REJECTED: use an integer from 0 to 250,000 W in 100 W steps.";render();return;
+  }
+  const saved=saveWattPresets();
+  wattMessage="Saved "+rackId+" baseline "+showW(w)+(saved?"":"; browser storage unavailable");
+  render();
+ });
+ $("floor100ResetRackWatts").addEventListener("click",()=>{
+  const rackId=state()?.getFloor100Diagnostics?.()?.selected;
+  if(!rackId||!state()?.resetFloor100RackBaselineWatts?.(rackId))return;
+  wattMessage="Reset "+rackId+" to default DEMO baseline";saveWattPresets();render();
+ });
+ $("floor100ResetAllRackWatts").addEventListener("click",()=>{
+  if(!state()?.resetFloor100RackBaselineWatts?.(null))return;
+  wattMessage="All 100 rack baseline overrides cleared";saveWattPresets();render();
+ });
+ wattFile.addEventListener("change",async()=>{
+  const file=wattFile.files?.[0];
+  if(!file)return;
+  try{
+   if(file.size>65536)throw Error("JSON file exceeds 64 KB");
+   const data=JSON.parse(await file.text());
+   if(!data||data.format!=="SPARK-FLOOR100-POWER-ESTIMATE-1"||
+      data.source!=="BROWSER_ONLY_DEMO_ASSUMPTIONS"||
+      !data.customOverrides||typeof data.customOverrides!=="object")
+    throw Error("Not a SPARK demo power-estimate JSON");
+   if(!state()?.replaceFloor100RackBaselineOverrides?.(data.customOverrides))
+    throw Error("Invalid rack identifier or baseline watts");
+   wattMessage="Imported validated "+Object.keys(data.customOverrides).length+" rack baselines";
+   saveWattPresets();
+  }catch(e){wattMessage="REJECTED: "+String(e?.message||e).slice(0,140)}
+  wattFile.value="";render();
+ });
  capSelect.addEventListener("change",()=>{
   state()?.setFloor100FeedCapacityKW?.(Number(capSelect.value));render();
  });
