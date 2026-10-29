@@ -623,6 +623,12 @@ function init(){
  getFloor100Diagnostics(){return floor100Scene?.diagnostics()||null},
  getFloor100RouteImpact(){return floor100Scene?.getRouteImpact()||null},
  getFloor100PowerModel(){return floor100Scene?.getPowerModel()||null},
+ getFloor100ThermalPlan(){return floor100Scene?.getThermalPlan()||null},
+ setFloor100ThermalAssumptions(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setThermalAssumptions(value)===true;
+  if(ok)needsRender=true;return ok;
+ },
  getFloor100RackBaselineOverrides(){return floor100Scene?.getRackBaselineOverrides()||{}},
  setFloor100RackBaselineWatts(id,watts){
   if(modelMode!=='floor100')return false;

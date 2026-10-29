@@ -5,6 +5,7 @@
  */
 import {buildFloor100Impact} from './floor100-impact.mjs';
 import {buildFloor100PowerModel,validateFloor100RackWatts,FLOOR100_RACK_BASELINE_MAX_W} from './floor100-power.mjs';
+import {buildFloor100ThermalPlan} from './floor100-thermal.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
@@ -249,6 +250,13 @@ export function createFloor100Concept(THREE){
  const rowFeedMeters=new THREE.InstancedMesh(boxGeom,rowLoadMaterial,20);
  rowFeedMeters.name="FLOOR100_DEMO_ROW_AB_LOAD_GAUGES";
  rowFeedMeters.frustumCulled=false;zones.power.add(rowFeedMeters);
+ // Ten compact visible row-end cooling budget strips (one draw call).
+ const coolingMeterMat=new THREE.MeshBasicMaterial({color:"#ffffff",toneMapped:false});
+ const coolingRowMeters=new THREE.InstancedMesh(boxGeom,coolingMeterMat,10);
+ coolingRowMeters.name="FLOOR100_THERMAL_COOLING_ROW_BUDGET";
+ coolingRowMeters.frustumCulled=false;zones.cooling.add(coolingRowMeters);
+ const coolingColors={safe:new THREE.Color("#71dddc"),high:new THREE.Color("#eebf78"),
+  over:new THREE.Color("#f37a6a"),idle:new THREE.Color("#566a70")};
  const meterColors={safe:new THREE.Color("#8fe2bb"),
   warning:new THREE.Color("#f1bf72"),over:new THREE.Color("#ef786a"),
   none:new THREE.Color("#52636b")};
@@ -261,6 +269,35 @@ export function createFloor100Concept(THREE){
  let rackBaselineOverrides=Object.create(null);
  let loadPercent=100,powerHeatmap=false,powerModel=buildFloor100PowerModel(racks,loadPercent);
  let feedCapacityKW=6000,feedAllocation=buildFloor100FeedAllocation(powerModel,"normal",feedCapacityKW);
+ let thermalCapturePercent=90,thermalCduCapacityKW=1200,thermalAvailableCDUs=8;
+ let thermalPlan=buildFloor100ThermalPlan(powerModel);
+ function refreshThermalPlan(){
+  thermalPlan=buildFloor100ThermalPlan(powerModel,{
+   liquidCapturePercent:thermalCapturePercent,cduCapacityKW:thermalCduCapacityKW,
+   availableCDUs:thermalAvailableCDUs
+  });
+  for(let i=0;i<10;i++){
+   const row=thermalPlan.rows[i],util=row.nominalUtilizationPercent;
+   const length=Math.max(.08,Math.min(2.4,(util??200)/100*1.35));
+   o.position.set(xR(0)-2.15,7.82,zR(i));
+   o.rotation.set(0,0,0);o.scale.set(.22,.15,length);
+   o.updateMatrix();coolingRowMeters.setMatrixAt(i,o.matrix);
+   coolingRowMeters.setColorAt(i,util===null||util>100?coolingColors.over:
+    util>=85?coolingColors.high:util>0?coolingColors.safe:coolingColors.idle);
+  }
+  coolingRowMeters.instanceMatrix.needsUpdate=true;
+  coolingRowMeters.instanceColor.needsUpdate=true;
+ }
+ function setThermalAssumptions({liquidCapturePercent=thermalCapturePercent,
+  cduCapacityKW=thermalCduCapacityKW,availableCDUs=thermalAvailableCDUs}={}){
+  try{
+   buildFloor100ThermalPlan(powerModel,{liquidCapturePercent,cduCapacityKW,availableCDUs});
+   thermalCapturePercent=liquidCapturePercent;
+   thermalCduCapacityKW=cduCapacityKW;
+   thermalAvailableCDUs=availableCDUs;
+   refreshThermalPlan();return true;
+  }catch{return false}
+ }
  function refreshFeedAllocation(){
   feedAllocation=buildFloor100FeedAllocation(powerModel,powerScenario,feedCapacityKW);
   for(let i=0;i<10;i++)for(let j=0;j<2;j++){
@@ -283,6 +320,7 @@ export function createFloor100Concept(THREE){
  function refreshPowerEstimate(){
   powerModel=buildFloor100PowerModel(racks,loadPercent,1.20,rackBaselineOverrides);
   refreshFeedAllocation();
+  refreshThermalPlan();
   powerModel.entries.forEach((r,i)=>heatIndicators.setColorAt(i,powerHeatColors[r.heatBand]));
   heatIndicators.instanceColor.needsUpdate=true;heatIndicators.visible=powerHeatmap;
  }
@@ -423,6 +461,9 @@ export function createFloor100Concept(THREE){
  function diagnostics(){
   return {racks:racks.length,computeRacks:racks.filter(r=>r.kind==="compute").length,
    powerScenario,coolingCircuit,
+   coolingAvailableCDUs:thermalAvailableCDUs,coolingCapturePercent:thermalCapturePercent,
+   coolingRowMeterInstances:coolingRowMeters.count,
+   coolingDemandKW:thermalPlan.liquidKW,coolingBudgetKW:thermalPlan.capacityKW,
    feedCapacityKW,feedAllocationStatus:feedAllocation.status,
    feedAPlanningKW:feedAllocation.aKW,feedBPlanningKW:feedAllocation.bKW,
    feedUnassignedPlanningKW:feedAllocation.unassignedKW,
@@ -471,6 +512,7 @@ export function createFloor100Concept(THREE){
  refreshPowerEstimate();
  return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,
   setPowerLoadPercent,setPowerHeatmap,setPowerPathMode,setFeedCapacityKW,
+  setThermalAssumptions,getThermalPlan:()=>thermalPlan,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),
   getFeedAllocation:()=>feedAllocation,getPowerPaths:()=>activePowerPaths,

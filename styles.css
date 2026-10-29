@@ -476,3 +476,28 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-rack-watt-editor small{color:#b2cfc5;font:500 9px/1.5 var(--mono)}
 @media(max-width:750px){.floor100-rack-watt-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.floor100-rack-watt-controls{grid-template-columns:1fr}}
+
+/* AI Factory 100: browser-only cooling/thermal planning. No measured temps or flows. */
+.floor100-thermal-planner{display:flex;flex-direction:column;gap:10px;padding:13px;margin:11px 0;border:1px solid #50989c;border-radius:9px;background:linear-gradient(115deg,#12313a,#1b4444)}
+.floor100-thermal-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center}
+.floor100-thermal-head strong{font:800 11px/1.45 var(--mono);color:#adefef}
+.floor100-thermal-head span{font:700 9px/1.45 var(--mono);color:#b7d5c9}
+.floor100-thermal-controls{display:grid;grid-template-columns:auto minmax(110px,1fr);gap:7px 10px;align-items:center}
+.floor100-thermal-controls label{color:#c5e5df;font:700 9px/1.35 var(--mono)}
+.floor100-thermal-controls select{width:100%;min-width:0;min-height:32px;background:#194650;border:1px solid #6caaab;color:#e5fafa;border-radius:5px;padding:6px;font:700 10px/1.45 var(--mono)}
+.floor100-thermal-controls select:focus-visible,.floor100-thermal-row:focus-visible{outline:2px solid #ffdda0;outline-offset:2px}
+.floor100-thermal-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.floor100-thermal-metrics>div{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px;background:#112d35;border:1px solid #53868d;border-radius:5px}
+.floor100-thermal-metrics small{color:#9ecbd0;font:700 9px/1.4 var(--mono)}
+.floor100-thermal-metrics strong{font:800 clamp(14px,1.5vw,21px)/1.25 var(--mono);color:#cef2e9}
+.floor100-thermal-track{width:100%;height:12px;background:#182d35;border:1px solid #59979b;border-radius:9px;overflow:hidden}
+#floor100CoolingBudgetBar{height:100%;display:block;background:#67cccf;transition:width .16s}
+#floor100CoolingPlanStatus{display:block;min-height:32px;padding:8px;background:#173940;border:1px solid #5e9d96;border-radius:5px;color:#bde6db;font:700 10px/1.45 var(--mono)}
+#floor100CoolingPlanStatus[data-status="over"]{border-color:#dc846e;background:#503833;color:#ffe0cb}
+.floor100-thermal-rows{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.floor100-thermal-row{cursor:pointer;padding:7px 5px;text-align:left;border:1px solid #549e9e;background:#235359;color:#d2f5f1;border-radius:5px;font:700 9px/1.5 var(--mono)}
+.floor100-thermal-row[data-status="over"]{border-color:#d87e71;background:#513d3c;color:#ffe1d2}
+#floor100SelectedHeat{font:700 10px/1.45 var(--mono);color:#d3f2ed}
+.floor100-thermal-planner>small{font:500 9px/1.55 var(--mono);color:#a9d0ce}
+@media(max-width:860px){.floor100-thermal-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.floor100-thermal-rows{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.floor100-thermal-controls{grid-template-columns:1fr}}

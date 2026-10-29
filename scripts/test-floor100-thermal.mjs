@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import {buildFloor100PowerModel} from '../floor100-power.mjs';
+import {buildFloor100ThermalPlan,FLOOR100_LIQUID_CAPTURE_PRESETS,FLOOR100_CDU_CAPACITY_PRESETS_KW} from '../floor100-thermal.mjs';
+const racks=Array.from({length:100},(_,i)=>({id:'R'+String(i+1).padStart(3,'0'),row:Math.floor(i/10),column:i%10,kind:i%10<8?'compute':i%10===8?'fabric':'storage'}));
+const watts=buildFloor100PowerModel(racks),before=JSON.stringify(watts);
+const base=buildFloor100ThermalPlan(watts);
+assert.deepEqual(FLOOR100_LIQUID_CAPTURE_PRESETS,[80,90,95]);
+assert.deepEqual(FLOOR100_CDU_CAPACITY_PRESETS_KW,[1200,1400,1600]);
+assert.equal(base.heatKW,10020);assert.equal(base.heatW,10020000);
+assert.equal(base.liquidKW,9018);assert.equal(base.airKW,1002);
+assert.equal(base.liquidW,9018000);assert.equal(base.airW,1002000);
+assert.equal(base.capacityKW,9600);assert.equal(base.excessKW,0);
+assert.equal(base.utilizationPercent,93.94);assert.equal(base.status,'WITHIN_DEMO_CAPACITY');
+assert.equal(base.rows.length,10);
+assert.ok(base.rows.every(x=>x.heatKW===1002&&x.liquidKW===901.8&&x.airKW===100.2&&x.nominalShareCapacityKW===960));
+const outage=buildFloor100ThermalPlan(watts,{availableCDUs:7});
+assert.equal(outage.status,'OVER_DEMO_CAPACITY');assert.equal(outage.capacityKW,8400);
+assert.equal(outage.excessKW,618);
+assert.ok(outage.rows.every(x=>x.nominalExcessKW===61.8));
+const zero=buildFloor100ThermalPlan(watts,{availableCDUs:0});
+assert.equal(zero.capacityKW,0);assert.equal(zero.excessKW,9018);
+assert.equal(zero.utilizationPercent,null);assert.equal(zero.status,'OVER_DEMO_CAPACITY');
+const capture80=buildFloor100ThermalPlan(watts,{liquidCapturePercent:80});
+assert.equal(capture80.liquidKW,8016);assert.equal(capture80.airKW,2004);
+const capture95=buildFloor100ThermalPlan(watts,{liquidCapturePercent:95});
+assert.equal(capture95.liquidKW,9519);assert.equal(capture95.airKW,501);
+const expanded=buildFloor100ThermalPlan(watts,{availableCDUs:7,cduCapacityKW:1400});
+assert.equal(expanded.capacityKW,9800);assert.equal(expanded.status,'WITHIN_DEMO_CAPACITY');
+const custom=buildFloor100PowerModel(racks,100,1.2,{R001:180000,R009:30000});
+const recomputed=buildFloor100ThermalPlan(custom);
+assert.equal(recomputed.heatKW,10092);
+assert.equal(recomputed.liquidKW,9082.8);
+assert.equal(recomputed.airKW,1009.2);
+assert.equal(recomputed.rows[0].heatKW,1074);
+assert.equal(recomputed.rows.slice(1).reduce((s,r)=>s+r.heatKW,0),9018);
+assert.equal(watts.totalKW,10020);
+assert.equal(JSON.stringify(watts),before);
+for(const bad of [
+ {liquidCapturePercent:70},{cduCapacityKW:1000},{availableCDUs:9},
+ {availableCDUs:-1},{availableCDUs:3.5},{availableCDUs:'7'}
+])assert.throws(()=>buildFloor100ThermalPlan(watts,bad),RangeError);
+assert.throws(()=>buildFloor100ThermalPlan(null),RangeError);
+assert.ok(base.disclaimer.includes('no actual coolant capacity'));
+console.log(JSON.stringify({status:'PASS',racks:100,heatKW:base.heatKW,liquidKW:base.liquidKW,airKW:base.airKW,capacityKW:base.capacityKW,oneCduOutageExcessKW:outage.excessKW,notMeasured:true}));
