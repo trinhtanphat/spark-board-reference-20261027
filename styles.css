@@ -602,3 +602,25 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-network-solver>small{font:500 9px/1.6 var(--mono);color:#b8d2d4}
 @media(max-width:800px){.floor100-network-solver-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.floor100-network-solver-rows{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.floor100-network-solver-controls{grid-template-columns:1fr}.floor100-network-solver-metrics{grid-template-columns:1fr}}
+
+
+/* Eight fictional independent CDU model cards; not equipment controls. */
+.floor100-cdu-banks-panel{margin:15px 0;padding:14px;border:1px solid #4d9f91;border-radius:10px;background:linear-gradient(120deg,#15333b,#244b49);color:#e5f8f0;display:flex;flex-direction:column;gap:11px}
+.floor100-cdu-banks-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font:700 10px/1.5 var(--mono)}
+.floor100-cdu-banks-head strong{color:#c2ffe7}.floor100-cdu-banks-head span{font-size:9px;color:#b0d6ca}
+.floor100-cdu-banks-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.floor100-cdu-banks-metrics>div{display:flex;flex-direction:column;gap:7px;min-width:0;border:1px solid #4e8580;border-radius:6px;padding:10px;background:#143c43}
+.floor100-cdu-banks-metrics small{font:700 9px/1.4 var(--mono);color:#c7e0d9}
+.floor100-cdu-banks-metrics strong{font:800 clamp(13px,1.5vw,18px)/1.4 var(--mono);overflow-wrap:anywhere}
+.floor100-cdu-banks-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.floor100-cdu-bank{border:1px solid #528f88;border-radius:7px;background:#173e42;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.floor100-cdu-bank[data-status="PUMP_OFF"]{border-color:#ae7976;background:#49373b}
+.floor100-cdu-bank>strong{font:800 12px/1.4 var(--mono);color:#c5ffdf}
+.floor100-cdu-bank select{min-width:0;max-width:100%;padding:8px;background:#235962;color:#edfff4;border:1px solid #83bdb2;border-radius:5px;font:700 10px/1.5 var(--mono)}
+.floor100-cdu-bank select:focus-visible{outline:2px solid #ffeb9e;outline-offset:2px}
+.floor100-cdu-bank output{font:700 11px/1.5 var(--mono);color:#dcffee}
+.floor100-cdu-bank small{font:500 9px/1.5 var(--mono);color:#b9d6d0}
+#floor100CduSelected{display:block;padding:10px;background:#184b49;border:1px solid #679e95;border-radius:6px;font:700 10px/1.5 var(--mono);color:#ecfff3}
+.floor100-cdu-banks-panel>small{color:#b6d2cd;font:500 9px/1.6 var(--mono)}
+@media(max-width:800px){.floor100-cdu-banks-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.floor100-cdu-banks-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.floor100-cdu-banks-metrics{grid-template-columns:1fr}.floor100-cdu-banks-grid{grid-template-columns:1fr}}

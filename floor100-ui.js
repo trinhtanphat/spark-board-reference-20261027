@@ -37,6 +37,7 @@
  const pumpSpeed=$("floor100PumpSpeed"),pumpHead=$("floor100PumpHead");
  const networkValve=$("floor100NetworkValve"),networkHX=$("floor100NetworkHX");
  const networkHeader=$("floor100NetworkHeader");
+ const cduCards=$("floor100CduBanks");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -54,6 +55,52 @@
   const thermal=state()?.getFloor100ThermalPlan?.();
   const water=state()?.getFloor100WaterBalance?.();
   const hydraulic=state()?.getFloor100HydraulicPlan?.();
+  const cduPlan=state()?.getFloor100CduBankPlan?.();
+  if(cduPlan){
+   $("floor100CduSumFlow").textContent=kw.format(cduPlan.modeledFlowLpm)+" L/min";
+   $("floor100CduDemand").textContent=kw.format(cduPlan.designTargetLpm)+" L/min";
+   $("floor100CduBlocked").textContent=kw.format(cduPlan.blockedDemandLpm)+" L/min";
+   $("floor100CduResidual").textContent=kw.format(cduPlan.maxPressureResidualKPa)+" kPa";
+   if(cduCards.children.length!==8){
+    cduCards.replaceChildren();
+    for(let i=0;i<8;i++){
+     const card=document.createElement("article");
+     card.className="floor100-cdu-bank";card.dataset.cdu=String(i+1);
+     const title=document.createElement("strong");title.textContent="CDU "+String(i+1);
+     const select=document.createElement("select");
+     select.setAttribute("aria-label","Hypothetical pump speed CDU "+(i+1));
+     select.className="floor100-cdu-bank-speed";
+     for(const val of [0,60,80,100]){
+      const opt=document.createElement("option");opt.value=String(val);
+      opt.textContent=val===0?"PUMP OFF":val+"% PUMP";
+      select.appendChild(opt);
+     }
+     select.addEventListener("change",()=>{
+      state()?.setFloor100CduPumpSpeed?.(i+1,Number(select.value));render();
+     });
+     const info=document.createElement("output");info.className="floor100-cdu-bank-flow";
+     const loss=document.createElement("small");loss.className="floor100-cdu-bank-loss";
+     card.append(title,select,info,loss);cduCards.appendChild(card);
+    }
+   }
+   for(const bank of cduPlan.banks){
+    const card=cduCards.children[bank.cdu-1];
+    card.dataset.status=bank.status;
+    card.querySelector("select").value=String(bank.pumpSpeedPercent);
+    card.querySelector(".floor100-cdu-bank-flow").textContent=
+     kw.format(bank.modeledLpm)+" L/min · "+kw.format(bank.pumpHeadKPa)+" kPa";
+    card.querySelector(".floor100-cdu-bank-loss").textContent=
+     "ROWS "+bank.rowNumbers.join(", ")+" · "+bank.status.replaceAll("_"," ")+
+     " · ΔP balance "+kw.format(bank.headResidualKPa)+" kPa";
+   }
+   const selectedEntry=state()?.getFloor100PowerModel?.()?.entries.find(r=>r.id===focus);
+   const rr=selectedEntry?cduPlan.rows[selectedEntry.row]:null;
+   $("floor100CduSelected").textContent=rr?
+    ("ROW "+rr.row+" · CDU "+rr.cduReference+" · "+
+     kw.format(rr.modeledLpm)+" L/min / "+kw.format(rr.targetLpm)+
+     " L/min target · "+(rr.blocked?"BLOCKED / DEMO":"INDEPENDENT SIMULATED PUMP")):
+    "8 independent fictional CDU circuits; select a compute rack or change one CDU speed.";
+  }
   const hydronic=state()?.getFloor100HydronicNetwork?.();
   if(hydronic){
    const n=hydronic,assumed=n.assumptions;
@@ -494,6 +541,7 @@
    hypotheticalComputeWaterBalance:state()?.getFloor100WaterBalance?.()||null,
    hypotheticalRowHydraulicSensitivity:state()?.getFloor100HydraulicPlan?.()||null,
    hypotheticalParallelPumpOperatingPoint:state()?.getFloor100HydronicNetwork?.()||null,
+   hypotheticalEightIndependentCduBanks:state()?.getFloor100CduBankPlan?.()||null,
    hypotheticalCoolantIsolation:state()?.getFloor100CoolantFault?.()||null,
    visualCoolantPipeAudit:state()?.getFloor100CoolantTopology?.()?.audit||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
