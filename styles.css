@@ -524,3 +524,22 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-cooling-path-explorer small{color:#b3d0cf;font:500 9px/1.55 var(--mono)}
 .floor100-cooling-path-explorer a{color:#9af1f9;font:700 10px/1.5 var(--mono)}
 @media(max-width:520px){.floor100-cooling-path-channels,#floor100CoolTraceSteps{grid-template-columns:1fr}}
+
+
+/* Assumed compute water heat balance; values are not telemetry. */
+.floor100-water-balance{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:13px;border:1px solid #509ca0;border-radius:9px;background:linear-gradient(125deg,#102d36,#21444c)}
+.floor100-water-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.floor100-water-head strong{font:800 11px/1.45 var(--mono);color:#b9f5f0}
+.floor100-water-head span{font:600 10px/1.45 var(--mono);color:#cfdbd2}
+.floor100-water-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.floor100-water-controls label{color:#bde4e0;font:700 10px/1.5 var(--mono)}
+.floor100-water-controls select{flex:1;min-width:165px;max-width:360px;min-height:36px;padding:7px;background:#1a4551;border:1px solid #68abae;border-radius:5px;color:#eafefa;font:700 10px/1.4 var(--mono)}
+.floor100-water-controls select:focus-visible{outline:2px solid #ffe0a7;outline-offset:2px}
+.floor100-water-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.floor100-water-metrics>div{display:flex;flex-direction:column;gap:7px;min-width:0;padding:10px;background:#112c35;border:1px solid #4d808b;border-radius:5px}
+.floor100-water-metrics small{font:700 9px/1.4 var(--mono);color:#aecdd2}
+.floor100-water-metrics strong{font:800 clamp(13px,1.5vw,19px)/1.35 var(--mono);color:#d8f5ef;overflow-wrap:anywhere}
+#floor100WaterSelected{padding:9px;border-radius:5px;background:#1a3e47;border:1px solid #538991;color:#ddf1ed;font:700 10px/1.5 var(--mono)}
+.floor100-water-balance>small{font:500 9px/1.55 var(--mono);color:#afd0d0}
+@media(max-width:850px){.floor100-water-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.floor100-water-metrics{grid-template-columns:1fr}}

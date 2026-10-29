@@ -31,6 +31,7 @@
  const availableSelect=$("floor100CduAvailable"),thermalRows=$("floor100ThermalRows");
  const coolTraceSelect=$("floor100CoolTrace"),coolTraceStatus=$("floor100CoolTraceStatus");
  const coolTraceSteps=$("floor100CoolTraceSteps");
+ const waterDeltaSelect=$("floor100WaterDeltaT");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -46,6 +47,7 @@
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
   const thermal=state()?.getFloor100ThermalPlan?.();
+  const water=state()?.getFloor100WaterBalance?.();
   const liquidPaths=state()?.getFloor100CoolingPaths?.()||[];
   coolTraceSelect.value=d.coolingTraceMode||"off";
   const liquidRack=liquidPaths[0]?.rackId??null;
@@ -109,6 +111,19 @@
      " · ASSUMED LIQUID "+showKW(Math.round(selected.estimatedKW*thermal.liquidCapturePercent)/100)+
      " · NOT MEASURED"):
     "Choose a rack to view its assumed heat-equivalent load";
+  }
+  if(water){
+   waterDeltaSelect.value=String(water.deltaTK);
+   $("floor100WaterComputeKW").textContent=showKW(water.computeLiquidKW);
+   $("floor100WaterLpm").textContent=kw.format(water.designFlowLpm)+" L/min";
+   $("floor100WaterM3h").textContent=kw.format(water.designFlowM3h)+" m³/h";
+   $("floor100WaterExcludedKW").textContent=showKW(water.excludedLiquidKW);
+   const chosen=water.racks.find(r=>r.id===focus);
+   $("floor100WaterSelected").textContent=chosen?
+    (chosen.id+" · "+showKW(chosen.liquidKW)+" COMPUTE LIQUID HEAT → "+
+     kw.format(chosen.targetLpm)+" L/min TARGET @ ΔT "+water.deltaTK+" K · NOT MEASURED"):
+    focus?focus+" · NO NVL72 MANIFOLD LOOP MAPPED FOR FABRIC/STORAGE RACK":
+    "Select a compute rack to view its theoretical water-flow target.";
   }
   const plan=state()?.getFloor100FeedAllocation?.();
   if(plan){
@@ -345,6 +360,9 @@
    });render();
   });
  }
+ waterDeltaSelect.addEventListener("change",()=>{
+  state()?.setFloor100WaterDeltaTK?.(Number(waterDeltaSelect.value));render();
+ });
  capSelect.addEventListener("change",()=>{
   state()?.setFloor100FeedCapacityKW?.(Number(capSelect.value));render();
  });
@@ -361,6 +379,7 @@
    selectedSchematicPaths:state()?.getFloor100PowerPaths?.()||[],
    hypotheticalFeedPlan:state()?.getFloor100FeedAllocation?.()||null,
    hypotheticalThermalPlan:state()?.getFloor100ThermalPlan?.()||null,
+   hypotheticalComputeWaterBalance:state()?.getFloor100WaterBalance?.()||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
