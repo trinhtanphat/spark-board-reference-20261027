@@ -625,6 +625,12 @@ function init(){
  getFloor100PowerModel(){return floor100Scene?.getPowerModel()||null},
  getFloor100ThermalPlan(){return floor100Scene?.getThermalPlan()||null},
  getFloor100WaterBalance(){return floor100Scene?.getWaterBalance()||null},
+ getFloor100HydraulicPlan(){return floor100Scene?.getHydraulicPlan()||null},
+ setFloor100HydraulicAssumptions(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setHydraulicAssumptions(value)===true;
+  if(ok)needsRender=true;return ok;
+ },
  setFloor100WaterDeltaTK(value){
   if(modelMode!=='floor100')return false;
   const ok=floor100Scene?.setWaterDeltaTK(value)===true;

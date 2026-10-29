@@ -7,6 +7,7 @@ import {buildFloor100Impact} from './floor100-impact.mjs';
 import {buildFloor100PowerModel,validateFloor100RackWatts,FLOOR100_RACK_BASELINE_MAX_W} from './floor100-power.mjs';
 import {buildFloor100ThermalPlan} from './floor100-thermal.mjs';
 import {buildFloor100WaterBalance,FLOOR100_WATER_DELTA_T_PRESETS_K} from './floor100-liquid-loop.mjs';
+import {buildFloor100HydraulicPlan,FLOOR100_HYDRAULIC_DIAMETERS_MM,FLOOR100_HYDRAULIC_LENGTHS_M} from './floor100-hydraulic.mjs';
 import {buildFloor100CoolingRoutes,FLOOR100_COOLING_TRACE_MODES} from './floor100-cooling-path.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES,FLOOR100_VISUAL_POWER_GEOMETRY} from './floor100-power-path.mjs';
@@ -315,12 +316,15 @@ export function createFloor100Concept(THREE){
  let thermalCapturePercent=90,thermalCduCapacityKW=1200,thermalAvailableCDUs=8;
  let thermalPlan=buildFloor100ThermalPlan(powerModel);
  let waterDeltaTK=10,waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
+ let hydraulicDiameterMM=160,hydraulicLengthM=30;
+ let hydraulicPlan=buildFloor100HydraulicPlan(waterBalance);
  function refreshThermalPlan(){
   thermalPlan=buildFloor100ThermalPlan(powerModel,{
    liquidCapturePercent:thermalCapturePercent,cduCapacityKW:thermalCduCapacityKW,
    availableCDUs:thermalAvailableCDUs
   });
   waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
+  hydraulicPlan=buildFloor100HydraulicPlan(waterBalance,{diameterMM:hydraulicDiameterMM,oneWayLengthM:hydraulicLengthM});
   for(let i=0;i<10;i++){
    const row=thermalPlan.rows[i],util=row.nominalUtilizationPercent;
    const length=Math.max(.08,Math.min(2.4,(util??200)/100*1.35));
@@ -347,6 +351,14 @@ export function createFloor100Concept(THREE){
   if(!FLOOR100_WATER_DELTA_T_PRESETS_K.includes(value))return false;
   waterDeltaTK=value;
   waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
+  hydraulicPlan=buildFloor100HydraulicPlan(waterBalance,{diameterMM:hydraulicDiameterMM,oneWayLengthM:hydraulicLengthM});
+  return true;
+ }
+ function setHydraulicAssumptions({diameterMM=hydraulicDiameterMM,oneWayLengthM=hydraulicLengthM}={}){
+  if(!FLOOR100_HYDRAULIC_DIAMETERS_MM.includes(diameterMM)||
+   !FLOOR100_HYDRAULIC_LENGTHS_M.includes(oneWayLengthM))return false;
+  const next=buildFloor100HydraulicPlan(waterBalance,{diameterMM,oneWayLengthM});
+  hydraulicDiameterMM=diameterMM;hydraulicLengthM=oneWayLengthM;hydraulicPlan=next;
   return true;
  }
  function refreshFeedAllocation(){
@@ -548,6 +560,7 @@ export function createFloor100Concept(THREE){
    coolingAvailableCDUs:thermalAvailableCDUs,coolingCapturePercent:thermalCapturePercent,
    waterDeltaTK,waterFlowTargetLpm:waterBalance.designFlowLpm,
    waterComputeHeatKW:waterBalance.computeLiquidKW,waterUnmappedHeatKW:waterBalance.excludedLiquidKW,
+   hydraulicDiameterMM,hydraulicLengthM,hydraulicMaxRowPressureKPa:hydraulicPlan.maxRowBranchLossKPa,
    coolingRowMeterInstances:coolingRowMeters.count,
    coolingTraceMode,coolingTraceSegments:coolingTraceGroup.children.length,
    coolingTraceRack:activeCoolingPaths[0]?.rackId??null,
@@ -605,6 +618,7 @@ export function createFloor100Concept(THREE){
   setPowerLoadPercent,setPowerHeatmap,setPowerPathMode,setFeedCapacityKW,
   setThermalAssumptions,getThermalPlan:()=>thermalPlan,
   setWaterDeltaTK,getWaterBalance:()=>waterBalance,
+  setHydraulicAssumptions,getHydraulicPlan:()=>hydraulicPlan,
   setCoolingTraceMode,getCoolingPaths:()=>activeCoolingPaths,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),

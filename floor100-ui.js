@@ -32,6 +32,7 @@
  const coolTraceSelect=$("floor100CoolTrace"),coolTraceStatus=$("floor100CoolTraceStatus");
  const coolTraceSteps=$("floor100CoolTraceSteps");
  const waterDeltaSelect=$("floor100WaterDeltaT");
+ const pipeDiameter=$("floor100PipeDiameter"),pipeLength=$("floor100PipeLength");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -48,6 +49,7 @@
   const modeledPower=state()?.getFloor100PowerModel?.();
   const thermal=state()?.getFloor100ThermalPlan?.();
   const water=state()?.getFloor100WaterBalance?.();
+  const hydraulic=state()?.getFloor100HydraulicPlan?.();
   const liquidPaths=state()?.getFloor100CoolingPaths?.()||[];
   coolTraceSelect.value=d.coolingTraceMode||"off";
   const liquidRack=liquidPaths[0]?.rackId??null;
@@ -124,6 +126,34 @@
      kw.format(chosen.targetLpm)+" L/min TARGET @ ΔT "+water.deltaTK+" K · NOT MEASURED"):
     focus?focus+" · NO NVL72 MANIFOLD LOOP MAPPED FOR FABRIC/STORAGE RACK":
     "Select a compute rack to view its theoretical water-flow target.";
+  }
+  if(hydraulic){
+   pipeDiameter.value=String(hydraulic.diameterMM);
+   pipeLength.value=String(hydraulic.oneWayLengthM);
+   $("floor100HydraulicDrop").textContent=kw.format(hydraulic.maxRowBranchLossKPa)+" kPa";
+   $("floor100HydraulicVelocity").textContent=kw.format(hydraulic.maxRowVelocityMps)+" m/s";
+   $("floor100HydraulicLength").textContent=String(hydraulic.oneWayLengthM*2)+" m / pair";
+   const chosen=modeledPower?.entries.find(e=>e.id===focus);
+   const chosenRow=chosen?hydraulic.rows[chosen.row]:null;
+   $("floor100HydraulicSelected").textContent=chosenRow?
+    ("ROW "+chosenRow.row+" · "+kw.format(chosenRow.flowLpm)+" L/min · "+
+     kw.format(chosenRow.lossKPa)+" kPa (SUPPLY + RETURN) · RE="+
+     watts.format(chosenRow.reynolds)+" · "+chosenRow.flowRegime+" · NOT PUMP HEAD"):
+    "Select a rack to compare the schematic pressure drop of its row branch.";
+   const rows=$("floor100HydraulicRows");
+   if(rows.children.length!==10){for(let i=0;i<10;i++){
+    const button=document.createElement("button");button.type="button";
+    button.className="floor100-hydraulic-row";
+    button.addEventListener("click",()=>selectRack("R"+String(i*10+1).padStart(3,"0")));
+    rows.appendChild(button);
+   }}
+   for(const row of hydraulic.rows){
+    const button=rows.children[row.row-1];
+    button.textContent="ROW "+row.row+" · "+kw.format(row.lossKPa)+" kPa";
+    button.dataset.warn=String(row.velocityFlag!=="NO_DEMO_VELOCITY_FLAG");
+    button.setAttribute("aria-pressed",String(chosenRow?.row===row.row));
+    button.title="Illustrative row supply+return pressure-loss sensitivity only";
+   }
   }
   const plan=state()?.getFloor100FeedAllocation?.();
   if(plan){
@@ -363,6 +393,11 @@
  waterDeltaSelect.addEventListener("change",()=>{
   state()?.setFloor100WaterDeltaTK?.(Number(waterDeltaSelect.value));render();
  });
+ for(const el of [pipeDiameter,pipeLength])el.addEventListener("change",()=>{
+  state()?.setFloor100HydraulicAssumptions?.({
+   diameterMM:Number(pipeDiameter.value),oneWayLengthM:Number(pipeLength.value)
+  });render();
+ });
  capSelect.addEventListener("change",()=>{
   state()?.setFloor100FeedCapacityKW?.(Number(capSelect.value));render();
  });
@@ -380,6 +415,7 @@
    hypotheticalFeedPlan:state()?.getFloor100FeedAllocation?.()||null,
    hypotheticalThermalPlan:state()?.getFloor100ThermalPlan?.()||null,
    hypotheticalComputeWaterBalance:state()?.getFloor100WaterBalance?.()||null,
+   hypotheticalRowHydraulicSensitivity:state()?.getFloor100HydraulicPlan?.()||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");

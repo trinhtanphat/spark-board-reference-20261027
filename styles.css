@@ -543,3 +543,26 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-water-balance>small{font:500 9px/1.55 var(--mono);color:#afd0d0}
 @media(max-width:850px){.floor100-water-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.floor100-water-metrics{grid-template-columns:1fr}}
+
+
+/* Hydraulic sensitivity is not pump sizing or OEM liquid-cooling design. */
+.floor100-hydraulic-panel{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:13px;border:1px solid #4a929a;border-radius:9px;background:linear-gradient(115deg,#112a34,#243f47)}
+.floor100-hydraulic-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.floor100-hydraulic-head strong{font:800 11px/1.45 var(--mono);color:#b9f5ef}
+.floor100-hydraulic-head span{font:700 9px/1.45 var(--mono);color:#b8d8dd}
+.floor100-hydraulic-controls{display:grid;grid-template-columns:auto minmax(130px,1fr);align-items:center;gap:8px}
+.floor100-hydraulic-controls label{font:700 9px/1.5 var(--mono);color:#bddfdf}
+.floor100-hydraulic-controls select{padding:8px;border:1px solid #66a3a7;border-radius:5px;color:#eefaf5;background:#194450;font:700 10px/1.5 var(--mono);min-height:34px}
+.floor100-hydraulic-controls select:focus-visible,.floor100-hydraulic-row:focus-visible{outline:2px solid #ffe4ae;outline-offset:2px}
+.floor100-hydraulic-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.floor100-hydraulic-metrics>div{display:flex;flex-direction:column;gap:7px;min-width:0;padding:10px;border:1px solid #507c87;background:#142e38;border-radius:6px}
+.floor100-hydraulic-metrics small{font:700 9px/1.45 var(--mono);color:#acd3cf}
+.floor100-hydraulic-metrics strong{font:800 clamp(14px,1.5vw,20px)/1.3 var(--mono);color:#def7eb;overflow-wrap:anywhere}
+.floor100-hydraulic-rows{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.floor100-hydraulic-row{cursor:pointer;text-align:left;padding:8px 5px;background:#214d55;color:#ddf4ea;border:1px solid #528c96;border-radius:5px;font:700 9px/1.5 var(--mono)}
+.floor100-hydraulic-row[data-warn="true"]{border-color:#dfa66b;color:#ffdfbc}
+.floor100-hydraulic-row[aria-pressed="true"]{outline:2px solid #ade7dc;outline-offset:-2px}
+#floor100HydraulicSelected{padding:9px;background:#1b424c;border:1px solid #568f96;border-radius:6px;color:#e6fcf2;font:700 10px/1.5 var(--mono)}
+.floor100-hydraulic-panel>small{font:500 9px/1.55 var(--mono);color:#afcdce}
+@media(max-width:750px){.floor100-hydraulic-metrics{grid-template-columns:1fr}.floor100-hydraulic-rows{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:470px){.floor100-hydraulic-controls{grid-template-columns:1fr}}
