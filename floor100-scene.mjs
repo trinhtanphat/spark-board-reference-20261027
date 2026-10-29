@@ -6,6 +6,7 @@
 import {buildFloor100Impact} from './floor100-impact.mjs';
 import {buildFloor100PowerModel,validateFloor100RackWatts,FLOOR100_RACK_BASELINE_MAX_W} from './floor100-power.mjs';
 import {buildFloor100ThermalPlan} from './floor100-thermal.mjs';
+import {buildFloor100CoolingRoutes,FLOOR100_COOLING_TRACE_MODES} from './floor100-cooling-path.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
@@ -370,6 +371,39 @@ export function createFloor100Concept(THREE){
   hardwarePart=next;refreshHardwareHighlight();return true;
  }
  let powerScenario="normal",coolingCircuit="both";
+ // Highlight exactly one selected compute rack's fictional CDU -> manifold
+ // routes. Rack position changes rebuild at most 8 mesh segments.
+ const coolingTraceGroup=new THREE.Group();coolingTraceGroup.name="FLOOR100_SELECTED_COOLING_PATH";
+ zones.cooling.add(coolingTraceGroup);
+ const coolingTraceMaterials={
+  supply:new THREE.MeshBasicMaterial({color:"#44e6f4",transparent:true,opacity:.98,depthTest:false,depthWrite:false,toneMapped:false}),
+  return:new THREE.MeshBasicMaterial({color:"#ffa36f",transparent:true,opacity:.98,depthTest:false,depthWrite:false,toneMapped:false})
+ };
+ let coolingTraceMode="off",activeCoolingPaths=[];
+ function rebuildCoolingPaths(){
+  for(const mesh of [...coolingTraceGroup.children]){
+   coolingTraceGroup.remove(mesh);mesh.geometry.dispose();
+  }
+  const selectedRack=racks.find(r=>r.id===selected);
+  activeCoolingPaths=selectedRack?buildFloor100CoolingRoutes(selectedRack,coolingTraceMode):[];
+  const axis=new THREE.Vector3(0,1,0);
+  for(const route of activeCoolingPaths){
+   for(const segment of route.segments){
+    const a=new THREE.Vector3(...segment.from),b=new THREE.Vector3(...segment.to);
+    const delta=b.clone().sub(a);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(.2,delta.length(),.2),coolingTraceMaterials[route.channel]);
+    mesh.name="FLOOR100_COOLING_TRACE_"+route.channel.toUpperCase()+"_"+segment.name.replace(/[^A-Z0-9]+/g,"_");
+    mesh.userData={rackId:route.rackId,channel:route.channel,segment:segment.name};
+    mesh.position.copy(a).add(b).multiplyScalar(.5);
+    mesh.quaternion.setFromUnitVectors(axis,delta.normalize());mesh.renderOrder=79;
+    coolingTraceGroup.add(mesh);
+   }
+  }
+ }
+ function setCoolingTraceMode(value){
+  if(!FLOOR100_COOLING_TRACE_MODES.includes(value))return false;
+  coolingTraceMode=value;rebuildCoolingPaths();return true;
+ }
  // Both routes remain off until the user requests an individual rack trace.
  const powerPathGroup=new THREE.Group();powerPathGroup.name="FLOOR100_SELECTED_RACK_POWER_PATH";
  zones.power.add(powerPathGroup);
@@ -450,7 +484,7 @@ export function createFloor100Concept(THREE){
   if(id!==null&&!rackById.has(id))return false;
   selected=id;outline.visible=Boolean(id);
   if(id){const r=rackById.get(id);outline.position.set(r.x,3.35,r.z)}
-  refreshHardwareHighlight();rebuildPowerPaths();return true;
+  refreshHardwareHighlight();rebuildPowerPaths();rebuildCoolingPaths();return true;
  }
  function setFilter(next){
   if(!["all","cooling","power","network","airflow"].includes(next))return false;
@@ -463,6 +497,10 @@ export function createFloor100Concept(THREE){
    powerScenario,coolingCircuit,
    coolingAvailableCDUs:thermalAvailableCDUs,coolingCapturePercent:thermalCapturePercent,
    coolingRowMeterInstances:coolingRowMeters.count,
+   coolingTraceMode,coolingTraceSegments:coolingTraceGroup.children.length,
+   coolingTraceRack:activeCoolingPaths[0]?.rackId??null,
+   coolingTraceChannels:activeCoolingPaths.map(r=>r.channel),
+   coolingTraceVisible:coolingTraceGroup.visible&&zones.cooling.visible,
    coolingDemandKW:thermalPlan.liquidKW,coolingBudgetKW:thermalPlan.capacityKW,
    feedCapacityKW,feedAllocationStatus:feedAllocation.status,
    feedAPlanningKW:feedAllocation.aKW,feedBPlanningKW:feedAllocation.bKW,
@@ -513,6 +551,7 @@ export function createFloor100Concept(THREE){
  return {group,racks,pickTargets,selectRack,setFilter,setSide,setPowerScenario,setCoolingCircuit,setHardwarePart,
   setPowerLoadPercent,setPowerHeatmap,setPowerPathMode,setFeedCapacityKW,
   setThermalAssumptions,getThermalPlan:()=>thermalPlan,
+  setCoolingTraceMode,getCoolingPaths:()=>activeCoolingPaths,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),
   getFeedAllocation:()=>feedAllocation,getPowerPaths:()=>activePowerPaths,

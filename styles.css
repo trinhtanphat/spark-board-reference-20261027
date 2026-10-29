@@ -501,3 +501,26 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-thermal-planner>small{font:500 9px/1.55 var(--mono);color:#a9d0ce}
 @media(max-width:860px){.floor100-thermal-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.floor100-thermal-rows{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:440px){.floor100-thermal-controls{grid-template-columns:1fr}}
+
+/* Rack-specific CDU supply/return fictional pipe path highlights */
+.floor100-cooling-path-explorer{display:flex;flex-direction:column;gap:9px;margin:12px 0;padding:12px;border:1px solid #61aab2;border-radius:8px;background:linear-gradient(135deg,#11333c,#254448)}
+.floor100-cooling-path-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:7px;align-items:center}
+.floor100-cooling-path-head strong{color:#b8f6fc;font:800 11px/1.5 var(--mono)}
+.floor100-cooling-path-head span{color:#bcd6d5;font:700 9px/1.4 var(--mono)}
+.floor100-cooling-path-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.floor100-cooling-path-controls label{color:#c2e7e5;font:700 9px/1.4 var(--mono)}
+.floor100-cooling-path-controls select,.floor100-cooling-path-controls button{border:1px solid #76a7a9;background:#254951;color:#e9fcf7;min-height:34px;padding:7px 9px;border-radius:5px;font:700 10px/1.45 var(--mono)}
+.floor100-cooling-path-controls select{min-width:155px;flex:1}
+.floor100-cooling-path-controls button{cursor:pointer}
+.floor100-cooling-path-controls :focus-visible{outline:2px solid #f9dca7;outline-offset:2px}
+#floor100CoolTraceStatus{padding:9px;min-height:34px;border-radius:5px;background:#153740;border:1px solid #507f84;color:#def3ed;font:700 10px/1.5 var(--mono)}
+#floor100CoolTraceStatus[data-status="active"]{border-color:#67cacc}
+#floor100CoolTraceStatus[data-status="unsupported"]{border-color:#daac78;color:#fce5c9}
+.floor100-cooling-path-channels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.floor100-cooling-path-channels span{padding:9px;border-radius:5px;border:1px solid #4e7780;color:#b3cfcc;font:700 10px/1.5 var(--mono)}
+#floor100CoolSupply[data-active="true"]{border-color:#42bfd4;color:#8ef0fc}
+#floor100CoolReturn[data-active="true"]{border-color:#ecab85;color:#ffcaac}
+#floor100CoolTraceSteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 16px;margin:0;padding-left:18px;font:600 10px/1.5 var(--mono);color:#b9dad8}
+.floor100-cooling-path-explorer small{color:#b3d0cf;font:500 9px/1.55 var(--mono)}
+.floor100-cooling-path-explorer a{color:#9af1f9;font:700 10px/1.5 var(--mono)}
+@media(max-width:520px){.floor100-cooling-path-channels,#floor100CoolTraceSteps{grid-template-columns:1fr}}
