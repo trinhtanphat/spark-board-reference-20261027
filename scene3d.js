@@ -637,6 +637,13 @@ function init(){
   if(ok)needsRender=true;return ok;
  },
  getFloor100CoolingPaths(){return floor100Scene?.getCoolingPaths()||[]},
+ getFloor100CoolantTopology(){return floor100Scene?.getCoolantTopology()||null},
+ getFloor100CoolantFault(){return floor100Scene?.getCoolantFault()||null},
+ setFloor100CoolantIsolation(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setCoolantIsolation(value)===true;
+  if(ok)needsRender=true;return ok;
+ },
  setFloor100CoolingTraceMode(value){
   if(modelMode!=='floor100')return false;
   const ok=floor100Scene?.setCoolingTraceMode(value)===true;

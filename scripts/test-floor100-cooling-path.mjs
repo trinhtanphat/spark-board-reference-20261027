@@ -9,9 +9,9 @@ assert.deepEqual(FLOOR100_COOLING_TRACE_MODES,["off","both","supply","return"]);
 assert.equal(FLOOR100_COOLING_HARDWARE_GUIDE,"https://docs.nvidia.com/dgx/dgxvr-user-guide/hardware.html");
 const r1=racks[0],r91=racks[90];
 const check=(path,rack)=>{
- assert.equal(path.rackId,rack.id);assert.equal(path.segments.length,4);
+ assert.equal(path.rackId,rack.id);assert.equal(path.segments.length,6);
  assert.equal(path.visualOnly,true);
- assert.ok(path.disclaimer.includes("no live water flow"));
+ assert.ok(path.disclaimer.includes("NO real pump-head"));
  for(let i=0;i<path.segments.length;i++){
   const s=path.segments[i];
   assert.ok(s.from.every(Number.isFinite)&&s.to.every(Number.isFinite));
@@ -50,4 +50,4 @@ assert.throws(()=>buildFloor100CoolingRoutes(null),RangeError);
 assert.throws(()=>buildFloor100CoolingRoute({...r1,x:Infinity},"return"),RangeError);
 assert.throws(()=>buildFloor100CoolingRoute({...r1,row:12},"supply"),RangeError);
 console.log(JSON.stringify({status:"PASS",computeRacks:80,liquidRoutesPerComputeRack:2,
- visualSegmentsPerSelectedRack:8,nonComputeRacksUnmapped:20,officialSitePipeCAD:false}));
+ visualSegmentsPerSelectedRack:12,nonComputeRacksUnmapped:20,officialSitePipeCAD:false}));

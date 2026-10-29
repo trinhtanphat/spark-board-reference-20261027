@@ -9,6 +9,7 @@ import {buildFloor100ThermalPlan} from './floor100-thermal.mjs';
 import {buildFloor100WaterBalance,FLOOR100_WATER_DELTA_T_PRESETS_K} from './floor100-liquid-loop.mjs';
 import {buildFloor100HydraulicPlan,FLOOR100_HYDRAULIC_DIAMETERS_MM,FLOOR100_HYDRAULIC_LENGTHS_M} from './floor100-hydraulic.mjs';
 import {buildFloor100CoolingRoutes,FLOOR100_COOLING_TRACE_MODES} from './floor100-cooling-path.mjs';
+import {buildFloor100CoolantTopology,buildFloor100CoolantFault,FLOOR100_COOLANT_FAULT_ROWS,FLOOR100_COOLANT_FAULT_CDUS} from './floor100-coolant-topology.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES,FLOOR100_VISUAL_POWER_GEOMETRY} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
@@ -123,9 +124,8 @@ export function createFloor100Concept(THREE){
  for(let row=0;row<9;row++){
   const z=(zR(row)+zR(row+1))/2;
   cube(row%2===0?"aisleCold":"aisleHot",0,-.938,z,38.65,.016,3.04,zones.airflow);
-  // Cooling headers over all ten rows; separate supply & return lines.
-  cube("coolant",0,8.20,z,39,.095,.09,zones.cooling);
-  cube("returnFlow",0,8.36,z+.38,39,.09,.09,zones.cooling);
+  // The shared connected coolant topology is generated from exact CDU, row
+  // and rack manifold coordinates below, NOT from decorative floating bars.
   cube("cable",0,8.62,z-.33,39,.11,.075,zones.network);
  }
  // Row aisle labels are visible from top and do not use WebGL text fonts.
@@ -299,6 +299,59 @@ export function createFloor100Concept(THREE){
  const coolingRowMeters=new THREE.InstancedMesh(boxGeom,coolingMeterMat,10);
  coolingRowMeters.name="FLOOR100_THERMAL_COOLING_ROW_BUDGET";
  coolingRowMeters.frustumCulled=false;zones.cooling.add(coolingRowMeters);
+
+ // Connected supply/return gallery trunk, ten row headers and eighty rear drops.
+ // Purely visual network; dimensions are scene units, not installation metres.
+ const coolantTopology=buildFloor100CoolantTopology(racks);
+ const coolantPipeMeshes={},coolantPipeRecords={};
+ const coolantVisualColors={supply:new THREE.Color("#32cedd"),return:new THREE.Color("#e8a56c"),blocked:new THREE.Color("#685357")};
+ for(const channel of ["supply","return"]){
+  const records=coolantTopology.pipes.filter(p=>p.channel===channel);
+  coolantPipeRecords[channel]=records;
+  const mesh=new THREE.InstancedMesh(boxGeom,new THREE.MeshStandardMaterial({color:"#ffffff",metalness:.62,roughness:.30}),records.length);
+  mesh.name="FLOOR100_CONNECTED_COOLANT_"+channel.toUpperCase();mesh.frustumCulled=false;
+  records.forEach((pipe,i)=>{
+   const axis=[0,1,2].find(k=>pipe.from[k]!==pipe.to[k]);
+   const dims=[.19,.19,.19];dims[axis]=Math.abs(pipe.to[axis]-pipe.from[axis])+.035;
+   o.position.set(...pipe.from.map((v,k)=>(v+pipe.to[k])/2));
+   o.scale.set(...dims);o.rotation.set(0,0,0);o.updateMatrix();
+   mesh.setMatrixAt(i,o.matrix);mesh.setColorAt(i,coolantVisualColors[channel]);
+  });
+  mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;
+  zones.cooling.add(mesh);coolantPipeMeshes[channel]=mesh;
+ }
+ const coolantRenderedAudit=(()=>{
+  const matrix=new THREE.Matrix4(),inverse=new THREE.Matrix4(),v=new THREE.Vector3();
+  let endpoints=0,missing=0;
+  for(const channel of ["supply","return"]){
+   const mesh=coolantPipeMeshes[channel];
+   coolantPipeRecords[channel].forEach((pipe,i)=>{
+    mesh.getMatrixAt(i,matrix);inverse.copy(matrix).invert();
+    for(const endpoint of [pipe.from,pipe.to]){
+     endpoints++;v.set(...endpoint).applyMatrix4(inverse);
+     if(Math.max(Math.abs(v.x),Math.abs(v.y),Math.abs(v.z))>.501)missing++;
+    }
+   });
+  }
+  return Object.freeze({endpoints,missing,connected:missing===0,
+   scope:"Rendered 3D instanced cuboid endpoint containment, not hydraulic continuity or site CAD"});
+ })();
+ if(!coolantRenderedAudit.connected)throw new Error("Rendered coolant pipe endpoint gap");
+ const valveIndicators=new THREE.InstancedMesh(boxGeom,new THREE.MeshBasicMaterial({color:"#ffffff",toneMapped:false}),20);
+ valveIndicators.name="FLOOR100_ROW_ISOLATION_VALVES";valveIndicators.frustumCulled=false;
+ for(let row=0;row<10;row++)for(let ci=0;ci<2;ci++){
+  o.position.set(22.55,ci?8.38:8.08,zR(row)+(ci?-2.18:-1.90));
+  o.scale.set(.28,.40,.28);o.rotation.set(0,0,0);o.updateMatrix();
+  valveIndicators.setMatrixAt(row*2+ci,o.matrix);
+ }
+ valveIndicators.instanceMatrix.needsUpdate=true;zones.cooling.add(valveIndicators);
+ const pumpIndicators=new THREE.InstancedMesh(boxGeom,new THREE.MeshBasicMaterial({color:"#ffffff",toneMapped:false}),8);
+ pumpIndicators.name="FLOOR100_CDU_PUMP_INDICATORS";pumpIndicators.frustumCulled=false;
+ for(let cdu=1;cdu<=8;cdu++){
+  o.position.set(25,4.5,(cdu-4.5)*7);o.scale.set(.53,.48,.60);o.rotation.set(0,0,0);o.updateMatrix();
+  pumpIndicators.setMatrixAt(cdu-1,o.matrix);
+ }
+ pumpIndicators.instanceMatrix.needsUpdate=true;zones.cooling.add(pumpIndicators);
  const coolingColors={safe:new THREE.Color("#71dddc"),high:new THREE.Color("#eebf78"),
   over:new THREE.Color("#f37a6a"),idle:new THREE.Color("#566a70")};
  const meterColors={safe:new THREE.Color("#8fe2bb"),
@@ -318,6 +371,37 @@ export function createFloor100Concept(THREE){
  let waterDeltaTK=10,waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
  let hydraulicDiameterMM=160,hydraulicLengthM=30;
  let hydraulicPlan=buildFloor100HydraulicPlan(waterBalance);
+
+ let isolatedCoolantRow=0,failedCoolantCdu=0;
+ let coolantFault=buildFloor100CoolantFault(waterBalance);
+ const coolantMarkerColors={ok:new THREE.Color("#8ff6c7"),blocked:new THREE.Color("#f27772")};
+ function refreshCoolantFault(){
+  coolantFault=buildFloor100CoolantFault(waterBalance,{isolatedRow:isolatedCoolantRow,failedCdu:failedCoolantCdu});
+  for(const channel of ["supply","return"]){
+   const mesh=coolantPipeMeshes[channel];
+   coolantPipeRecords[channel].forEach((pipe,i)=>{
+    const blocked=(pipe.row!==0&&coolantFault.rows[pipe.row-1].blocked)||
+     (pipe.kind.startsWith("cdu-")&&failedCoolantCdu===pipe.cdu);
+    mesh.setColorAt(i,blocked?coolantVisualColors.blocked:coolantVisualColors[channel]);
+   });
+   mesh.instanceColor.needsUpdate=true;
+  }
+  for(let row=0;row<10;row++)for(let ci=0;ci<2;ci++)
+   valveIndicators.setColorAt(row*2+ci,coolantFault.rows[row].blocked?coolantMarkerColors.blocked:coolantMarkerColors.ok);
+  valveIndicators.instanceColor.needsUpdate=true;
+  for(let i=0;i<8;i++)pumpIndicators.setColorAt(i,failedCoolantCdu===i+1?
+   coolantMarkerColors.blocked:coolantMarkerColors.ok);
+  pumpIndicators.instanceColor.needsUpdate=true;
+  const rack=selected?racks.find(r=>r.id===selected):null;
+  const dim=rack&&coolantFault.rows[rack.row].blocked;
+  coolingTraceMaterials.supply.opacity=dim?.28:.98;
+  coolingTraceMaterials.return.opacity=dim?.28:.98;
+ }
+ function setCoolantIsolation({isolatedRow=isolatedCoolantRow,failedCdu=failedCoolantCdu}={}){
+  if(!FLOOR100_COOLANT_FAULT_ROWS.includes(isolatedRow)||!FLOOR100_COOLANT_FAULT_CDUS.includes(failedCdu))return false;
+  isolatedCoolantRow=isolatedRow;failedCoolantCdu=failedCdu;refreshCoolantFault();return true;
+ }
+
  function refreshThermalPlan(){
   thermalPlan=buildFloor100ThermalPlan(powerModel,{
    liquidCapturePercent:thermalCapturePercent,cduCapacityKW:thermalCduCapacityKW,
@@ -325,6 +409,7 @@ export function createFloor100Concept(THREE){
   });
   waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
   hydraulicPlan=buildFloor100HydraulicPlan(waterBalance,{diameterMM:hydraulicDiameterMM,oneWayLengthM:hydraulicLengthM});
+  refreshCoolantFault();
   for(let i=0;i<10;i++){
    const row=thermalPlan.rows[i],util=row.nominalUtilizationPercent;
    const length=Math.max(.08,Math.min(2.4,(util??200)/100*1.35));
@@ -352,6 +437,7 @@ export function createFloor100Concept(THREE){
   waterDeltaTK=value;
   waterBalance=buildFloor100WaterBalance(powerModel,{liquidCapturePercent:thermalCapturePercent,deltaTK:waterDeltaTK});
   hydraulicPlan=buildFloor100HydraulicPlan(waterBalance,{diameterMM:hydraulicDiameterMM,oneWayLengthM:hydraulicLengthM});
+  refreshCoolantFault();
   return true;
  }
  function setHydraulicAssumptions({diameterMM=hydraulicDiameterMM,oneWayLengthM=hydraulicLengthM}={}){
@@ -532,6 +618,8 @@ export function createFloor100Concept(THREE){
    if(kind==="coolant")batch.visible=coolingCircuit!=="return";
    if(kind==="returnFlow")batch.visible=coolingCircuit!=="supply";
   }
+  coolantPipeMeshes.supply.visible=coolingCircuit!=="return";
+  coolantPipeMeshes.return.visible=coolingCircuit!=="supply";
  }
  function setPowerScenario(next){
   if(!scenarioOptions.includes(next))return false;
@@ -546,7 +634,7 @@ export function createFloor100Concept(THREE){
   if(id!==null&&!rackById.has(id))return false;
   selected=id;outline.visible=Boolean(id);
   if(id){const r=rackById.get(id);outline.position.set(r.x,3.35,r.z)}
-  refreshHardwareHighlight();rebuildPowerPaths();rebuildCoolingPaths();return true;
+  refreshHardwareHighlight();rebuildPowerPaths();rebuildCoolingPaths();refreshCoolantFault();return true;
  }
  function setFilter(next){
   if(!["all","cooling","power","network","airflow"].includes(next))return false;
@@ -561,6 +649,10 @@ export function createFloor100Concept(THREE){
    waterDeltaTK,waterFlowTargetLpm:waterBalance.designFlowLpm,
    waterComputeHeatKW:waterBalance.computeLiquidKW,waterUnmappedHeatKW:waterBalance.excludedLiquidKW,
    hydraulicDiameterMM,hydraulicLengthM,hydraulicMaxRowPressureKPa:hydraulicPlan.maxRowBranchLossKPa,
+   coolantVisualAudit:coolantTopology.audit,coolantRenderedAudit,
+   coolantPipeInstances:coolantTopology.pipes.length,
+   coolantValveInstances:valveIndicators.count,coolantPumpInstances:pumpIndicators.count,
+   isolatedCoolantRow,failedCoolantCdu,coolantBlockedRows:coolantFault.blockedRows,
    coolingRowMeterInstances:coolingRowMeters.count,
    coolingTraceMode,coolingTraceSegments:coolingTraceGroup.children.length,
    coolingTraceRack:activeCoolingPaths[0]?.rackId??null,
@@ -620,6 +712,7 @@ export function createFloor100Concept(THREE){
   setWaterDeltaTK,getWaterBalance:()=>waterBalance,
   setHydraulicAssumptions,getHydraulicPlan:()=>hydraulicPlan,
   setCoolingTraceMode,getCoolingPaths:()=>activeCoolingPaths,
+  setCoolantIsolation,getCoolantFault:()=>coolantFault,getCoolantTopology:()=>coolantTopology,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),
   getFeedAllocation:()=>feedAllocation,getPowerPaths:()=>activePowerPaths,

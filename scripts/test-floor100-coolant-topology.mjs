@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import {buildFloor100PowerModel} from '../floor100-power.mjs';
+import {buildFloor100WaterBalance} from '../floor100-liquid-loop.mjs';
+import {buildFloor100CoolantTopology,buildFloor100CoolantFault} from '../floor100-coolant-topology.mjs';
+import {buildFloor100CoolingRoute,floor100CduForRow} from '../floor100-cooling-path.mjs';
+const racks=Array.from({length:100},(_,i)=>({id:'R'+String(i+1).padStart(3,'0'),
+ row:Math.floor(i/10),column:i%10,kind:i%10<8?'compute':i%10===8?'fabric':'storage',
+ x:((i%10)-4.5)*3.82,z:(Math.floor(i/10)-4.5)*5.7}));
+const network=buildFloor100CoolantTopology(racks);
+assert.equal(network.audit.paths,160);assert.equal(network.audit.segments,960);
+assert.equal(network.audit.missing,0);assert.equal(network.audit.connected,true);
+assert.equal(network.pipes.length,374);
+assert.equal(network.pipes.filter(p=>p.kind==='spine').length,2);
+assert.equal(network.pipes.filter(p=>p.kind==='cdu-riser').length,16);
+assert.equal(network.pipes.filter(p=>p.kind==='row-header').length,20);
+assert.equal(network.pipes.filter(p=>p.kind==='rack-drop').length,160);
+assert.ok(network.pipes.every(p=>p.from.filter((v,i)=>v!==p.to[i]).length===1));
+for(let i=0;i<10;i++)assert.ok(floor100CduForRow(i)>=1&&floor100CduForRow(i)<=8);
+const left=buildFloor100CoolingRoute(racks[0],'supply');
+const back=buildFloor100CoolingRoute(racks[0],'return');
+assert.equal(left.segments.length,6);assert.equal(back.segments.length,6);
+assert.deepEqual(left.segments[0].from,[25,4.5,-24.5]);
+assert.deepEqual(back.segments.at(-1).to,[25,4.5,-24.5]);
+assert.equal(left.segments.at(-1).to[1],3.25);
+for(const r of racks.filter(r=>r.kind!=='compute'))assert.throws(()=>buildFloor100CoolingRoute(r,'supply'),RangeError);
+const water=buildFloor100WaterBalance(buildFloor100PowerModel(racks));
+const normal=buildFloor100CoolantFault(water);
+assert.deepEqual(normal.blockedRows,[]);assert.equal(normal.blockedFlowLpm,0);
+const isolation=buildFloor100CoolantFault(water,{isolatedRow:1});
+assert.deepEqual(isolation.blockedRows,[1]);
+assert.equal(isolation.blockedComputeKW,864);
+assert.ok(isolation.blockedFlowLpm>1200);
+const outage=buildFloor100CoolantFault(water,{failedCdu:2});
+assert.deepEqual(outage.blockedRows,[2,3]);
+assert.equal(outage.blockedComputeKW,1728);
+const combined=buildFloor100CoolantFault(water,{failedCdu:2,isolatedRow:2});
+assert.deepEqual(combined.blockedRows,[2,3]);
+assert.equal(combined.blockedComputeKW,1728);
+const combinedOther=buildFloor100CoolantFault(water,{failedCdu:2,isolatedRow:9});
+assert.deepEqual(combinedOther.blockedRows,[2,3,9]);
+const reduced=buildFloor100CoolantFault(buildFloor100WaterBalance(buildFloor100PowerModel(racks,60)),{failedCdu:2});
+assert.ok(reduced.blockedFlowLpm<outage.blockedFlowLpm);
+const idle=buildFloor100CoolantFault(buildFloor100WaterBalance(buildFloor100PowerModel(racks,100,1.2,Object.fromEntries(racks.map(r=>[r.id,0])))),{failedCdu:1});
+assert.equal(idle.blockedFlowLpm,0);
+for(const bad of [{isolatedRow:11},{failedCdu:9},{failedCdu:'1'},{isolatedRow:NaN}])
+ assert.throws(()=>buildFloor100CoolantFault(water,bad),RangeError);
+assert.throws(()=>buildFloor100CoolantTopology(racks.slice(0,50)),RangeError);
+assert.throws(()=>buildFloor100CoolantFault(null),RangeError);
+console.log(JSON.stringify({status:'PASS',paths:network.audit.paths,segments:network.audit.segments,
+ visualPipes:network.pipes.length,missing:network.audit.missing,failedCduRows:outage.blockedRows,actualFlow:false}));
