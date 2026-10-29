@@ -581,3 +581,24 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 #floor100CoolantFaultStatus[data-status="blocked"]{color:#ffe2d1;border-color:#ba8c76;background:#513735}
 .floor100-coolant-network>small{font:500 9px/1.6 var(--mono);color:#b8d0d4}
 @media(max-width:600px){.floor100-network-controls{grid-template-columns:1fr}.floor100-network-title{flex-direction:column}}
+
+/* Hypothetical parallel hydronic network — never physical control/telemetry. */
+.floor100-network-solver{display:flex;flex-direction:column;gap:10px;margin:14px 0;padding:14px;border:1px solid #489fa0;border-radius:10px;background:linear-gradient(120deg,#14313a,#273d49);color:#ddf8ef}
+.floor100-network-solver-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font:700 10px/1.5 var(--mono)}
+.floor100-network-solver-head strong{color:#b0f7e5}.floor100-network-solver-head span{font-size:9px;color:#bbd5d3}
+.floor100-network-solver-controls{display:grid;grid-template-columns:minmax(135px,1fr) minmax(140px,1fr);gap:8px;align-items:center}
+.floor100-network-solver-controls label{font:700 9px/1.5 var(--mono);color:#c2e9e3}
+.floor100-network-solver-controls select{padding:8px;min-width:0;min-height:34px;border:1px solid #5b969b;border-radius:6px;background:#174650;color:#eefbf6;font:700 10px/1.5 var(--mono)}
+.floor100-network-solver-controls select:focus-visible,.floor100-network-row:focus-visible{outline:2px solid #ffed9f;outline-offset:2px}
+.floor100-network-solver-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.floor100-network-solver-metrics>div{background:#173844;padding:10px;border:1px solid #456f77;border-radius:6px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.floor100-network-solver-metrics small{font:700 9px/1.4 var(--mono);color:#b9d6d8}
+.floor100-network-solver-metrics strong{font:800 clamp(13px,1.5vw,18px)/1.3 var(--mono);color:#d7ffed;overflow-wrap:anywhere}
+.floor100-network-solver-rows{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.floor100-network-row{min-width:0;cursor:pointer;padding:8px 5px;text-align:left;border:1px solid #669e9f;background:#214c54;border-radius:5px;color:#e1f4e9;font:700 9px/1.5 var(--mono)}
+.floor100-network-row[data-blocked="true"]{color:#eec7c1;border-color:#a97775;background:#493a44}
+.floor100-network-row[aria-pressed="true"]{outline:2px solid #aef2d1;outline-offset:-2px}
+#floor100NetworkSelected{display:block;padding:9px;background:#173f49;border:1px solid #579497;border-radius:6px;font:700 10px/1.5 var(--mono);color:#e3faf4}
+.floor100-network-solver>small{font:500 9px/1.6 var(--mono);color:#b8d2d4}
+@media(max-width:800px){.floor100-network-solver-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.floor100-network-solver-rows{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.floor100-network-solver-controls{grid-template-columns:1fr}.floor100-network-solver-metrics{grid-template-columns:1fr}}

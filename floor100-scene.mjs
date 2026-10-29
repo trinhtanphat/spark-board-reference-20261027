@@ -10,6 +10,7 @@ import {buildFloor100WaterBalance,FLOOR100_WATER_DELTA_T_PRESETS_K} from './floo
 import {buildFloor100HydraulicPlan,FLOOR100_HYDRAULIC_DIAMETERS_MM,FLOOR100_HYDRAULIC_LENGTHS_M} from './floor100-hydraulic.mjs';
 import {buildFloor100CoolingRoutes,FLOOR100_COOLING_TRACE_MODES} from './floor100-cooling-path.mjs';
 import {buildFloor100CoolantTopology,buildFloor100CoolantFault,FLOOR100_COOLANT_FAULT_ROWS,FLOOR100_COOLANT_FAULT_CDUS} from './floor100-coolant-topology.mjs';
+import {buildFloor100HydronicNetwork,FLOOR100_NETWORK_PUMP_SPEEDS,FLOOR100_NETWORK_HEAD_PRESETS_KPA,FLOOR100_NETWORK_VALVE_PRESETS_KPA,FLOOR100_NETWORK_HX_PRESETS_KPA,FLOOR100_NETWORK_HEADER_DIAMETERS_MM} from './floor100-hydronic-network.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES,FLOOR100_VISUAL_POWER_GEOMETRY} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
@@ -374,9 +375,31 @@ export function createFloor100Concept(THREE){
 
  let isolatedCoolantRow=0,failedCoolantCdu=0;
  let coolantFault=buildFloor100CoolantFault(waterBalance);
+ let hydronicAssumptions={
+  pumpSpeedPercent:100,shutoffHeadKPa:55,valveDropAtDesignKPa:10,
+  heatExchangerDropAtDesignKPa:15,headerDiameterMM:400
+ };
+ let hydronicNetwork=buildFloor100HydronicNetwork(waterBalance,hydraulicPlan,coolantFault,hydronicAssumptions);
+ function refreshHydronicNetwork(){
+  hydronicNetwork=buildFloor100HydronicNetwork(waterBalance,hydraulicPlan,coolantFault,hydronicAssumptions);
+ }
+ function setHydronicAssumptions(changes={}){
+  if(!changes||typeof changes!=="object"||Array.isArray(changes))return false;
+  const allowed=["pumpSpeedPercent","shutoffHeadKPa","valveDropAtDesignKPa","heatExchangerDropAtDesignKPa","headerDiameterMM"];
+  if(Object.keys(changes).some(k=>!allowed.includes(k)))return false;
+  const next={...hydronicAssumptions,...changes};
+  if(!FLOOR100_NETWORK_PUMP_SPEEDS.includes(next.pumpSpeedPercent)||
+   !FLOOR100_NETWORK_HEAD_PRESETS_KPA.includes(next.shutoffHeadKPa)||
+   !FLOOR100_NETWORK_VALVE_PRESETS_KPA.includes(next.valveDropAtDesignKPa)||
+   !FLOOR100_NETWORK_HX_PRESETS_KPA.includes(next.heatExchangerDropAtDesignKPa)||
+   !FLOOR100_NETWORK_HEADER_DIAMETERS_MM.includes(next.headerDiameterMM))return false;
+  const solved=buildFloor100HydronicNetwork(waterBalance,hydraulicPlan,coolantFault,next);
+  hydronicAssumptions=next;hydronicNetwork=solved;return true;
+ }
  const coolantMarkerColors={ok:new THREE.Color("#8ff6c7"),blocked:new THREE.Color("#f27772")};
  function refreshCoolantFault(){
   coolantFault=buildFloor100CoolantFault(waterBalance,{isolatedRow:isolatedCoolantRow,failedCdu:failedCoolantCdu});
+  refreshHydronicNetwork();
   for(const channel of ["supply","return"]){
    const mesh=coolantPipeMeshes[channel];
    coolantPipeRecords[channel].forEach((pipe,i)=>{
@@ -445,7 +468,7 @@ export function createFloor100Concept(THREE){
    !FLOOR100_HYDRAULIC_LENGTHS_M.includes(oneWayLengthM))return false;
   const next=buildFloor100HydraulicPlan(waterBalance,{diameterMM,oneWayLengthM});
   hydraulicDiameterMM=diameterMM;hydraulicLengthM=oneWayLengthM;hydraulicPlan=next;
-  return true;
+  refreshHydronicNetwork();return true;
  }
  function refreshFeedAllocation(){
   feedAllocation=buildFloor100FeedAllocation(powerModel,powerScenario,feedCapacityKW);
@@ -653,6 +676,9 @@ export function createFloor100Concept(THREE){
    coolantPipeInstances:coolantTopology.pipes.length,
    coolantValveInstances:valveIndicators.count,coolantPumpInstances:pumpIndicators.count,
    isolatedCoolantRow,failedCoolantCdu,coolantBlockedRows:coolantFault.blockedRows,
+   hydronicModeledFlowLpm:hydronicNetwork.modeledFlowLpm,
+   hydronicPumpHeadKPa:hydronicNetwork.pumpHeadKPa,
+   hydronicNetworkResidualKPa:hydronicNetwork.balanceResidualKPa,
    coolingRowMeterInstances:coolingRowMeters.count,
    coolingTraceMode,coolingTraceSegments:coolingTraceGroup.children.length,
    coolingTraceRack:activeCoolingPaths[0]?.rackId??null,
@@ -713,6 +739,7 @@ export function createFloor100Concept(THREE){
   setHydraulicAssumptions,getHydraulicPlan:()=>hydraulicPlan,
   setCoolingTraceMode,getCoolingPaths:()=>activeCoolingPaths,
   setCoolantIsolation,getCoolantFault:()=>coolantFault,getCoolantTopology:()=>coolantTopology,
+  setHydronicAssumptions,getHydronicNetwork:()=>hydronicNetwork,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),
   getFeedAllocation:()=>feedAllocation,getPowerPaths:()=>activePowerPaths,

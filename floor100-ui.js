@@ -34,6 +34,9 @@
  const isolationRow=$("floor100IsolatedRow"),failedCdu=$("floor100FailedCdu");
  const waterDeltaSelect=$("floor100WaterDeltaT");
  const pipeDiameter=$("floor100PipeDiameter"),pipeLength=$("floor100PipeLength");
+ const pumpSpeed=$("floor100PumpSpeed"),pumpHead=$("floor100PumpHead");
+ const networkValve=$("floor100NetworkValve"),networkHX=$("floor100NetworkHX");
+ const networkHeader=$("floor100NetworkHeader");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -51,6 +54,43 @@
   const thermal=state()?.getFloor100ThermalPlan?.();
   const water=state()?.getFloor100WaterBalance?.();
   const hydraulic=state()?.getFloor100HydraulicPlan?.();
+  const hydronic=state()?.getFloor100HydronicNetwork?.();
+  if(hydronic){
+   const n=hydronic,assumed=n.assumptions;
+   pumpSpeed.value=String(assumed.pumpSpeedPercent);
+   pumpHead.value=String(assumed.shutoffHeadKPa);
+   networkValve.value=String(assumed.valveDropAtDesignKPa);
+   networkHX.value=String(assumed.heatExchangerDropAtDesignKPa);
+   networkHeader.value=String(assumed.headerDiameterMM);
+   $("floor100NetworkFlow").textContent=kw.format(n.modeledFlowLpm)+" L/min";
+   $("floor100NetworkPumpKPa").textContent=kw.format(n.pumpHeadKPa)+" kPa";
+   $("floor100NetworkHeaderKPa").textContent=kw.format(n.mainHeadKPa)+" kPa";
+   $("floor100NetworkResidual").textContent=kw.format(n.balanceResidualKPa)+" kPa";
+   const selected=modeledPower?.entries.find(x=>x.id===focus);
+   const selectedRow=selected?n.rows[selected.row]:null;
+   $("floor100NetworkSelected").textContent=selectedRow?
+    ("ROW "+selectedRow.row+" · "+kw.format(selectedRow.modeledLpm)+" MODELED L/min vs "+
+     kw.format(selectedRow.requestedLpm)+" TARGET · "+
+     kw.format(selectedRow.branchDropKPa)+" kPa branch · "+
+     (selectedRow.blocked?"ISOLATED DEMO ROW":"NOT REAL SUPPLIED FLOW")):
+    ("TEN PARALLEL DEMO BRANCHES · OPEN TARGET "+kw.format(n.openDemandLpm)+
+     " L/min · ISOLATED TARGET "+kw.format(n.isolatedDemandLpm)+" L/min · NOT LIVE DATA");
+   const bar=$("floor100NetworkRows");
+   if(bar.children.length!==10){
+    for(let i=0;i<10;i++){
+     const b=document.createElement("button");
+     b.type="button";b.className="floor100-network-row";
+     b.addEventListener("click",()=>selectRack("R"+String(i*10+1).padStart(3,"0")));
+     bar.appendChild(b);
+    }
+   }
+   for(const row of n.rows){
+    const b=bar.children[row.row-1];
+    b.textContent="R"+row.row+" · "+kw.format(row.modeledLpm)+" L/min";
+    b.dataset.blocked=String(row.blocked);
+    b.setAttribute("aria-pressed",String(selectedRow?.row===row.row));
+   }
+  }
   const liquidPaths=state()?.getFloor100CoolingPaths?.()||[];
   const coolantFault=state()?.getFloor100CoolantFault?.();
   if(coolantFault){
@@ -419,6 +459,17 @@
  waterDeltaSelect.addEventListener("change",()=>{
   state()?.setFloor100WaterDeltaTK?.(Number(waterDeltaSelect.value));render();
  });
+ for(const el of [pumpSpeed,pumpHead,networkValve,networkHX,networkHeader]){
+  el.addEventListener("change",()=>{
+   state()?.setFloor100HydronicAssumptions?.({
+    pumpSpeedPercent:Number(pumpSpeed.value),
+    shutoffHeadKPa:Number(pumpHead.value),
+    valveDropAtDesignKPa:Number(networkValve.value),
+    heatExchangerDropAtDesignKPa:Number(networkHX.value),
+    headerDiameterMM:Number(networkHeader.value)
+   });render();
+  });
+ }
  for(const el of [pipeDiameter,pipeLength])el.addEventListener("change",()=>{
   state()?.setFloor100HydraulicAssumptions?.({
    diameterMM:Number(pipeDiameter.value),oneWayLengthM:Number(pipeLength.value)
@@ -442,6 +493,7 @@
    hypotheticalThermalPlan:state()?.getFloor100ThermalPlan?.()||null,
    hypotheticalComputeWaterBalance:state()?.getFloor100WaterBalance?.()||null,
    hypotheticalRowHydraulicSensitivity:state()?.getFloor100HydraulicPlan?.()||null,
+   hypotheticalParallelPumpOperatingPoint:state()?.getFloor100HydronicNetwork?.()||null,
    hypotheticalCoolantIsolation:state()?.getFloor100CoolantFault?.()||null,
    visualCoolantPipeAudit:state()?.getFloor100CoolantTopology?.()?.audit||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
