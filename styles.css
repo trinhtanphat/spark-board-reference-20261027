@@ -566,3 +566,18 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-hydraulic-panel>small{font:500 9px/1.55 var(--mono);color:#afcdce}
 @media(max-width:750px){.floor100-hydraulic-metrics{grid-template-columns:1fr}.floor100-hydraulic-rows{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:470px){.floor100-hydraulic-controls{grid-template-columns:1fr}}
+
+
+/* Coolant geometry + simulated isolation; not a physical control system. */
+.floor100-coolant-network{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:14px;border:1px solid #408d96;border-radius:9px;background:linear-gradient(120deg,#132b37,#263846);color:#d9f4f1}
+.floor100-network-title{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font:700 10px/1.5 var(--mono)}
+.floor100-network-title strong{color:#b2f5f0}.floor100-network-title span{color:#b7cbcf;font-size:9px}
+.floor100-network-controls{display:grid;grid-template-columns:minmax(120px,1fr) minmax(180px,1.25fr);gap:7px;align-items:center}
+.floor100-network-controls label{font:700 9px/1.5 var(--mono);color:#bce8e3}
+.floor100-network-controls select,.floor100-network-controls button{min-height:34px;min-width:0;padding:8px;border:1px solid #79afb0;border-radius:6px;background:#1b4a55;color:#f1faf7;font:700 10px/1.5 var(--mono)}
+.floor100-network-controls button{grid-column:1/-1;cursor:pointer;background:#2c5b62}
+.floor100-network-controls select:focus-visible,.floor100-network-controls button:focus-visible{outline:2px solid #fff2ad;outline-offset:2px}
+#floor100CoolantTopologyStatus,#floor100CoolantFaultStatus{display:block;padding:10px;border:1px solid #4c838a;border-radius:6px;background:#173643;color:#d2fcf5;font:700 10px/1.55 var(--mono)}
+#floor100CoolantFaultStatus[data-status="blocked"]{color:#ffe2d1;border-color:#ba8c76;background:#513735}
+.floor100-coolant-network>small{font:500 9px/1.6 var(--mono);color:#b8d0d4}
+@media(max-width:600px){.floor100-network-controls{grid-template-columns:1fr}.floor100-network-title{flex-direction:column}}

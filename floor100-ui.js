@@ -31,6 +31,7 @@
  const availableSelect=$("floor100CduAvailable"),thermalRows=$("floor100ThermalRows");
  const coolTraceSelect=$("floor100CoolTrace"),coolTraceStatus=$("floor100CoolTraceStatus");
  const coolTraceSteps=$("floor100CoolTraceSteps");
+ const isolationRow=$("floor100IsolatedRow"),failedCdu=$("floor100FailedCdu");
  const waterDeltaSelect=$("floor100WaterDeltaT");
  const pipeDiameter=$("floor100PipeDiameter"),pipeLength=$("floor100PipeLength");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
@@ -51,6 +52,22 @@
   const water=state()?.getFloor100WaterBalance?.();
   const hydraulic=state()?.getFloor100HydraulicPlan?.();
   const liquidPaths=state()?.getFloor100CoolingPaths?.()||[];
+  const coolantFault=state()?.getFloor100CoolantFault?.();
+  if(coolantFault){
+   isolationRow.value=String(coolantFault.isolatedRow);
+   failedCdu.value=String(coolantFault.failedCdu);
+   const status=$("floor100CoolantFaultStatus");
+   status.dataset.status=coolantFault.blockedRows.length?"blocked":"normal";
+   status.textContent=coolantFault.blockedRows.length?
+    ("SCHEMATIC DISCONNECTED DEMAND: ROWS "+coolantFault.blockedRows.join(", ")+
+     " · "+showKW(coolantFault.blockedComputeKW)+" HEAT / "+
+     kw.format(coolantFault.blockedFlowLpm)+" L/min target potentially affected · NOT MEASURED FLOW"):
+    "ALL ILLUSTRATIVE ROW VALVES OPEN / ALL CDU PUMP SYMBOLS AVAILABLE · NO LIVE TELEMETRY";
+   $("floor100CoolantTopologyStatus").textContent="AUDITED CONNECTED 3D PIPES · "+
+    d.coolantVisualAudit.paths+" SUPPLY / RETURN ROUTES · "+d.coolantVisualAudit.segments+
+    " CONTINUITY SEGMENTS · "+d.coolantPipeInstances+" VISIBLE SECTIONS · "+
+    d.coolantRenderedAudit.missing+" RENDERED ENDPOINT GAPS · NOT SITE CAD";
+  }
   coolTraceSelect.value=d.coolingTraceMode||"off";
   const liquidRack=liquidPaths[0]?.rackId??null;
   const notCompute=d.selected&&d.hardwareSelectedRackKind!=="compute";
@@ -379,6 +396,15 @@
   }
   state()?.setFloor100CoolingTraceMode?.(mode);render();
  });
+ for(const el of [isolationRow,failedCdu])el.addEventListener("change",()=>{
+  state()?.setFloor100CoolantIsolation?.({
+   isolatedRow:Number(isolationRow.value),failedCdu:Number(failedCdu.value)
+  });
+  state()?.setFloor100Filter?.("cooling");render();
+ });
+ $("floor100CoolantFaultReset").addEventListener("click",()=>{
+  state()?.setFloor100CoolantIsolation?.({isolatedRow:0,failedCdu:0});render();
+ });
  $("floor100CoolTraceReset").addEventListener("click",()=>{
   state()?.setFloor100CoolingTraceMode?.("off");render();
  });
@@ -416,6 +442,8 @@
    hypotheticalThermalPlan:state()?.getFloor100ThermalPlan?.()||null,
    hypotheticalComputeWaterBalance:state()?.getFloor100WaterBalance?.()||null,
    hypotheticalRowHydraulicSensitivity:state()?.getFloor100HydraulicPlan?.()||null,
+   hypotheticalCoolantIsolation:state()?.getFloor100CoolantFault?.()||null,
+   visualCoolantPipeAudit:state()?.getFloor100CoolantTopology?.()?.audit||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
