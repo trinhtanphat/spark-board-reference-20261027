@@ -11,7 +11,7 @@ for(const [scenario,states] of modes){
  assert.deepEqual(paths.map(x=>x.feed),["A","B"]);
  assert.deepEqual(paths.map(x=>x.visualState),states);
  assert.equal(paths[0].rackId,"R001");
- assert.ok(paths.every(x=>x.segments.length===6&&x.disclaimer.includes("no live load reading")));
+ assert.ok(paths.every(x=>x.segments.length===7&&x.disclaimer.includes("no live load reading")));
  for(const path of paths){
   for(let i=0;i<path.segments.length;i++){
    const seg=path.segments[i];
@@ -22,8 +22,9 @@ for(const [scenario,states] of modes){
    if(i>0)assert.deepEqual(path.segments[i-1].to,seg.from);
   }
   assert.equal(path.segments.at(-1).to[1],2.75);
-  assert.equal(path.segments.at(-1).to[2],r1.z-1.64);
-  assert.equal(path.segments.at(-1).to[0],r1.x+(path.feed==="A"?-1.35:1.35));
+  assert.equal(path.segments[5].to[2],Math.round((r1.z-1.64)*1000)/1000);
+  assert.equal(path.segments.at(-1).to[2],Math.round((r1.z-1.37)*1000)/1000);
+  assert.ok(Math.abs(path.segments.at(-1).to[0]-(r1.x+(path.feed==="A"?-1.35:1.35)))<0.002);
  }
 }
 assert.equal(buildFloor100FeedRoutes(r1,"off").length,0);
@@ -35,4 +36,4 @@ assert.throws(()=>buildFloor100FeedRoutes(r1,"invalid"),RangeError);
 assert.throws(()=>buildFloor100FeedRoute(r1,"C"),RangeError);
 assert.throws(()=>buildFloor100FeedRoute(r1,"A","invalid"),RangeError);
 assert.throws(()=>buildFloor100FeedRoute({...r1,z:NaN},"A"),RangeError);
-console.log(JSON.stringify({status:"PASS",oneRack:"R001",scenarios:modes.length,perFeedSegments:6,dualFeedSegments:12,allRacksSupported:true,officialElectricalTopology:false}));
+console.log(JSON.stringify({status:"PASS",oneRack:"R001",scenarios:modes.length,perFeedSegments:7,dualFeedSegments:14,allRacksSupported:true,officialElectricalTopology:false}));

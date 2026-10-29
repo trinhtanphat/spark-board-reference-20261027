@@ -8,7 +8,7 @@ import {buildFloor100PowerModel,validateFloor100RackWatts,FLOOR100_RACK_BASELINE
 import {buildFloor100ThermalPlan} from './floor100-thermal.mjs';
 import {buildFloor100CoolingRoutes,FLOOR100_COOLING_TRACE_MODES} from './floor100-cooling-path.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
-import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES} from './floor100-power-path.mjs';
+import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES,FLOOR100_VISUAL_POWER_GEOMETRY} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
 export const FLOOR100_SPEC=Object.freeze({
  rows:10,columns:10,rackCount:100,rackWidth:3.72,rackDepth:2.52,
@@ -172,45 +172,61 @@ export function createFloor100Concept(THREE){
  // Dedicated A/B visual utility routing from equipment gallery to rack trunks.
  // These schematic conduits are NOT actual cable sizing, safe busway installation
  // or a verified UPS/generator connection sequence.
- for(const [dx,kind,y] of [[-20.7,"powerA",8.87],[-20.3,"powerB",9.02]]){
-  cube(kind,dx,y,0,.15,.12,55,zones.power);
+ for(const d of Object.values(FLOOR100_VISUAL_POWER_GEOMETRY.feeds)){
+  cube(d.kind,d.trunkX,d.topY,0,.15,.16,55,zones.power);
  }
  for(let bank=0;bank<4;bank++){
   const z=(bank-1.5)*12.0;
-  for(const [kind,dx,y] of [["powerA",-20.7,8.87],["powerB",-20.3,9.02]]){
-   cube(kind,dx,5.4,z,.12,7.05,.13,zones.power);
-   cube(kind,-23.32,y,z,6.2,.11,.14,zones.power);
-   cube(kind,-26.1,5.4,z,.12,7.05,.12,zones.power);
+  for(const [kind,trunkX,top,upsX] of [
+   ["powerA",-20.7,8.87,-26.1],["powerB",-20.3,9.02,-25.9]
+  ]){
+   // Attach the riser to the UPS enclosure upper surface (Y=3.95).
+   // Keep A/B offset visually separate and join each riser to its trunk.
+   cube(kind,upsX,(FLOOR100_VISUAL_POWER_GEOMETRY.upsTopY+top)/2,z,
+    .16,top-FLOOR100_VISUAL_POWER_GEOMETRY.upsTopY+.22,.17,zones.power);
+   cube(kind,(upsX+trunkX)/2,top,z,trunkX-upsX+.22,.16,.17,zones.power);
+   cube(kind,upsX,top,z,.26,.24,.26,zones.power);
+   cube(kind,trunkX,top,z,.26,.24,.26,zones.power);
   }
  }
- // Visual emergency generator / UPS and battery-gallery feeders only.
- // No physical transfer time, isolation, load sharing or rating is implied.
+ // This is only a visual service-gallery connection, not ATS/switchgear CAD.
+ // One continuous gallery ties the fictional battery and generator symbols
+ // into the UPS enclosures instead of leaving separate floating rails.
+ cube("source",-26.3,4.0,0,.18,.18,50.3,zones.power);
  for(const generatorZ of [-25,25]){
-  cube("source",-26.3,4.35,generatorZ,.16,2.25,.15,zones.power);
-  cube("source",-26.3,4.4,generatorZ>0?21.5:-21.5,.15,.13,7.1,zones.power);
+  cube("source",-26.3,3.75,generatorZ,.18,1.35,.18,zones.power);
+  cube("source",-26.3,4.0,generatorZ,.28,.24,.28,zones.power);
  }
  for(let i=0;i<8;i++){
   const z=(i-3.5)*6.7;
-  cube("source",-29.2,4.0,z,5.4,.13,.13,zones.power);
-  cube("source",-32,3.5,z,.12,1.85,.12,zones.power);
+  cube("source",-29.15,4.0,z,5.9,.18,.18,zones.power);
+  cube("source",-32,3.6,z,.18,1.80,.18,zones.power);
+  cube("source",-26.3,4.0,z,.27,.25,.27,zones.power);
  }
- // Dual electrical distribution visualization. Not engineering wiring geometry.
+ // Full-length visual busways, ending exactly at the outermost cabinet
+ // tap. Both A/B tracks share landing coordinates with the rack drops below.
+ // This is a render-geometry fix, not a facility electrical circuit design.
  for(let row=0;row<10;row++){
-  cube("powerA",-10.0,8.87,zR(row),53,.08,.13,zones.power);
-  cube("powerB",-10.0,9.02,zR(row)+.3,53,.08,.11,zones.power);
+  for(const d of Object.values(FLOOR100_VISUAL_POWER_GEOMETRY.feeds)){
+   const x0=d.trunkX,xEnd=xR(9)+d.offsetX;
+   cube(d.kind,(x0+xEnd)/2,d.topY,zR(row)+d.offsetZ,
+    xEnd-x0+.24,.16,.17,zones.power);
+  }
  }
  for(let row=0;row<10;row++)for(let c=0;c<10;c++){
   const x=xR(c),z=zR(row);
   if(c<8)cube("coolant",x,8.04,z,.065,.18,2.20,zones.cooling);
-  // Every cabinet gets TWO independent schematic rear-side feed drops (A/B).
-  // The current single-column parity feed-status map remains a separate
-  // simplified route illustration, not a rack power availability assertion.
+  // Each vertical conduit now touches its overhead spur AND a connector
+  // terminating on the actual cabinet rear. No free-floating endpoints.
   for(const [dx,kind,headerZ,top] of [[-1.35,"powerA",z,8.87],[1.35,"powerB",z+.3,9.02]]){
-   cube(kind,x+dx,4.7,z-1.64,.095,8.1,.105,zones.power);
-   const dz=(headerZ+z-1.64)/2;
-   cube(kind,x+dx,top,dz,.09,.09,Math.abs(headerZ-(z-1.64))+.08,zones.power);
-   cube(kind,x+dx,2.75,z-1.78,.25,.24,.16,zones.power);
-   cube("steel",x+dx,2.75,z-1.9,.30,.29,.09,zones.power);
+   const px=x+dx,entryZ=z-1.64,rearPanelZ=z-1.37,portY=2.75;
+   const yCenter=(top+portY)/2;
+   cube(kind,px,yCenter,entryZ,.105,top-portY+.2,.12,zones.power);
+   cube(kind,px,top,(headerZ+entryZ)/2,.13,.13,Math.abs(headerZ-entryZ)+.2,zones.power);
+   cube(kind,px,top,headerZ,.24,.23,.24,zones.power);
+   cube(kind,px,top,entryZ,.24,.23,.24,zones.power);
+   cube(kind,px,portY,(entryZ+rearPanelZ)/2,.22,.25,Math.abs(rearPanelZ-entryZ)+.20,zones.power);
+   cube("steel",px,portY,rearPanelZ,.34,.32,.13,zones.power);
   }
  }
  // Place repeating details into one InstancedMesh per (zone, material).
@@ -228,6 +244,31 @@ export function createFloor100Concept(THREE){
   records.forEach((r,i)=>{o.position.set(r.x,r.y,r.z);o.rotation.set(0,0,0);o.scale.set(r.w,r.h,r.d);o.updateMatrix();mesh.setMatrixAt(i,o.matrix)});
   mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();owner.add(mesh);batched.push(mesh);
  }
+ // Geometry-only overlap audit: verify the visible prisms actually cover
+ // both endpoints of every highlighted segment, for all 200 fictional paths.
+ // This checks 3D mesh topology, not electrical continuity or safety.
+ const visualCableAudit=(()=>{
+  const byKind=new Map();
+  for(const kind of ["powerA","powerB"]){
+   byKind.set(kind,(instanceRecords.get(kind)||[]).filter(r=>r.owner===zones.power));
+  }
+  const contained=(r,p)=>{
+   return Math.abs(p[0]-r.x)<=r.w/2+.005&&
+    Math.abs(p[1]-r.y)<=r.h/2+.005&&
+    Math.abs(p[2]-r.z)<=r.d/2+.005;
+  };
+  let paths=0,segments=0,missing=0;
+  for(const rack of racks)for(const feed of ["A","B"]){
+   paths++;
+   const kind=feed==="A"?"powerA":"powerB";
+   for(const s of buildFloor100FeedRoutes(rack,feed)[0].segments){
+    segments++;
+    if(!byKind.get(kind).some(r=>contained(r,s.from)&&contained(r,s.to)))missing++;
+   }
+  }
+  return Object.freeze({paths,segments,missing,connected:missing===0,
+   scope:"Visual 3D cuboid overlaps only, NOT electrical continuity"});
+ })();
  // Per-rack live SCHEMATIC ROUTE indicator. Operational availability is not measured.
  const indicatorMat=new THREE.MeshBasicMaterial({color:'#ffffff',toneMapped:false});
  const routeIndicators=new THREE.InstancedMesh(boxGeom,indicatorMat,racks.length);
@@ -515,6 +556,7 @@ export function createFloor100Concept(THREE){
    customRackWattCount:Object.keys(rackBaselineOverrides).length,
    powerTotalW:powerModel.totalW,powerFacilityW:powerModel.facilityW,
    powerDualDrops:200,powerHeatIndicators:heatIndicators.count,
+   visualCableAudit,
    powerHeatVisible:heatIndicators.visible,
    hardwarePart,hardwareHighlightVisible:highlight.visible,
    hardwareHighlightCount:highlight.count,
