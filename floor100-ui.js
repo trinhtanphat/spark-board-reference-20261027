@@ -27,6 +27,8 @@
   }catch{wattMessage="Browser storage unavailable or stored preset invalid."}
  }
  const capSelect=$("floor100FeedCapacity"),feedRowGrid=$("floor100FeedRowAllocation");
+ const liquidSelect=$("floor100LiquidCapture"),cduCapSelect=$("floor100CduKW");
+ const availableSelect=$("floor100CduAvailable"),thermalRows=$("floor100ThermalRows");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -41,6 +43,44 @@
   restoreWattPresetsOnce();
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
+  const thermal=state()?.getFloor100ThermalPlan?.();
+  if(thermal){
+   liquidSelect.value=String(thermal.liquidCapturePercent);
+   cduCapSelect.value=String(thermal.cduCapacityKW);
+   availableSelect.value=String(thermal.availableCDUs);
+   $("floor100HeatKW").textContent=showKW(thermal.heatKW);
+   $("floor100LiquidKW").textContent=showKW(thermal.liquidKW);
+   $("floor100AirKW").textContent=showKW(thermal.airKW);
+   $("floor100CduBudgetKW").textContent=showKW(thermal.capacityKW);
+   $("floor100CoolingBudgetBar").style.width=(thermal.utilizationPercent===null?100:Math.min(100,thermal.utilizationPercent))+"%";
+   const s=$("floor100CoolingPlanStatus");
+   s.dataset.status=thermal.status==="OVER_DEMO_CAPACITY"?"over":"within";
+   s.textContent=thermal.status==="OVER_DEMO_CAPACITY"?
+    ("WHAT-IF COOLING GAP "+showKW(thermal.excessKW)+" / LIQUID "+showKW(thermal.liquidKW)+
+     " / CDU BUDGET "+showKW(thermal.capacityKW)+" · NO REAL TEMPERATURE PREDICTION"):
+    ("WITHIN FICTIONAL CDU BUDGET · LIQUID "+showKW(thermal.liquidKW)+
+     " / "+showKW(thermal.capacityKW)+" · NO LIVE COOLANT CAPACITY MEASURED");
+   if(thermalRows.children.length!==10){
+    for(let i=0;i<10;i++){
+     const b=document.createElement("button");b.type="button";
+     b.className="floor100-thermal-row";b.dataset.row=String(i+1);
+     b.addEventListener("click",()=>selectRack("R"+String(i*10+1).padStart(3,"0")));
+     thermalRows.appendChild(b);
+    }
+   }
+   for(const row of thermal.rows){
+    const b=thermalRows.children[row.row-1];
+    b.textContent="ROW "+row.row+" · "+showKW(row.liquidKW)+" LIQ / "+showKW(row.airKW)+" AIR";
+    b.dataset.status=row.nominalExcessKW>0?"over":"within";
+    b.title="Illustrative row heat budget; select row "+row.row;
+   }
+   const selected=modeledPower?.entries.find(e=>e.id===focus);
+   $("floor100SelectedHeat").textContent=selected?
+    (selected.id+" · HEAT "+showKW(selected.estimatedKW)+" / "+showW(selected.estimatedW)+
+     " · ASSUMED LIQUID "+showKW(Math.round(selected.estimatedKW*thermal.liquidCapturePercent)/100)+
+     " · NOT MEASURED"):
+    "Choose a rack to view its assumed heat-equivalent load";
+  }
   const plan=state()?.getFloor100FeedAllocation?.();
   if(plan){
    capSelect.value=String(plan.capacityKW);
@@ -256,6 +296,14 @@
   }catch(e){wattMessage="REJECTED: "+String(e?.message||e).slice(0,140)}
   wattFile.value="";render();
  });
+ for(const el of [liquidSelect,cduCapSelect,availableSelect]){
+  el.addEventListener("change",()=>{
+   state()?.setFloor100ThermalAssumptions?.({
+    liquidCapturePercent:Number(liquidSelect.value),cduCapacityKW:Number(cduCapSelect.value),
+    availableCDUs:Number(availableSelect.value)
+   });render();
+  });
+ }
  capSelect.addEventListener("change",()=>{
   state()?.setFloor100FeedCapacityKW?.(Number(capSelect.value));render();
  });
@@ -270,7 +318,8 @@
   const data=JSON.stringify({format:"SPARK-FLOOR100-POWER-ESTIMATE-1",
    source:"BROWSER_ONLY_DEMO_ASSUMPTIONS",createdAt:new Date().toISOString(),...profile,
    selectedSchematicPaths:state()?.getFloor100PowerPaths?.()||[],
-   hypotheticalFeedPlan:state()?.getFloor100FeedAllocation?.()||null},null,2);
+   hypotheticalFeedPlan:state()?.getFloor100FeedAllocation?.()||null,
+   hypotheticalThermalPlan:state()?.getFloor100ThermalPlan?.()||null},null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
   link.href=url;link.download="spark-floor100-power-estimate-NOT-TELEMETRY.json";
