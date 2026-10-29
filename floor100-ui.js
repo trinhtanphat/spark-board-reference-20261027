@@ -29,6 +29,8 @@
  const capSelect=$("floor100FeedCapacity"),feedRowGrid=$("floor100FeedRowAllocation");
  const liquidSelect=$("floor100LiquidCapture"),cduCapSelect=$("floor100CduKW");
  const availableSelect=$("floor100CduAvailable"),thermalRows=$("floor100ThermalRows");
+ const coolTraceSelect=$("floor100CoolTrace"),coolTraceStatus=$("floor100CoolTraceStatus");
+ const coolTraceSteps=$("floor100CoolTraceSteps");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -44,6 +46,33 @@
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
   const thermal=state()?.getFloor100ThermalPlan?.();
+  const liquidPaths=state()?.getFloor100CoolingPaths?.()||[];
+  coolTraceSelect.value=d.coolingTraceMode||"off";
+  const liquidRack=liquidPaths[0]?.rackId??null;
+  const notCompute=d.selected&&d.hardwareSelectedRackKind!=="compute";
+  coolTraceStatus.dataset.status=notCompute&&d.coolingTraceMode!=="off"?"unsupported":liquidPaths.length?"active":"idle";
+  coolTraceStatus.textContent=liquidPaths.length?
+   ("SCHEMATIC "+liquidRack+" · "+liquidPaths.map(p=>p.channel.toUpperCase()+
+    " CDU "+p.cduReference+" / "+p.segments.length+" STEPS").join(" | ")+
+    " · NOT FLOW TELEMETRY"):
+   notCompute&&d.coolingTraceMode!=="off"?
+    ("NO LIQUID ROUTE MAPPED FOR "+d.selected+" · FABRIC/STORAGE IS NOT NVL72 COMPUTE HARDWARE"):
+    "Choose a compute rack, then trace conceptual supply/return pipes.";
+  for(const channel of ["supply","return"]){
+   const route=liquidPaths.find(x=>x.channel===channel);
+   const el=$("floor100Cool"+(channel==="supply"?"Supply":"Return"));
+   el.dataset.active=String(Boolean(route));
+   el.textContent=route?
+    (channel.toUpperCase()+" · CDU GALLERY #"+route.cduReference+" · "+route.segments.length+" PIPE SECTIONS"):
+    (channel.toUpperCase()+" · NOT SELECTED");
+  }
+  coolTraceSteps.replaceChildren();
+  if(liquidPaths.length){
+   for(const segment of liquidPaths[0].segments){
+    const li=document.createElement("li");li.textContent=segment.name;
+    coolTraceSteps.appendChild(li);
+   }
+  }
   if(thermal){
    liquidSelect.value=String(thermal.liquidCapturePercent);
    cduCapSelect.value=String(thermal.cduCapacityKW);
@@ -296,6 +325,18 @@
   }catch(e){wattMessage="REJECTED: "+String(e?.message||e).slice(0,140)}
   wattFile.value="";render();
  });
+ coolTraceSelect.addEventListener("change",()=>{
+  const mode=coolTraceSelect.value;
+  if(mode!=="off"){
+   if(!state()?.getFloor100Diagnostics?.()?.selected)selectRack("R001");
+   state()?.setFloor100Filter?.("cooling");
+   state()?.setFloor100Side?.("rear");
+  }
+  state()?.setFloor100CoolingTraceMode?.(mode);render();
+ });
+ $("floor100CoolTraceReset").addEventListener("click",()=>{
+  state()?.setFloor100CoolingTraceMode?.("off");render();
+ });
  for(const el of [liquidSelect,cduCapSelect,availableSelect]){
   el.addEventListener("change",()=>{
    state()?.setFloor100ThermalAssumptions?.({
@@ -319,7 +360,8 @@
    source:"BROWSER_ONLY_DEMO_ASSUMPTIONS",createdAt:new Date().toISOString(),...profile,
    selectedSchematicPaths:state()?.getFloor100PowerPaths?.()||[],
    hypotheticalFeedPlan:state()?.getFloor100FeedAllocation?.()||null,
-   hypotheticalThermalPlan:state()?.getFloor100ThermalPlan?.()||null},null,2);
+   hypotheticalThermalPlan:state()?.getFloor100ThermalPlan?.()||null,
+   selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
   link.href=url;link.download="spark-floor100-power-estimate-NOT-TELEMETRY.json";
