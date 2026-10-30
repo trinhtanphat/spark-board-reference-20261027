@@ -14,6 +14,7 @@ import {buildFloor100HydronicNetwork,FLOOR100_NETWORK_PUMP_SPEEDS,FLOOR100_NETWO
 import {buildFloor100CduBanks,FLOOR100_CDU_PUMP_SPEEDS,FLOOR100_CDU_IDS} from './floor100-cdu-banks.mjs';
 import {buildFloor100ThermalTransient,FLOOR100_TRANSIENT_INCIDENT_MINUTES,FLOOR100_TRANSIENT_RECOVERY_MINUTES,FLOOR100_TRANSIENT_MASS_KJ_PER_K} from './floor100-thermal-transient.mjs';
 import {buildFloor100CduN1Study} from './floor100-cdu-n1-study.mjs';
+import {buildFloor100CduRestartComparison,FLOOR100_RESTART_RAMP_MINUTES} from './floor100-cdu-restart.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES,FLOOR100_VISUAL_POWER_GEOMETRY} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
@@ -389,6 +390,20 @@ export function createFloor100Concept(THREE){
  let transientReference=buildFloor100CduBanks(waterBalance,hydraulicPlan,buildFloor100CoolantFault(waterBalance));
  let transientPlan=buildFloor100ThermalTransient(waterBalance,transientReference,cduBankPlan);
  let cduN1Study=buildFloor100CduN1Study(waterBalance,hydraulicPlan);
+ let restartCdu=2,restartRampMinutes=6;
+ let restartStudy=buildFloor100CduRestartComparison(waterBalance,hydraulicPlan);
+ function setCduRestartOptions(changes={}){
+  if(!changes||typeof changes!=="object"||Array.isArray(changes))return false;
+  if(Object.keys(changes).some(k=>!["cdu","selectedRampMinutes"].includes(k)))return false;
+  const proposed={cdu:restartCdu,selectedRampMinutes:restartRampMinutes,...changes};
+  if(!Number.isInteger(proposed.cdu)||proposed.cdu<1||proposed.cdu>8||
+   !FLOOR100_RESTART_RAMP_MINUTES.includes(proposed.selectedRampMinutes))return false;
+  const next=buildFloor100CduRestartComparison(waterBalance,hydraulicPlan,{
+   cdu:proposed.cdu,selectedRampMinutes:proposed.selectedRampMinutes,
+   incidentMinutes:transientIncidentMinutes,recoveryMinutes:transientRecoveryMinutes,
+   equivalentCapacityKJPerK:transientCapacityKJPerK});
+  restartCdu=proposed.cdu;restartRampMinutes=proposed.selectedRampMinutes;restartStudy=next;return true;
+ }
  function setCduN1Scenario(cdu){
   if(!Number.isInteger(cdu)||cdu<0||cdu>8)return false;
   const proposed=Array(8).fill(100);
@@ -407,6 +422,10 @@ export function createFloor100Concept(THREE){
   cduN1Study=buildFloor100CduN1Study(waterBalance,hydraulicPlan,{
    incidentMinutes:transientIncidentMinutes,recoveryMinutes:transientRecoveryMinutes,
    equivalentCapacityKJPerK:transientCapacityKJPerK});
+  restartStudy=buildFloor100CduRestartComparison(waterBalance,hydraulicPlan,{
+   cdu:restartCdu,selectedRampMinutes:restartRampMinutes,
+   incidentMinutes:transientIncidentMinutes,recoveryMinutes:transientRecoveryMinutes,
+   equivalentCapacityKJPerK:transientCapacityKJPerK});
  }
  function setThermalTransientOptions(changes={}){
   if(!changes||typeof changes!=="object"||Array.isArray(changes))return false;
@@ -419,7 +438,9 @@ export function createFloor100Concept(THREE){
    !FLOOR100_TRANSIENT_MASS_KJ_PER_K.includes(next.equivalentCapacityKJPerK))return false;
   const solved=buildFloor100ThermalTransient(waterBalance,transientReference,cduBankPlan,next);
   const nextN1=buildFloor100CduN1Study(waterBalance,hydraulicPlan,next);
-  cduN1Study=nextN1;
+  const nextRestart=buildFloor100CduRestartComparison(waterBalance,hydraulicPlan,{
+   ...next,cdu:restartCdu,selectedRampMinutes:restartRampMinutes});
+  cduN1Study=nextN1;restartStudy=nextRestart;
   transientIncidentMinutes=next.incidentMinutes;transientRecoveryMinutes=next.recoveryMinutes;
   transientCapacityKJPerK=next.equivalentCapacityKJPerK;transientPlan=solved;return true;
  }
@@ -737,6 +758,7 @@ export function createFloor100Concept(THREE){
    thermalTransientAffectedRows:transientPlan.affectedRows,
    cduN1WorstIllustrativeCdu:cduN1Study.worstIllustrativeCdu,
    cduN1Comparisons:cduN1Study.comparisons,
+   cduRestartCdu:restartStudy.cdu,cduRestartRampMinutes:restartStudy.selectedRampMinutes,
    coolingRowMeterInstances:coolingRowMeters.count,
    coolingTraceMode,coolingTraceSegments:coolingTraceGroup.children.length,
    coolingTraceRack:activeCoolingPaths[0]?.rackId??null,
@@ -801,6 +823,7 @@ export function createFloor100Concept(THREE){
   setCduPumpSpeed,getCduBankPlan:()=>cduBankPlan,
   setThermalTransientOptions,getThermalTransient:()=>transientPlan,
   setCduN1Scenario,getCduN1Study:()=>cduN1Study,
+  setCduRestartOptions,getCduRestartComparison:()=>restartStudy,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),
   getFeedAllocation:()=>feedAllocation,getPowerPaths:()=>activePowerPaths,
