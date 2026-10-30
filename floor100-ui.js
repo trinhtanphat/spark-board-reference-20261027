@@ -54,6 +54,61 @@
   restoreWattPresetsOnce();
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
+  const n1=state()?.getFloor100CduN1Study?.();
+  if(n1){
+   const fmt=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
+   $("floor100N1Worst").textContent="CDU "+n1.worstIllustrativeCdu+" (ILLUSTRATIVE)";
+   $("floor100N1WorstExposure").textContent=fmt.format(n1.worstPositiveExcessProxyKMinutes)+" K·min";
+   $("floor100N1Cases").textContent=String(n1.comparisons);
+   const active=state()?.getFloor100CduBankPlan?.();
+   const fault=state()?.getFloor100CoolantFault?.();
+   const out=active?.pumpSpeeds?.map((s,i)=>s===0?i+1:0).filter(Boolean)||[];
+   const solo=out.length===1&&active.pumpSpeeds.filter(s=>s===100).length===7&&
+    fault?.isolatedRow===0&&fault?.failedCdu===0?out[0]:0;
+   const status=$("floor100N1Status");
+   status.textContent=solo?
+    ("PREVIEWING ONLY CDU "+solo+" PUMP-OFF CASE · FICTIONAL ROW HEAT RESPONSE"):
+    "COMPARISON OF EIGHT INDEPENDENT ONE-CDU OUTAGES · CLICK A CASE TO PREVIEW";
+   const cards=$("floor100N1CasesGrid");
+   if(cards.children.length!==8){
+    cards.replaceChildren();
+    for(let cdu=1;cdu<=8;cdu++){
+     const b=document.createElement("button");
+     b.type="button";b.className="floor100-n1-case";
+     b.dataset.cdu=String(cdu);
+     b.addEventListener("click",()=>{
+      state()?.setFloor100CduN1Scenario?.(cdu);
+      state()?.setFloor100Filter?.("cooling");
+      render();
+     });
+     const top=document.createElement("span");top.className="floor100-n1-case-head";
+     const label=document.createElement("span");label.className="floor100-n1-name";
+     const rank=document.createElement("span");rank.className="floor100-n1-order";
+     top.append(label,rank);
+     const score=document.createElement("strong");score.className="floor100-n1-score";
+     const track=document.createElement("span");track.className="floor100-n1-track";
+     const fill=document.createElement("span");fill.className="floor100-n1-fill";
+     track.appendChild(fill);
+     const detail=document.createElement("small");detail.className="floor100-n1-detail";
+     b.append(top,score,track,detail);cards.appendChild(b);
+    }
+   }
+   const worst=Math.max(0.0001,...n1.scenarios.map(x=>x.positiveExcessProxyKMinutes));
+   for(const scenario of n1.scenarios){
+    const b=cards.children[scenario.cdu-1];
+    b.dataset.active=String(solo===scenario.cdu);
+    b.dataset.top=String(scenario.comparisonOrder===1);
+    b.setAttribute("aria-pressed",String(solo===scenario.cdu));
+    b.querySelector(".floor100-n1-name").textContent="CDU "+scenario.cdu+" OFF";
+    b.querySelector(".floor100-n1-order").textContent="ORDER "+scenario.comparisonOrder+" / 8";
+    b.querySelector(".floor100-n1-score").textContent=fmt.format(scenario.positiveExcessProxyKMinutes)+" K·min PROXY";
+    b.querySelector(".floor100-n1-fill").style.width=(scenario.positiveExcessProxyKMinutes/worst*100).toFixed(2)+"%";
+    b.querySelector(".floor100-n1-detail").textContent=
+     "ROWS "+scenario.blockedRows.join(", ")+" · PEAK +"+
+     fmt.format(scenario.peakRiseC)+" K · MODEL FLOW LOSS "+
+     fmt.format(scenario.modeledLossLpm)+" L/min";
+   }
+  }
   const thermal=state()?.getFloor100ThermalPlan?.();
   const water=state()?.getFloor100WaterBalance?.();
   const hydraulic=state()?.getFloor100HydraulicPlan?.();
@@ -564,6 +619,9 @@
  waterDeltaSelect.addEventListener("change",()=>{
   state()?.setFloor100WaterDeltaTK?.(Number(waterDeltaSelect.value));render();
  });
+ $("floor100N1Reset").addEventListener("click",()=>{
+  state()?.setFloor100CduN1Scenario?.(0);render();
+ });
  for(const el of [transientIncident,transientRecovery,transientMass])el.addEventListener("change",()=>{
   state()?.setFloor100ThermalTransientOptions?.({
    incidentMinutes:Number(transientIncident.value),
@@ -608,6 +666,7 @@
    hypotheticalParallelPumpOperatingPoint:state()?.getFloor100HydronicNetwork?.()||null,
    hypotheticalEightIndependentCduBanks:state()?.getFloor100CduBankPlan?.()||null,
    hypotheticalThermalTransient:state()?.getFloor100ThermalTransient?.()||null,
+   hypotheticalEightCduSingleOutageComparison:state()?.getFloor100CduN1Study?.()||null,
    hypotheticalCoolantIsolation:state()?.getFloor100CoolantFault?.()||null,
    visualCoolantPipeAudit:state()?.getFloor100CoolantTopology?.()?.audit||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);

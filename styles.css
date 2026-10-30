@@ -643,3 +643,28 @@ body{background:radial-gradient(ellipse at 60% 9%,#273033 0%,#161c20 44%,#101619
 .floor100-transient-panel>small{color:#bed6da;font:500 9px/1.6 var(--mono)}
 @media(max-width:780px){.floor100-transient-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.floor100-transient-controls,.floor100-transient-metrics{grid-template-columns:1fr}}
+
+/* Single CDU outage comparison — fictional proxy heat exposure, not N+1 certification. */
+.floor100-n1-study{display:flex;flex-direction:column;gap:11px;margin:15px 0;padding:15px;border:1px solid #7b9d94;border-radius:10px;background:linear-gradient(125deg,#183943,#2b414b);color:#e5f7f0}
+.floor100-n1-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font:800 10px/1.5 var(--mono)}
+.floor100-n1-head strong{color:#f7e9a6}.floor100-n1-head span{color:#bdd8d9;font-size:9px}
+.floor100-n1-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.floor100-n1-metrics>div{display:flex;flex-direction:column;gap:7px;min-width:0;background:#1c4550;border:1px solid #537b85;border-radius:6px;padding:10px}
+.floor100-n1-metrics small{font:700 9px/1.4 var(--mono);color:#bddbdc}
+.floor100-n1-metrics strong{font:800 clamp(13px,1.6vw,18px)/1.4 var(--mono);color:#ffedbb;overflow-wrap:anywhere}
+#floor100N1Status{display:block;border:1px solid #718c8f;background:#254653;border-radius:5px;padding:8px;font:700 10px/1.5 var(--mono);color:#dbeef1}
+.floor100-n1-cases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.floor100-n1-case{display:flex;flex-direction:column;gap:6px;text-align:left;min-width:0;background:#1d424c;border:1px solid #547e80;color:#ecfaf3;border-radius:7px;padding:10px;cursor:pointer}
+.floor100-n1-case[data-active="true"]{outline:2px solid #ffdf97;outline-offset:-2px;background:#3b514e}
+.floor100-n1-case[data-top="true"]{border-color:#dca979}
+.floor100-n1-case-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font:800 11px/1.4 var(--mono)}
+.floor100-n1-case small{font:500 9px/1.5 var(--mono);color:#c5d9dc}
+.floor100-n1-case strong{font:800 12px/1.4 var(--mono);color:#f9eeab}
+.floor100-n1-track{display:block;min-height:7px;border-radius:10px;overflow:hidden;background:#345e66}
+.floor100-n1-fill{display:block;height:8px;background:#f4ce8c}
+.floor100-n1-actions{display:flex;gap:9px;align-items:center}
+#floor100N1Reset{background:#244f5d;border:1px solid #80b2ad;color:#edfff2;padding:9px 12px;border-radius:6px;font:700 10px/1.5 var(--mono);cursor:pointer}
+.floor100-n1-study button:focus-visible{outline:2px solid #ffe39f;outline-offset:2px}
+.floor100-n1-study>small{font:500 9px/1.6 var(--mono);color:#bcd7d9}
+@media(max-width:750px){.floor100-n1-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.floor100-n1-cases{grid-template-columns:1fr}}
+@media(max-width:450px){.floor100-n1-metrics{grid-template-columns:1fr}}
