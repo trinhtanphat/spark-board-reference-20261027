@@ -13,6 +13,7 @@ import {buildFloor100CoolantTopology,buildFloor100CoolantFault,FLOOR100_COOLANT_
 import {buildFloor100HydronicNetwork,FLOOR100_NETWORK_PUMP_SPEEDS,FLOOR100_NETWORK_HEAD_PRESETS_KPA,FLOOR100_NETWORK_VALVE_PRESETS_KPA,FLOOR100_NETWORK_HX_PRESETS_KPA,FLOOR100_NETWORK_HEADER_DIAMETERS_MM} from './floor100-hydronic-network.mjs';
 import {buildFloor100CduBanks,FLOOR100_CDU_PUMP_SPEEDS,FLOOR100_CDU_IDS} from './floor100-cdu-banks.mjs';
 import {buildFloor100ThermalTransient,FLOOR100_TRANSIENT_INCIDENT_MINUTES,FLOOR100_TRANSIENT_RECOVERY_MINUTES,FLOOR100_TRANSIENT_MASS_KJ_PER_K} from './floor100-thermal-transient.mjs';
+import {buildFloor100CduN1Study} from './floor100-cdu-n1-study.mjs';
 import {buildFloor100FeedAllocation,FLOOR100_DEMO_FEED_CAPACITIES} from './floor100-feed-allocation.mjs';
 import {buildFloor100FeedRoutes,FLOOR100_TRACE_MODES,FLOOR100_VISUAL_POWER_GEOMETRY} from './floor100-power-path.mjs';
 import {NVL72_INSPECTION_PARTS,nvl72PartShapes} from './floor100-hardware.mjs';
@@ -387,9 +388,23 @@ export function createFloor100Concept(THREE){
  let transientIncidentMinutes=10,transientRecoveryMinutes=20,transientCapacityKJPerK=180000;
  let transientReference=buildFloor100CduBanks(waterBalance,hydraulicPlan,buildFloor100CoolantFault(waterBalance));
  let transientPlan=buildFloor100ThermalTransient(waterBalance,transientReference,cduBankPlan);
+ let cduN1Study=buildFloor100CduN1Study(waterBalance,hydraulicPlan);
+ function setCduN1Scenario(cdu){
+  if(!Number.isInteger(cdu)||cdu<0||cdu>8)return false;
+  const proposed=Array(8).fill(100);
+  if(cdu)proposed[cdu-1]=0;
+  const healthyFault=buildFloor100CoolantFault(waterBalance);
+  // Validate the complete proposed scenario before updating any live demo state.
+  buildFloor100CduBanks(waterBalance,hydraulicPlan,healthyFault,{pumpSpeeds:proposed});
+  cduPumpSpeeds=proposed;isolatedCoolantRow=0;failedCoolantCdu=0;
+  refreshCoolantFault();return true;
+ }
  function refreshThermalTransient(){
   transientReference=buildFloor100CduBanks(waterBalance,hydraulicPlan,buildFloor100CoolantFault(waterBalance));
   transientPlan=buildFloor100ThermalTransient(waterBalance,transientReference,cduBankPlan,{
+   incidentMinutes:transientIncidentMinutes,recoveryMinutes:transientRecoveryMinutes,
+   equivalentCapacityKJPerK:transientCapacityKJPerK});
+  cduN1Study=buildFloor100CduN1Study(waterBalance,hydraulicPlan,{
    incidentMinutes:transientIncidentMinutes,recoveryMinutes:transientRecoveryMinutes,
    equivalentCapacityKJPerK:transientCapacityKJPerK});
  }
@@ -403,6 +418,8 @@ export function createFloor100Concept(THREE){
    !FLOOR100_TRANSIENT_RECOVERY_MINUTES.includes(next.recoveryMinutes)||
    !FLOOR100_TRANSIENT_MASS_KJ_PER_K.includes(next.equivalentCapacityKJPerK))return false;
   const solved=buildFloor100ThermalTransient(waterBalance,transientReference,cduBankPlan,next);
+  const nextN1=buildFloor100CduN1Study(waterBalance,hydraulicPlan,next);
+  cduN1Study=nextN1;
   transientIncidentMinutes=next.incidentMinutes;transientRecoveryMinutes=next.recoveryMinutes;
   transientCapacityKJPerK=next.equivalentCapacityKJPerK;transientPlan=solved;return true;
  }
@@ -718,6 +735,8 @@ export function createFloor100Concept(THREE){
    cduBankOffCount:cduBankPlan.banks.filter(b=>b.status==='PUMP_OFF').length,
    thermalTransientPeakProxyC:transientPlan.maxProxyC,
    thermalTransientAffectedRows:transientPlan.affectedRows,
+   cduN1WorstIllustrativeCdu:cduN1Study.worstIllustrativeCdu,
+   cduN1Comparisons:cduN1Study.comparisons,
    coolingRowMeterInstances:coolingRowMeters.count,
    coolingTraceMode,coolingTraceSegments:coolingTraceGroup.children.length,
    coolingTraceRack:activeCoolingPaths[0]?.rackId??null,
@@ -781,6 +800,7 @@ export function createFloor100Concept(THREE){
   setHydronicAssumptions,getHydronicNetwork:()=>hydronicNetwork,
   setCduPumpSpeed,getCduBankPlan:()=>cduBankPlan,
   setThermalTransientOptions,getThermalTransient:()=>transientPlan,
+  setCduN1Scenario,getCduN1Study:()=>cduN1Study,
   setRackBaselineWatts,resetRackBaselineWatts,replaceRackBaselineOverrides,
   getRackBaselineOverrides:()=>({...rackBaselineOverrides}),
   getFeedAllocation:()=>feedAllocation,getPowerPaths:()=>activePowerPaths,
