@@ -630,6 +630,12 @@ function init(){
  getFloor100CduBankPlan(){return floor100Scene?.getCduBankPlan()||null},
  getFloor100ThermalTransient(){return floor100Scene?.getThermalTransient()||null},
  getFloor100CduN1Study(){return floor100Scene?.getCduN1Study()||null},
+ getFloor100CduRestartComparison(){return floor100Scene?.getCduRestartComparison()||null},
+ setFloor100CduRestartOptions(value){
+  if(modelMode!=='floor100')return false;
+  const ok=floor100Scene?.setCduRestartOptions(value)===true;
+  if(ok)needsRender=true;return ok;
+ },
  setFloor100CduN1Scenario(cdu){
   if(modelMode!=='floor100')return false;
   const ok=floor100Scene?.setCduN1Scenario(cdu)===true;

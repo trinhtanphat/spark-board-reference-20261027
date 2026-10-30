@@ -40,6 +40,7 @@
  const cduCards=$("floor100CduBanks");
  const transientIncident=$("floor100TransientIncident"),transientRecovery=$("floor100TransientRecovery");
  const transientMass=$("floor100TransientMass");
+ const restartCdu=$("floor100RestartCdu"),restartRamp=$("floor100RestartRamp");
  const watts=new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
  const kw=new Intl.NumberFormat("en-US",{maximumFractionDigits:2});
  const showW=x=>watts.format(x)+" W",showKW=x=>kw.format(x)+" kW";
@@ -54,6 +55,85 @@
   restoreWattPresetsOnce();
   const focus=d.selected||"";
   const modeledPower=state()?.getFloor100PowerModel?.();
+  const restart=state()?.getFloor100CduRestartComparison?.();
+  if(restart){
+   const selected=restart.selected;
+   restartCdu.value=String(restart.cdu);
+   restartRamp.value=String(restart.selectedRampMinutes);
+   $("floor100RestartRows").textContent="CDU "+restart.cdu+" · ROWS "+restart.affectedRows.join(", ");
+   $("floor100RestartEnd").textContent=kw.format(selected.afterRecoveryMaxProxyC)+" °C PROXY";
+   $("floor100RestartExtra").textContent="+"+kw.format(restart.additionalProxyBurdenVsInstantKMinutes)+" K·min";
+   $("floor100RestartStatus").textContent=
+    (restart.selectedRampMinutes===0?"INSTANT RESTART":restart.selectedRampMinutes+" MIN STAGED RESTART")+
+    " · "+restart.options.incidentMinutes+" MIN FICTIONAL OUTAGE · "+
+    "COMPARE THREE HYPOTHETICAL STARTUP PROFILES, NOT HARDWARE CONTROLS";
+   const cards=$("floor100RestartCases");
+   if(cards.children.length!==3){
+    cards.replaceChildren();
+    for(const ramp of [0,6,12]){
+     const btn=document.createElement("button");btn.type="button";
+     btn.className="floor100-restart-case";btn.dataset.ramp=String(ramp);
+     btn.addEventListener("click",()=>{
+      state()?.setFloor100CduRestartOptions?.({selectedRampMinutes:ramp});render();
+     });
+     const title=document.createElement("strong"),meta=document.createElement("small");
+     const burden=document.createElement("small");
+     title.className="floor100-restart-case-label";
+     meta.className="floor100-restart-case-outcome";
+     burden.className="floor100-restart-case-burden";
+     btn.append(title,meta,burden);cards.appendChild(btn);
+    }
+   }
+   for(const entry of restart.cases){
+    const idx=[0,6,12].indexOf(entry.rampMinutes),card=cards.children[idx];
+    card.dataset.selected=String(restart.selectedRampMinutes===entry.rampMinutes);
+    card.setAttribute("aria-pressed",String(restart.selectedRampMinutes===entry.rampMinutes));
+    card.querySelector(".floor100-restart-case-label").textContent=
+     entry.rampMinutes===0?"INSTANT RETURN TO 100%":entry.rampMinutes+" MIN STAGED PUMP SPEED";
+    card.querySelector(".floor100-restart-case-outcome").textContent=
+     "MAX "+kw.format(entry.maxProxyC)+" °C PROXY · END "+
+     kw.format(entry.afterRecoveryMaxProxyC)+" °C PROXY";
+    card.querySelector(".floor100-restart-case-burden").textContent=
+     kw.format(entry.positiveExcessProxyKMinutes)+" K·min / ALL 10 ROWS";
+   }
+   const svg=$("floor100RestartSvg"),ns="http://www.w3.org/2000/svg";
+   svg.replaceChildren();
+   const el=(tag,attrs,content)=>{
+    const node=document.createElementNS(ns,tag);
+    for(const [k,v] of Object.entries(attrs||{}))node.setAttribute(k,String(v));
+    if(content!==undefined)node.textContent=content;
+    svg.appendChild(node);return node;
+   };
+   const samples=restart.cases.flatMap(c=>c.timeline.map(p=>p.maxProxyC));
+   const lo=Math.floor(Math.min(29.5,...samples)-.5);
+   const hi=Math.ceil(Math.max(30.5,...samples)+.5);
+   const xp=x=>55+860*x/restart.recoveryEndMinute;
+   const yp=y=>185-152*(y-lo)/(hi-lo);
+   for(let k=0;k<=4;k++){
+    const temp=lo+(hi-lo)*k/4, y=yp(temp);
+    el("line",{x1:52,y1:y,x2:922,y2:y,stroke:"#698e9a","stroke-width":0.8});
+    el("text",{x:8,y:y+4,fill:"#cde4e1","font-size":12},kw.format(temp)+"°");
+   }
+   el("rect",{x:xp(restart.incidentStartMinute),y:16,
+    width:xp(restart.incidentEndMinute)-xp(restart.incidentStartMinute),
+    height:172,fill:"#8d5464","fill-opacity":.22});
+   for(const [min,label] of [[0,"0"],[restart.incidentStartMinute,"FAULT"],
+    [restart.incidentEndMinute,"STARTUP"],[restart.recoveryEndMinute,restart.recoveryEndMinute+" min"]]){
+    el("line",{x1:xp(min),y1:14,x2:xp(min),y2:189,stroke:"#c1dfd9",
+     "stroke-dasharray":"4 5","stroke-width":.7});
+    el("text",{x:xp(min),y:206,fill:"#cce8db","font-size":11,
+     "text-anchor":min===0?"start":min===restart.recoveryEndMinute?"end":"middle"},label);
+   }
+   const palette=["#81d9bc","#f2da81","#e79da4"];
+   for(const [i,entry] of restart.cases.entries()){
+    const pts=entry.timeline.map(p=>xp(p.minute).toFixed(2)+","+yp(p.maxProxyC).toFixed(2)).join(" ");
+    el("polyline",{points:pts,fill:"none",stroke:palette[i],class:"floor100-restart-curve",
+     "data-ramp":entry.rampMinutes,"stroke-width":entry.rampMinutes===restart.selectedRampMinutes?3.5:2,
+     "stroke-opacity":entry.rampMinutes===restart.selectedRampMinutes?1:.68});
+   }
+   el("text",{x:62,y:16,fill:"#c0e4dc","font-size":11},
+    "INSTANT (GREEN) · 6 MIN (YELLOW) · 12 MIN (PINK) — ALL VALUES ARE PROXY");
+  }
   const n1=state()?.getFloor100CduN1Study?.();
   if(n1){
    const fmt=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
@@ -619,6 +699,11 @@
  waterDeltaSelect.addEventListener("change",()=>{
   state()?.setFloor100WaterDeltaTK?.(Number(waterDeltaSelect.value));render();
  });
+ for(const element of [restartCdu,restartRamp])element.addEventListener("change",()=>{
+  state()?.setFloor100CduRestartOptions?.({
+   cdu:Number(restartCdu.value),selectedRampMinutes:Number(restartRamp.value)
+  });render();
+ });
  $("floor100N1Reset").addEventListener("click",()=>{
   state()?.setFloor100CduN1Scenario?.(0);render();
  });
@@ -667,6 +752,7 @@
    hypotheticalEightIndependentCduBanks:state()?.getFloor100CduBankPlan?.()||null,
    hypotheticalThermalTransient:state()?.getFloor100ThermalTransient?.()||null,
    hypotheticalEightCduSingleOutageComparison:state()?.getFloor100CduN1Study?.()||null,
+   hypotheticalCduStagedRestart:state()?.getFloor100CduRestartComparison?.()||null,
    hypotheticalCoolantIsolation:state()?.getFloor100CoolantFault?.()||null,
    visualCoolantPipeAudit:state()?.getFloor100CoolantTopology?.()?.audit||null,
    selectedSchematicCoolingPaths:state()?.getFloor100CoolingPaths?.()||[]},null,2);
